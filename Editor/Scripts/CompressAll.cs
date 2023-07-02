@@ -47,29 +47,32 @@ public class TextureCompressionEditor: EditorWindow {
 
     private void ApplyCompressionSettings() {
     string[] textureGUIDs = AssetDatabase.FindAssets("t:Texture");
-    foreach(string textureGUID in textureGUIDs)
+     var textureCount = textureGUIDs.LongLength;
+    long i = 0;
+    foreach(string textureGUID in textureGUIDs) {
+        string texturePath = AssetDatabase.GUIDToAssetPath(textureGUID);
+        TextureImporter textureImporter = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+        CompressionSettings settings;
+        if (textureImporter != null)
         {
-            string texturePath = AssetDatabase.GUIDToAssetPath(textureGUID);
-            TextureImporter textureImporter = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-            CompressionSettings settings;
-            if (textureImporter != null)
+            i += 1;
+            Debug.Log($"Compressing texture {i}/{textureCount}: {textureImporter.textureType}");
+            if (textureImporter.textureType == TextureImporterType.NormalMap)
             {
-                Debug.Log(textureImporter.textureType);
-                if (textureImporter.textureType == TextureImporterType.NormalMap)
-                {
-                    settings = normalMapsCompressionSettings;
-                }
-                else
-                {
-                    settings = remainingTexturesCompressionSettings;
-                }
-                textureImporter.textureCompression = settings.compression;
-                textureImporter.maxTextureSize = settings.maxTextureSize;
-                foreach(string _override in settings.overrides) {
-                    textureImporter.SetPlatformTextureSettings(_override, settings.maxTextureSize, settings.format, settings.compressorQuality, settings.useCrunchCompression);
-                }
-                textureImporter.SaveAndReimport();
-                }
-           }
+                settings = normalMapsCompressionSettings;
+            }
+            else
+            {
+                settings = remainingTexturesCompressionSettings;
+            }
+            textureImporter.textureCompression = settings.compression;
+            textureImporter.maxTextureSize = settings.maxTextureSize;
+            foreach(string _override in settings.overrides) {
+                textureImporter.SetPlatformTextureSettings(_override, settings.maxTextureSize, settings.format, settings.compressorQuality, settings.useCrunchCompression);
+            }
+            textureImporter.SaveAndReimport();
+            }
+        }
+        Debug.Log($"Compressed {i} Textures");
     }
 }
