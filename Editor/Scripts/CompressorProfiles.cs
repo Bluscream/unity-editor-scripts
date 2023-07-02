@@ -28,7 +28,7 @@ public class TextureCompressionEditor : EditorWindow
         public string name = "Unknown";
         public int maxTextureSize = 2048;
         public TextureResizeAlgorithm resizeAlgorithm = TextureResizeAlgorithm.Mitchell;
-        public TextureImporterFormat format = TextureImporterFormat.RGBA32;
+        public TextureImporterFormat format = TextureImporterFormat.Automatic;
         public TextureImporterCompression compression = TextureImporterCompression.Compressed;
         public bool useCrunchCompression = false;
         public int compressorQuality = 50;
@@ -56,7 +56,7 @@ public class TextureCompressionEditor : EditorWindow
             return success;
         }
     }
-
+    // EDIT THIS
     internal CompressionSettings[] compressors = new CompressionSettings[]{
     new CompressionSettings()
         {
@@ -68,10 +68,12 @@ public class TextureCompressionEditor : EditorWindow
         },
         new CompressionSettings()
         {
-            name = "Remaining Textures"
+            name = "Remaining Textures",
+            useCrunchCompression = true,
+            compressorQuality = 75
         }
     };
-
+    // DON'T EDIT THIS
     [MenuItem("Window/Texture Compression Editor")]
     public static void ShowWindow()
     {
