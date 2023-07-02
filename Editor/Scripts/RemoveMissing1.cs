@@ -1,23 +1,30 @@
-[MenuItem("Auto/Remove Missing Scripts Recursively")]
-private static void FindAndRemoveMissingInSelected()
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEditor;
+public static class RemoveMissing
 {
-    var deepSelection = EditorUtility.CollectDeepHierarchy(Selection.gameObjects);
-    int compCount = 0;
-    int goCount = 0;
-    foreach (var o in deepSelection)
+    [MenuItem("Auto/Remove Missing Scripts Recursively")]
+    private static void FindAndRemoveMissingInSelected()
     {
-        if (o is GameObject go)
+        var deepSelection = EditorUtility.CollectDeepHierarchy(Selection.gameObjects);
+        int compCount = 0;
+        int goCount = 0;
+        foreach (var o in deepSelection)
         {
-            int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
-            if (count > 0)
+            if (o is GameObject go)
             {
-                // Edit: use undo record object, since undo destroy wont work with missing
-                Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
-                GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
-                compCount += count;
-                goCount++;
+                int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+                if (count > 0)
+                {
+                    // Edit: use undo record object, since undo destroy wont work with missing
+                    Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
+                    GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                    compCount += count;
+                    goCount++;
+                }
             }
         }
+        Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects");
     }
-    Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects");
 }

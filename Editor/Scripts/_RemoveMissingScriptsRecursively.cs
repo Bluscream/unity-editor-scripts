@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
-public static class FindMissingScriptsRecursively
+public static class FindMissingScriptsRecursively2
 {
     [MenuItem("Auto/Remove Missing Scripts Recursively Visit Prefabs")]
     private static void FindAndRemoveMissingInSelected()

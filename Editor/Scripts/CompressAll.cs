@@ -14,6 +14,7 @@ public class TextureCompressionEditor: EditorWindow {
     }
     private CompressionSettings normalMapsCompressionSettings = new CompressionSettings();
     private CompressionSettings remainingTexturesCompressionSettings = new CompressionSettings();
+    // private TextureImporterType[] normalMapTypes = new { TextureImporterType.Bump, TextureImporterType.NormalMap };
 
     [MenuItem("Window/Texture Compression Editor")]
     public static void ShowWindow() {
@@ -24,7 +25,7 @@ public class TextureCompressionEditor: EditorWindow {
 
     private void CreateCompressionSettingsPanel(string name, CompressionSettings settings) {
     EditorGUILayout.LabelField($"{name} Settings", EditorStyles.boldLabel);
-    settings.maxTextureSize = EditorGUILayout.IntField("Max Texture Size", maxTextureSize);
+    settings.maxTextureSize = EditorGUILayout.IntField("Max Texture Size", settings.maxTextureSize);
     settings.resizeAlgorithm = EditorGUILayout.TextField("Resize Algorithm", settings.resizeAlgorithm);
     settings.format = (TextureImporterFormat) EditorGUILayout.EnumPopup("Format", settings.format);
     settings.compression = (TextureImporterCompression) EditorGUILayout.EnumPopup("Compression", settings.compression);
@@ -36,12 +37,7 @@ public class TextureCompressionEditor: EditorWindow {
     private void OnGUI() {
     EditorGUILayout.LabelField("Compression Settings", EditorStyles.boldLabel);
 
-    if (GUILayout.Button("Apply Compression Settings")) {
-        ApplyCompressionSettings();
-    }
-
-    CreateCompressionSettingsPanel("Normal Maps Settings"
-        normalMapsCompressionSettings);
+    CreateCompressionSettingsPanel("Normal Maps Settings", normalMapsCompressionSettings);
     EditorGUILayout.Space();
     CreateCompressionSettingsPanel("Other Textures Settings", remainingTexturesCompressionSettings);
 
@@ -52,22 +48,29 @@ public class TextureCompressionEditor: EditorWindow {
 
     private void ApplyCompressionSettings() {
     string[] textureGUIDs = AssetDatabase.FindAssets("t:Texture");
-    foreach(string textureGUID in textureGUIDs) {
-        string texturePath = AssetDatabase.GUIDToAssetPath(textureGUID);
-        TextureImporter textureImporter = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-        var settings = null
-        if (textureImporter != null) {
-        if (IsNormalMap(textureImporter))
-            settings = normalMapsCompressionSettings;
-        else
-            settings = remainingTexturesCompressionSettings;
-        textureImporter.textureCompression = settings.compression;
-        textureImporter.maxTextureSize = settings.maxTextureSize;
-        foreach(string override in settings.overrides) {
-            textureImporter.SetPlatformTextureSettings(override, settings.maxTextureSize, settings.format, settings.compressorQuality, settings.useCrunchCompression);
-        }
-        textureImporter.SaveAndReimport();
-        }
-    }
+    foreach(string textureGUID in textureGUIDs)
+        {
+            string texturePath = AssetDatabase.GUIDToAssetPath(textureGUID);
+            TextureImporter textureImporter = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            CompressionSettings settings;
+            if (textureImporter != null)
+            {
+                Debug.Log(textureImporter.textureType);
+                if (textureImporter.textureType == TextureImporterType.NormalMap)
+                {
+                    settings = normalMapsCompressionSettings;
+                }
+                else
+                {
+                    settings = remainingTexturesCompressionSettings;
+                }
+                textureImporter.textureCompression = settings.compression;
+                textureImporter.maxTextureSize = settings.maxTextureSize;
+                foreach(string _override in settings.overrides) {
+                    textureImporter.SetPlatformTextureSettings(_override, settings.maxTextureSize, settings.format, settings.compressorQuality, settings.useCrunchCompression);
+                }
+                textureImporter.SaveAndReimport();
+                }
+           }
     }
 }
