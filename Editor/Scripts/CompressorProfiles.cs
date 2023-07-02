@@ -13,7 +13,7 @@ public class TextureCompressionEditor : EditorWindow
         public TextureImporter importer { get; set; }
         public bool apply(CompressionSettings settings, bool force = false)
         {
-            if (force || settings.validate(importer, path, guid)) return false;
+            if (!force && !settings.validate(importer, path, guid)) return false;
             importer.textureCompression = settings.compression;
             importer.maxTextureSize = settings.maxTextureSize;
             foreach (string _override in settings.overrides)
@@ -33,7 +33,7 @@ public class TextureCompressionEditor : EditorWindow
         public bool useCrunchCompression = false;
         public int compressorQuality = 50;
         public string[] overrides = { };
-        public Func<TextureImporter, string, string, bool> validate = (TextureImporter _, string _a, string _b) => { return true; };
+        public Func<TextureImporter, string, string, bool> validate = (TextureImporter _, string _a, string _b) => { return _ != null; };
         public List<CompressorTexture> get()
         {
             List<CompressorTexture> ret = new List<CompressorTexture>();
@@ -63,10 +63,6 @@ public class TextureCompressionEditor : EditorWindow
             name = "Normal Maps",
             validate = (TextureImporter importer, string path, string guid) =>
             {
-                if (importer is null) {
-                    Debug.LogError($"guid: {guid} | path: {path} | importer: {importer}");
-                    return false;
-                }
                 return importer.textureType == TextureImporterType.NormalMap;
             }
         },
@@ -74,7 +70,11 @@ public class TextureCompressionEditor : EditorWindow
         {
             name = "Remaining Textures",
             useCrunchCompression = true,
-            compressorQuality = 75
+            compressorQuality = 75,
+            validate = (TextureImporter importer, string path, string guid) =>
+            {
+                return importer.textureType != TextureImporterType.NormalMap;
+            }
         }
     };
     // DON'T EDIT THIS
@@ -124,9 +124,9 @@ public class TextureCompressionEditor : EditorWindow
             foreach (var tex in textures)
             {
                 Debug.Log($"Compressing texture {i}/{compressorTextureCount} ({tex.importer.textureType})");
-                var success = tex.apply(compressor);
+                var success = tex.apply(compressor, true);
                 float progress = (float)i / compressorTextureCount;
-                if (EditorUtility.DisplayCancelableProgressBar($"Applying Compression Settings {compressor.name}", $"Compressing texture {i}/{compressorTextureCount}", progress))
+                if (EditorUtility.DisplayCancelableProgressBar($"Compressing {compressor.name}", $"Compressing texture {i}/{compressorTextureCount}", progress))
                 {
                     break;
                 }
