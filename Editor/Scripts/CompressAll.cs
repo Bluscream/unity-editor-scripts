@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 
 
@@ -31,19 +31,18 @@ public class TextureCompressionEditor: EditorWindow {
     settings.compression = (TextureImporterCompression) EditorGUILayout.EnumPopup("Compression", settings.compression);
     settings.useCrunchCompression = EditorGUILayout.Toggle("Use Crunch Compression", settings.useCrunchCompression);
     settings.compressorQuality = EditorGUILayout.IntSlider("Compressor Quality", settings.compressorQuality, 0, 100);
-    settings.resizeAlgorithm = EditorGUILayout.TextField("Resize Algorithm", settings.resizeAlgorithm);
     }
 
     private void OnGUI() {
-    EditorGUILayout.LabelField("Compression Settings", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Compression Settings", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+        CreateCompressionSettingsPanel("Normal Maps", normalMapsCompressionSettings);
+        EditorGUILayout.Space();
+        CreateCompressionSettingsPanel("Other Textures", remainingTexturesCompressionSettings);
 
-    CreateCompressionSettingsPanel("Normal Maps Settings", normalMapsCompressionSettings);
-    EditorGUILayout.Space();
-    CreateCompressionSettingsPanel("Other Textures Settings", remainingTexturesCompressionSettings);
-
-    if (GUILayout.Button("Apply Compression Settings")) {
-        ApplyCompressionSettings();
-    }
+        if (GUILayout.Button("Apply Compression Settings")) {
+            ApplyCompressionSettings();
+        }
     }
 
     private void ApplyCompressionSettings() {
