@@ -42,7 +42,7 @@ public class TextureCompressionEditor : EditorWindow
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                if (validate(importer, path, guid)) ret.Add(new CompressorTexture() { guid=guid,path=path,importer=importer });
+                    if (importer != null && validate(importer, path, guid)) ret.Add(new CompressorTexture() { guid=guid,path=path,importer=importer });
             }
             return ret;
         }
@@ -63,6 +63,10 @@ public class TextureCompressionEditor : EditorWindow
             name = "Normal Maps",
             validate = (TextureImporter importer, string path, string guid) =>
             {
+                if (importer is null) {
+                    Debug.LogError($"guid: {guid} | path: {path} | importer: {importer}");
+                    return false;
+                }
                 return importer.textureType == TextureImporterType.NormalMap;
             }
         },
