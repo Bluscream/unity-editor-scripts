@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
+
 public static class RemoveMissing
 {
     [MenuItem("Auto/Remove Missing Scripts Recursively")]

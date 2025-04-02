@@ -1,14 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
+
 public static class FindMissingScriptsRecursively2
 {
     [MenuItem("Auto/Remove Missing Scripts Recursively Visit Prefabs")]
     private static void FindAndRemoveMissingInSelected()
     {
         // EditorUtility.CollectDeepHierarchy does not include inactive children
-        var deeperSelection = Selection.gameObjects.SelectMany(go => go.GetComponentsInChildren<Transform>(true))
+        var deeperSelection = Selection
+            .gameObjects.SelectMany(go => go.GetComponentsInChildren<Transform>(true))
             .Select(t => t.gameObject);
         var prefabs = new HashSet<Object>();
         int compCount = 0;
@@ -40,8 +42,12 @@ public static class FindMissingScriptsRecursively2
 
     // Prefabs can both be nested or variants, so best way to clean all is to go through them all
     // rather than jumping straight to the original prefab source.
-    private static void RecursivePrefabSource(GameObject instance, HashSet<Object> prefabs, ref int compCount,
-        ref int goCount)
+    private static void RecursivePrefabSource(
+        GameObject instance,
+        HashSet<Object> prefabs,
+        ref int compCount,
+        ref int goCount
+    )
     {
         var source = PrefabUtility.GetCorrespondingObjectFromSource(instance);
         // Only visit if source is valid, and hasn't been visited before
