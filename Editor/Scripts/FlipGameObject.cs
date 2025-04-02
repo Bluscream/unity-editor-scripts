@@ -1,5 +1,5 @@
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 public class FlipGameObject : MonoBehaviour
 {
@@ -14,12 +14,9 @@ public class FlipGameObject : MonoBehaviour
 
     private static void FlipObject(Transform transform)
     {
-        // Apply flip to the transform itself
         Vector3 scale = transform.localScale;
         scale.x *= -1; // Flip along the X-axis
         transform.localScale = scale;
-
-        // Recursively apply flip to all children
         foreach (Transform child in transform)
         {
             FlipObject(child);

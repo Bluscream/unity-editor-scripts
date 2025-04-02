@@ -14,8 +14,6 @@ public class ShaderFreePreviewWindow : EditorWindow
     private List<GameObject> originalObjects = new List<GameObject>();
     private List<GameObject> previewInstances = new List<GameObject>();
     private Material standardMaterial;
-
-    // Camera control variables
     private float rotationSpeed = 50f;
     private float zoomSpeed = 2f;
     private float minZoomDistance = 2f;
@@ -36,29 +34,27 @@ public class ShaderFreePreviewWindow : EditorWindow
 
     private void InitializePreview()
     {
-        // Create a new preview scene
         previewScene = EditorSceneManager.NewPreviewScene();
-        
-        // Create a camera for rendering
         GameObject cameraObj = new GameObject("Preview Camera");
         previewCamera = cameraObj.AddComponent<Camera>();
-        previewCamera.transform.position = new Vector3(0, currentZoomDistance, -currentZoomDistance);
+        previewCamera.transform.position = new Vector3(
+            0,
+            currentZoomDistance,
+            -currentZoomDistance
+        );
         previewCamera.transform.LookAt(Vector3.zero);
         previewCamera.cameraType = CameraType.Preview;
         previewCamera.scene = previewScene.Value;
-        
-        // Set up rendering textures
         renderTexture = new RenderTexture(1024, 768, 16);
-        displayTexture = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.RGBA32, false);
-        
-        // Create Standard material instance
+        displayTexture = new Texture2D(
+            renderTexture.width,
+            renderTexture.height,
+            TextureFormat.RGBA32,
+            false
+        );
         standardMaterial = new Material(Shader.Find("Standard"));
-        
-        // Initialize empty lists
         previewInstances = new List<GameObject>();
         originalObjects = new List<GameObject>();
-        
-        // Call UpdatePreviewObjects only if there are selections
         if (Selection.objects.Length > 0)
         {
             UpdatePreviewObjects();
@@ -67,7 +63,6 @@ public class ShaderFreePreviewWindow : EditorWindow
 
     private void UpdatePreviewObjects()
     {
-        // Clear previous instances
         if (previewInstances != null)
         {
             foreach (GameObject obj in previewInstances)
@@ -79,21 +74,18 @@ public class ShaderFreePreviewWindow : EditorWindow
             }
             previewInstances.Clear();
         }
-
-        // Only proceed if there are selected objects
         if (Selection.objects.Length > 0 && previewScene.HasValue)
         {
-            // Clone selected objects
             foreach (UnityEngine.Object selectedObj in Selection.objects)
             {
                 if (selectedObj is GameObject gameObject)
                 {
-                    GameObject instance = PrefabUtility.InstantiatePrefab(gameObject, previewScene.Value) as GameObject;
+                    GameObject instance =
+                        PrefabUtility.InstantiatePrefab(gameObject, previewScene.Value)
+                        as GameObject;
                     if (instance != null)
                     {
                         previewInstances.Add(instance);
-
-                        // Apply Standard shader to all renderers
                         Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
                         if (renderers != null)
                         {
@@ -119,8 +111,6 @@ public class ShaderFreePreviewWindow : EditorWindow
     private void OnGUI()
     {
         EditorGUILayout.Space(10);
-
-        // Controls section
         EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
         rotationSpeed = EditorGUILayout.Slider(
             "Rotation Speed",
@@ -131,8 +121,6 @@ public class ShaderFreePreviewWindow : EditorWindow
         );
         zoomSpeed = EditorGUILayout.Slider("Zoom Speed", zoomSpeed, 0.5f, 5f, GUILayout.Width(150));
         EditorGUILayout.EndHorizontal();
-
-        // Render preview
         if (previewCamera != null && renderTexture != null)
         {
             HandleCameraControls(Event.current);
@@ -141,8 +129,6 @@ public class ShaderFreePreviewWindow : EditorWindow
             previewCamera.Render();
 
             Graphics.CopyTexture(renderTexture, displayTexture);
-
-            // Display the rendered texture
             Rect texRect = EditorGUILayout.GetControlRect(
                 GUILayout.ExpandWidth(true),
                 GUILayout.Height(400)
@@ -160,8 +146,6 @@ public class ShaderFreePreviewWindow : EditorWindow
         else if (currentEvent.type == EventType.MouseDrag)
         {
             Vector2 delta = currentEvent.mousePosition - lastMousePosition;
-
-            // Rotate camera
             if (currentEvent.modifiers == EventModifiers.None)
             {
                 float rotX = -delta.y * rotationSpeed * Time.deltaTime;
@@ -174,7 +158,6 @@ public class ShaderFreePreviewWindow : EditorWindow
                 );
                 previewCamera.transform.RotateAround(Vector3.zero, Vector3.up, rotY);
             }
-            // Zoom camera
             else if (currentEvent.modifiers == EventModifiers.Control)
             {
                 currentZoomDistance -= delta.y * zoomSpeed * Time.deltaTime;
@@ -206,33 +189,28 @@ public class ShaderFreePreviewWindow : EditorWindow
 
     private void Cleanup()
     {
-        // Remove the render texture from the camera
         if (previewCamera != null && renderTexture != null)
         {
             previewCamera.targetTexture = null;
         }
-        
-        // Release and destroy resources
         if (renderTexture != null)
         {
             renderTexture.Release();
             DestroyImmediate(renderTexture);
             renderTexture = null;
         }
-        
+
         if (displayTexture != null)
         {
             DestroyImmediate(displayTexture);
             displayTexture = null;
         }
-        
+
         if (standardMaterial != null)
         {
             DestroyImmediate(standardMaterial);
             standardMaterial = null;
         }
-        
-        // Clean up preview objects
         if (previewInstances != null)
         {
             foreach (GameObject obj in previewInstances)
@@ -244,14 +222,10 @@ public class ShaderFreePreviewWindow : EditorWindow
             }
             previewInstances.Clear();
         }
-        
-        // Close the preview scene
         if (previewScene.HasValue)
         {
             EditorSceneManager.ClosePreviewScene(previewScene.Value);
         }
-        
-        // Reset all references
         previewScene = null;
         previewCamera = null;
     }

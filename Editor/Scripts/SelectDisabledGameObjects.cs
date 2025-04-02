@@ -1,6 +1,6 @@
-﻿using UnityEditor;
+﻿using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
-using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 
 public class SelectDisabledGameObjects : EditorWindow
@@ -12,8 +12,6 @@ public class SelectDisabledGameObjects : EditorWindow
         List<GameObject> rootObjects = new List<GameObject>();
         Scene scene = SceneManager.GetActiveScene();
         scene.GetRootGameObjects(rootObjects);
-
-        // iterate root objects and select disabled game objects
         for (int i = 0; i < rootObjects.Count; ++i)
         {
             GameObject gameObject = rootObjects[i];
@@ -21,8 +19,6 @@ public class SelectDisabledGameObjects : EditorWindow
             {
                 toSelect.Add(gameObject);
             }
-
-            // iterate children recursively and select disabled game objects
             SelectDisabledChildren(gameObject, toSelect);
         }
 
@@ -42,8 +38,6 @@ public class SelectDisabledGameObjects : EditorWindow
                 toSelect.Add(childObject);
                 continue;
             }
-
-            // recursively select disabled children
             SelectDisabledChildren(childObject, toSelect);
         }
     }

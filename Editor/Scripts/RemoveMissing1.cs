@@ -18,7 +18,6 @@ public static class RemoveMissing
                 int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
                 if (count > 0)
                 {
-                    // Edit: use undo record object, since undo destroy wont work with missing
                     Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
                     GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
                     compCount += count;
