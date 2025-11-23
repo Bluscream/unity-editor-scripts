@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Components Backup Schema",
+  "description": "Schema for components.json file containing component backup data",
+  "type": "object",
+  "required": ["components"],
+  "properties": {
+    "components": {
+      "type": "array",
+      "description": "Array of component backups",
+      "items": {
+        "$ref": "#/definitions/ComponentBackup"
+      }
+    }
+  },
+  "definitions": {
+    "ComponentBackup": {
+      "type": "object",
+      "required": ["gameObjectPath", "componentType"],
+      "properties": {
+        "gameObjectPath": {
+          "type": "string",
+          "description": "Hierarchy path to the GameObject containing this component (e.g., 'Root/Child/Grandchild')"
+        },
+        "componentType": {
+          "type": "string",
+          "description": "Full type name of the component (e.g., 'UnityEngine.Transform', 'UnityEngine.MeshRenderer')"
+        },
+        "componentData": {
+          "type": "array",
+          "description": "Array of component property entries (dictionary-like structure)",
+          "items": {
+            "$ref": "#/definitions/ComponentPropertyEntry"
+          }
+        },
+        "componentDataString": {
+          "type": "string",
+          "description": "Legacy format: JSON serialized component data (deprecated, use componentData instead)"
+        }
+      }
+    },
+    "ComponentPropertyEntry": {
+      "type": "object",
+      "required": ["key", "value", "type"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Property name (e.g., 'm_IsActive', 'm_LocalPosition')"
+        },
+        "value": {
+          "type": "string",
+          "description": "Property value as string. Format depends on type: Integer='42', Boolean='true', Float='3.14', String='text', Vector3='1,2,3', Color='1,0,0,1', etc."
+        },
+        "type": {
+          "type": "string",
+          "description": "Property type name from SerializedPropertyType enum",
+          "enum": [
+            "Integer",
+            "Boolean",
+            "Float",
+            "String",
+            "Color",
+            "ObjectReference",
+            "LayerMask",
+            "Enum",
+            "Vector2",
+            "Vector3",
+            "Vector4",
+            "Rect",
+            "ArraySize",
+            "Character",
+            "AnimationCurve",
+            "Bounds",
+            "Gradient",
+            "Quaternion",
+            "ExposedReference",
+            "FixedBufferSize",
+            "Vector2Int",
+            "Vector3Int",
+            "RectInt",
+            "BoundsInt",
+            "ManagedReference",
+            "Hash128",
+            "Generic"
+          ]
+        }
+      }
+    }
+  }
+}

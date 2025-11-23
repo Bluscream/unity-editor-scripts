@@ -1,0 +1,19 @@
+{
+  "name": "dev.bluscream.replacer",
+  "version": "1.0.0",
+  "displayName": "Bluscream Replacer",
+  "description": "Tool for replacing GameObjects in the scene with other GameObjects or prefabs.",
+  "unity": "2019.4",
+  "dependencies": {
+    "dev.bluscream.common": "1.0.0"
+  },
+  "author": {
+    "name": "Bluscream"
+  },
+  "keywords": [
+    "replace",
+    "gameobject",
+    "prefab",
+    "transform"
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "description": "Shader replacement mappings for VRChat Quest compatibility",
+  "mappings": [
+    {
+      "pattern": ".*poiyomi.*toon.*",
+      "replacement": "VRChat/Mobile/Toon Standard",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*poiyomi.*lit.*",
+      "replacement": "VRChat/Mobile/Toon Lit",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "exact": "poiyomi/toon",
+      "replacement": "VRChat/Mobile/Toon Standard",
+      "matchType": "exact"
+    },
+    {
+      "exact": "poiyomi/toon lite",
+      "replacement": "VRChat/Mobile/Toon Standard",
+      "matchType": "exact"
+    },
+    {
+      "exact": "poiyomi/toon lit",
+      "replacement": "VRChat/Mobile/Toon Lit",
+      "matchType": "exact"
+    },
+    {
+      "exact": "poiyomi/toon unlit",
+      "replacement": "VRChat/Mobile/Toon Lit",
+      "matchType": "exact"
+    },
+    {
+      "exact": "standard",
+      "replacement": "VRChat/Mobile/Standard Lite",
+      "matchType": "exact"
+    },
+    {
+      "exact": "standard (specular setup)",
+      "replacement": "VRChat/Mobile/Bumped Mapped Specular",
+      "matchType": "exact"
+    },
+    {
+      "exact": "diffuse",
+      "replacement": "VRChat/Mobile/Diffuse",
+      "matchType": "exact"
+    },
+    {
+      "exact": "bumped diffuse",
+      "replacement": "VRChat/Mobile/Bumped Diffuse",
+      "matchType": "exact"
+    },
+    {
+      "exact": "bumped specular",
+      "replacement": "VRChat/Mobile/Bumped Mapped Specular",
+      "matchType": "exact"
+    },
+    {
+      "pattern": ".*standard.*metallic.*",
+      "replacement": "VRChat/Mobile/Standard Lite",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*standard.*specular.*",
+      "replacement": "VRChat/Mobile/Bumped Mapped Specular",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*toon.*standard.*",
+      "replacement": "VRChat/Mobile/Toon Standard",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*toon.*lit.*",
+      "replacement": "VRChat/Mobile/Toon Lit",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*diffuse.*bump.*",
+      "replacement": "VRChat/Mobile/Bumped Diffuse",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*specular.*bump.*",
+      "replacement": "VRChat/Mobile/Bumped Mapped Specular",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*matcap.*",
+      "replacement": "VRChat/Mobile/Matcap Lit",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*particle.*additive.*",
+      "replacement": "VRChat/Mobile/Particles/Additive",
+      "matchType": "pattern",
+      "caseSensitive": false
+    },
+    {
+      "pattern": ".*particle.*multiply.*",
+      "replacement": "VRChat/Mobile/Particles/Multiply",
+      "matchType": "pattern",
+      "caseSensitive": false
+    }
+  ],
+  "questShaders": [
+    "VRChat/Mobile/Toon Standard",
+    "VRChat/Mobile/Toon Lit",
+    "VRChat/Mobile/Standard Lite",
+    "VRChat/Mobile/Bumped Diffuse",
+    "VRChat/Mobile/Bumped Mapped Specular",
+    "VRChat/Mobile/Diffuse",
+    "VRChat/Mobile/Matcap Lit",
+    "VRChat/Mobile/Particles/Additive",
+    "VRChat/Mobile/Particles/Multiply"
+  ]
+}

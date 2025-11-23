@@ -1,0 +1,15 @@
+{
+  "name": "dev.bluscream.common",
+  "version": "1.0.0",
+  "displayName": "Bluscream Common",
+  "description": "Common utilities and shared code for Bluscream Unity packages.",
+  "unity": "2019.4",
+  "author": {
+    "name": "Bluscream"
+  },
+  "keywords": [
+    "utilities",
+    "common",
+    "shared"
+  ]
+}

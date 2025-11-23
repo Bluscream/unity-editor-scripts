@@ -1,0 +1,19 @@
+{
+  "name": "dev.bluscream.texturecompressor",
+  "version": "1.0.0",
+  "displayName": "Texture Compressor",
+  "description": "Editor tool for applying texture compression settings to textures in your project with optional backup support.",
+  "unity": "2019.4",
+  "dependencies": {
+    "dev.bluscream.common": "1.0.0"
+  },
+  "author": {
+    "name": "Bluscream"
+  },
+  "keywords": [
+    "texture",
+    "compression",
+    "optimization",
+    "importer"
+  ]
+}

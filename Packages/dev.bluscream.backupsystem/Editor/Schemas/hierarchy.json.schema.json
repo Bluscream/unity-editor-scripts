@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameObject Hierarchy Backup Schema",
+  "description": "Schema for hierarchy.json file containing GameObject hierarchy backup data",
+  "type": "object",
+  "required": ["gameObjects"],
+  "properties": {
+    "gameObjects": {
+      "type": "array",
+      "description": "Array of GameObject backups",
+      "items": {
+        "$ref": "#/definitions/GameObjectBackup"
+      }
+    }
+  },
+  "definitions": {
+    "GameObjectBackup": {
+      "type": "object",
+      "required": [
+        "gameObjectPath",
+        "localPosition",
+        "localRotation",
+        "localScale",
+        "activeSelf"
+      ],
+      "properties": {
+        "gameObjectPath": {
+          "type": "string",
+          "description": "Hierarchy path to the GameObject (e.g., 'Root/Child/Grandchild'). Parent path can be derived by removing the last segment."
+        },
+        "localPosition": {
+          "$ref": "#/definitions/Vector3",
+          "description": "Local position of the GameObject"
+        },
+        "localRotation": {
+          "$ref": "#/definitions/Quaternion",
+          "description": "Local rotation of the GameObject as quaternion"
+        },
+        "localScale": {
+          "$ref": "#/definitions/Vector3",
+          "description": "Local scale of the GameObject"
+        },
+        "activeSelf": {
+          "type": "boolean",
+          "description": "Whether the GameObject is active (activeSelf property)"
+        }
+      }
+    },
+    "Vector3": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X component"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "Z component"
+        }
+      }
+    },
+    "Quaternion": {
+      "type": "object",
+      "required": ["x", "y", "z", "w"],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X component"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "Z component"
+        },
+        "w": {
+          "type": "number",
+          "description": "W component"
+        }
+      }
+    }
+  }
+}

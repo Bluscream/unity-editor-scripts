@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Backup Metadata Schema",
+  "description": "Schema for backup.json metadata file containing comprehensive information about a backup",
+  "type": "object",
+  "required": [
+    "version",
+    "timestamp",
+    "unityVersion",
+    "projectName",
+    "projectPath",
+    "platform",
+    "scope"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Backup system version",
+      "default": "1.0.0",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "Backup creation timestamp in ISO 8601 format (UTC)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "backupName": {
+      "type": ["string", "null"],
+      "description": "Optional name for the backup"
+    },
+    "backupLocation": {
+      "type": "string",
+      "description": "Full path where backup is stored"
+    },
+    "scope": {
+      "type": "integer",
+      "description": "Backup scope: 0=AllAssets, 1=SingleGameObject, 2=GameObjectRecursive",
+      "enum": [0, 1, 2]
+    },
+    "targetPath": {
+      "type": "string",
+      "description": "GameObject path or 'ALL_ASSETS'"
+    },
+    "unityVersion": {
+      "type": "string",
+      "description": "Unity version used to create the backup",
+      "pattern": "^\\d{4}\\.\\d+(\\.\\d+)?[a-z]?\\d*$"
+    },
+    "projectName": {
+      "type": "string",
+      "description": "Name of the Unity project"
+    },
+    "projectPath": {
+      "type": "string",
+      "description": "Full path to the Unity project directory"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Current build target platform",
+      "enum": [
+        "WindowsEditor",
+        "OSXEditor",
+        "LinuxEditor",
+        "WindowsPlayer",
+        "OSXPlayer",
+        "LinuxPlayer",
+        "iOS",
+        "Android",
+        "WebGLPlayer",
+        "WindowsStorePlayer",
+        "PS4",
+        "XboxOne",
+        "AppleTV",
+        "Switch",
+        "GameCoreXboxOne",
+        "GameCoreXboxSeries",
+        "PS5",
+        "CloudRendering",
+        "GameCoreScarlett",
+        "GameCoreXboxOne",
+        "GameCoreXboxSeries",
+        "LinuxServer",
+        "WindowsServer",
+        "OSXServer",
+        "Stadia"
+      ]
+    },
+    "backedUpMaterials": {
+      "type": "string",
+      "description": "Relative path to materials backup file (e.g., 'materials.json') or empty string if not backed up",
+      "pattern": "^(materials\\.json|)$"
+    },
+    "backedUpComponents": {
+      "type": "string",
+      "description": "Relative path to components backup file (e.g., 'components.json') or empty string if not backed up",
+      "pattern": "^(components\\.json|)$"
+    },
+    "backedUpTextures": {
+      "type": "string",
+      "description": "Relative path to textures backup file (e.g., 'textures.json') or empty string if not backed up",
+      "pattern": "^(textures\\.json|)$"
+    },
+    "backedUpGameObjectHierarchy": {
+      "type": "string",
+      "description": "Relative path to hierarchy backup file (e.g., 'hierarchy.json') or empty string if not backed up",
+      "pattern": "^(hierarchy\\.json|)$"
+    },
+    "includedMaterialProperties": {
+      "type": "boolean",
+      "description": "Whether material properties were included in backup"
+    },
+    "includedComponentData": {
+      "type": "boolean",
+      "description": "Whether component data was included in backup"
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "Name of the system that created the backup",
+      "default": "Backup System"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about the backup"
+    }
+  }
+}

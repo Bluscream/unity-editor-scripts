@@ -1,0 +1,181 @@
+{
+  "version": "1.0.0",
+  "description": "Shader property mappings for transferring properties between shaders",
+  "universalMappings": [
+    {
+      "source": "_MainTex",
+      "target": "_MainTex",
+      "description": "Main albedo texture"
+    },
+    {
+      "source": "_Color",
+      "target": "_Color",
+      "description": "Main color tint"
+    },
+    {
+      "source": "_BumpMap",
+      "target": "_BumpMap",
+      "description": "Normal map"
+    },
+    {
+      "source": "_BumpScale",
+      "target": "_BumpScale",
+      "description": "Normal map intensity"
+    },
+    {
+      "source": "_NormalMap",
+      "target": "_BumpMap",
+      "description": "Alternative normal map name"
+    },
+    {
+      "source": "_NormalScale",
+      "target": "_BumpScale",
+      "description": "Alternative normal scale name"
+    },
+    {
+      "source": "_Cutoff",
+      "target": "_Cutoff",
+      "description": "Alpha cutoff"
+    },
+    {
+      "source": "_AlphaCutoff",
+      "target": "_Cutoff",
+      "description": "Alternative alpha cutoff name"
+    },
+    {
+      "source": "_EmissionMap",
+      "target": "_EmissionMap",
+      "description": "Emission texture"
+    },
+    {
+      "source": "_EmissionColor",
+      "target": "_EmissionColor",
+      "description": "Emission color"
+    },
+    {
+      "source": "_Emission",
+      "target": "_EmissionColor",
+      "description": "Alternative emission color name"
+    },
+    {
+      "source": "_MetallicGlossMap",
+      "target": "_MetallicGlossMap",
+      "description": "Metallic and smoothness map (Standard Lite)"
+    },
+    {
+      "source": "_Metallic",
+      "target": "_Metallic",
+      "description": "Metallic value (Standard Lite)"
+    },
+    {
+      "source": "_Glossiness",
+      "target": "_Glossiness",
+      "description": "Smoothness value (Standard Lite)"
+    },
+    {
+      "source": "_Smoothness",
+      "target": "_Glossiness",
+      "description": "Alternative smoothness name"
+    },
+    {
+      "source": "_GlossMapScale",
+      "target": "_Glossiness",
+      "description": "Glossiness map scale"
+    },
+    {
+      "source": "_OcclusionMap",
+      "target": "_OcclusionMap",
+      "description": "Ambient occlusion map"
+    },
+    {
+      "source": "_OcclusionStrength",
+      "target": "_OcclusionStrength",
+      "description": "Occlusion strength"
+    },
+    {
+      "source": "_DetailAlbedoMap",
+      "target": "_DetailAlbedoMap",
+      "description": "Detail albedo texture"
+    },
+    {
+      "source": "_DetailTex",
+      "target": "_DetailAlbedoMap",
+      "description": "Poiyomi detail texture name"
+    },
+    {
+      "source": "_DetailNormalMap",
+      "target": "_DetailNormalMap",
+      "description": "Detail normal map"
+    },
+    {
+      "source": "_DetailNormalMapScale",
+      "target": "_DetailNormalMapScale",
+      "description": "Detail normal map scale"
+    },
+    {
+      "source": "_DetailMask",
+      "target": "_DetailMask",
+      "description": "Detail mask"
+    },
+    {
+      "source": "_SpecGlossMap",
+      "target": "_SpecGlossMap",
+      "description": "Specular map (Specular setup)"
+    },
+    {
+      "source": "_SpecColor",
+      "target": "_SpecColor",
+      "description": "Specular color (Specular setup)"
+    },
+    {
+      "source": "_MainTex_ST",
+      "target": "_MainTex_ST",
+      "description": "Main texture tiling and offset"
+    },
+    {
+      "source": "_BumpMap_ST",
+      "target": "_BumpMap_ST",
+      "description": "Normal map tiling and offset"
+    },
+    {
+      "source": "_DetailAlbedoMap_ST",
+      "target": "_DetailAlbedoMap_ST",
+      "description": "Detail texture tiling and offset"
+    }
+  ],
+  "ignoredProperties": [
+    "shader_master_label",
+    "shader_is_using_thry_editor",
+    "shader_locale",
+    "footer_youtube",
+    "footer_twitter",
+    "footer_patreon",
+    "footer_discord",
+    "footer_github",
+    "_ShaderUIWarning0",
+    "_ShaderUIWarning1",
+    "_ForgotToLockMaterial",
+    "_ShaderOptimizerEnabled",
+    "GeometryShader_Enabled",
+    "Tessellation_Enabled"
+  ],
+  "ignoredPropertyPrefixes": [
+    "m_start_",
+    "m_end_",
+    "s_start_",
+    "s_end_",
+    "footer_",
+    "_ShaderUI"
+  ],
+  "ignoredPropertySuffixes": [
+    "Pan",
+    "UV",
+    "Stochastic",
+    "PixelMode",
+    "ThemeIndex",
+    "GlobalMask",
+    "BlendType",
+    "Toggle",
+    "Enabled"
+  ]
+}
