@@ -223,13 +223,13 @@ public class ComponentRemover
     [MenuItem("Tools/Component Remover/Find Missing Scripts Window", false, 31)]
     public static void ShowFindMissingScriptsWindow()
     {
-        GetWindow<FindMissingScriptsWindow>("Missing Script Finder").Show();
+        EditorWindow.GetWindow<FindMissingScriptsWindow>("Missing Script Finder").Show();
     }
 
     [MenuItem("Tools/Component Remover/Missing Script Utility Window", false, 32)]
     public static void ShowMissingScriptUtilityWindow()
     {
-        GetWindow<MissingScriptUtility>("Missing Script Utility").Show();
+        EditorWindow.GetWindow<MissingScriptUtility>("Missing Script Utility").Show();
     }
 
     #endregion

@@ -30,6 +30,18 @@ public class TextureCompressionEditor : EditorWindow
                     {
                         try
                         {
+                            // Use new API for Unity 2018.1+
+                            #if UNITY_2018_1_OR_NEWER
+                            TextureImporterPlatformSettings platformSettings = new TextureImporterPlatformSettings();
+                            platformSettings.name = _override;
+                            platformSettings.maxTextureSize = settings.maxTextureSize;
+                            platformSettings.format = settings.format;
+                            platformSettings.compressionQuality = settings.compressorQuality;
+                            platformSettings.textureCompression = settings.compression;
+                            platformSettings.crunchedCompression = settings.useCrunchCompression;
+                            importer.SetPlatformTextureSettings(platformSettings);
+                            #else
+                            // Fallback to old API for older Unity versions
                             importer.SetPlatformTextureSettings(
                                 _override,
                                 settings.maxTextureSize,
@@ -37,6 +49,7 @@ public class TextureCompressionEditor : EditorWindow
                                 settings.compressorQuality,
                                 settings.useCrunchCompression
                             );
+                            #endif
                         }
                         catch (System.Exception e)
                         {
