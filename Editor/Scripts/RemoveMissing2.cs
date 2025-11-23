@@ -19,7 +19,15 @@ public static class FindMissingScriptsRecursively
             int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
             if (count > 0)
             {
-                if (PrefabUtility.IsPartOfAnyPrefab(go))
+                bool isPartOfPrefab = false;
+                #if UNITY_2018_3_OR_NEWER
+                // Unity 2018.3+ uses IsPartOfAnyPrefab
+                isPartOfPrefab = PrefabUtility.IsPartOfAnyPrefab(go);
+                #else
+                // Older versions use GetPrefabType
+                isPartOfPrefab = PrefabUtility.GetPrefabType(go) != PrefabType.None;
+                #endif
+                if (isPartOfPrefab)
                 {
                     RecursivePrefabSource(go, prefabs, ref compCount, ref goCount);
                     count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);

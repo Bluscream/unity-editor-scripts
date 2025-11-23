@@ -36,59 +36,104 @@ namespace FLGCoreEditor.Utilities
 
         private static void FindInSelected()
         {
-            var go = Selection.gameObjects;
-            _goCount = 0;
-            _componentsCount = 0;
-            _missingCount = 0;
-            foreach (var g in go)
+            try
             {
-                FindInGo(g);
+                var go = Selection.gameObjects;
+                if (go == null || go.Length == 0)
+                {
+                    Debug.LogWarning("No GameObjects selected");
+                    return;
+                }
+
+                _goCount = 0;
+                _componentsCount = 0;
+                _missingCount = 0;
+                foreach (var g in go)
+                {
+                    if (g != null)
+                    {
+                        FindInGo(g);
+                    }
+                }
+
+                _bHaveRun = true;
+                Debug.Log(
+                    $"Searched {_goCount} GameObjects, {_componentsCount} components, found {_missingCount} missing"
+                );
+
+                AssetDatabase.SaveAssets();
             }
-
-            _bHaveRun = true;
-            Debug.Log(
-                $"Searched {_goCount} GameObjects, {_componentsCount} components, found {_missingCount} missing"
-            );
-
-            AssetDatabase.SaveAssets();
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error finding missing scripts: {e.Message}\n{e.StackTrace}");
+            }
         }
 
         private static void FindInGo(GameObject g)
         {
-            _goCount++;
-            var components = g.GetComponents<Component>();
-
-            var r = 0;
-
-            for (var i = 0; i < components.Length; i++)
+            try
             {
-                _componentsCount++;
-                if (components[i] != null)
-                    continue;
-                _missingCount++;
-                var s = g.name;
-                var t = g.transform;
-                while (t.parent != null)
+                if (g == null)
+                    return;
+
+                _goCount++;
+                var components = g.GetComponents<Component>();
+
+                if (components == null)
+                    return;
+
+                var r = 0;
+
+                for (var i = 0; i < components.Length; i++)
                 {
-                    s = t.parent.name + "/" + s;
-                    t = t.parent;
+                    _componentsCount++;
+                    if (components[i] != null)
+                        continue;
+                    _missingCount++;
+                    var s = g.name;
+                    var t = g.transform;
+                    while (t != null && t.parent != null)
+                    {
+                        s = t.parent.name + "/" + s;
+                        t = t.parent;
+                    }
+
+                    Debug.Log($"{s} has a missing script at {i}", g);
+
+                    try
+                    {
+                        var serializedObject = new SerializedObject(g);
+
+                        var prop = serializedObject.FindProperty("m_Component");
+
+                        if (prop != null)
+                        {
+                            prop.DeleteArrayElementAtIndex(i - r);
+                            r++;
+
+                            serializedObject.ApplyModifiedProperties();
+                        }
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"Error removing missing script at index {i} from {g.name}: {e.Message}");
+                    }
                 }
 
-                Debug.Log($"{s} has a missing script at {i}", g);
-
-                var serializedObject = new SerializedObject(g);
-
-                var prop = serializedObject.FindProperty("m_Component");
-
-                prop.DeleteArrayElementAtIndex(i - r);
-                r++;
-
-                serializedObject.ApplyModifiedProperties();
+                if (g.transform != null)
+                {
+                    foreach (Transform childT in g.transform)
+                    {
+                        if (childT != null && childT.gameObject != null)
+                        {
+                            FindInGo(childT.gameObject);
+                        }
+                    }
+                }
             }
-
-            foreach (Transform childT in g.transform)
+            catch (System.Exception e)
             {
-                FindInGo(childT.gameObject);
+                Debug.LogWarning($"Error processing GameObject {g?.name}: {e.Message}");
             }
         }
     }

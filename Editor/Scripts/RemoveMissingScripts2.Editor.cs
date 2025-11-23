@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,84 +29,195 @@ public class MissingScriptUtility : EditorWindow
         );
 
         if (GUILayout.Button("Log Missing Scripts"))
-            LogMissingScripts(
-                UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()
-            );
+        {
+            try
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                GameObject[] rootObjects;
+                #if UNITY_2019_3_OR_NEWER
+                var rootList = new List<GameObject>();
+                scene.GetRootGameObjects(rootList);
+                rootObjects = rootList.ToArray();
+                #else
+                rootObjects = scene.GetRootGameObjects();
+                #endif
+                LogMissingScripts(rootObjects);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
+            }
+        }
         if (GUILayout.Button("Log Missing Scripts from Selected GameObjects"))
-            LogMissingScripts(SelectedGameObjects(includeInactive, includePrefabs));
+        {
+            try
+            {
+                LogMissingScripts(SelectedGameObjects(includeInactive, includePrefabs));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error logging missing scripts from selection: {e.Message}\n{e.StackTrace}");
+            }
+        }
 
         EditorGUILayout.Space();
 
         if (GUILayout.Button("Select GameObjects with Missing Scripts"))
-            SelectGameObjectsWithMissingScripts(
-                UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()
-            );
+        {
+            try
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                GameObject[] rootObjects;
+                #if UNITY_2019_3_OR_NEWER
+                var rootList = new List<GameObject>();
+                scene.GetRootGameObjects(rootList);
+                rootObjects = rootList.ToArray();
+                #else
+                rootObjects = scene.GetRootGameObjects();
+                #endif
+                SelectGameObjectsWithMissingScripts(rootObjects);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
+            }
+        }
 
         EditorGUILayout.Space();
 
         if (GUILayout.Button("Remove Missing Scripts"))
-            RemoveMissingScripts(
-                UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()
-            );
+        {
+            try
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                GameObject[] rootObjects;
+                #if UNITY_2019_3_OR_NEWER
+                var rootList = new List<GameObject>();
+                scene.GetRootGameObjects(rootList);
+                rootObjects = rootList.ToArray();
+                #else
+                rootObjects = scene.GetRootGameObjects();
+                #endif
+                RemoveMissingScripts(rootObjects);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+            }
+        }
         if (GUILayout.Button("Remove Missing Scripts from Selected GameObjects"))
-            RemoveMissingScripts(SelectedGameObjects(includeInactive, includePrefabs));
+        {
+            try
+            {
+                RemoveMissingScripts(SelectedGameObjects(includeInactive, includePrefabs));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error removing missing scripts from selection: {e.Message}\n{e.StackTrace}");
+            }
+        }
     }
 
     public static void LogMissingScripts(GameObject[] gameObjects)
     {
-        int gameObjectCount = 0;
-        int missingScriptCount = 0;
-        foreach (GameObject gameObject in gameObjects)
+        try
         {
-            missingScriptCount += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(
-                gameObject
-            );
-            ++gameObjectCount;
-        }
+            if (gameObjects == null)
+            {
+                Debug.LogWarning("GameObjects array is null");
+                return;
+            }
 
-        Debug.Log(
-            string.Format(
-                "Searched {0} GameObjects and found {1} missing scripts.",
-                gameObjectCount,
-                missingScriptCount
-            )
-        );
+            int gameObjectCount = 0;
+            int missingScriptCount = 0;
+            foreach (GameObject gameObject in gameObjects)
+            {
+                if (gameObject != null)
+                {
+                    missingScriptCount += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(
+                        gameObject
+                    );
+                    ++gameObjectCount;
+                }
+            }
+
+            Debug.Log(
+                string.Format(
+                    "Searched {0} GameObjects and found {1} missing scripts.",
+                    gameObjectCount,
+                    missingScriptCount
+                )
+            );
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     public static void SelectGameObjectsWithMissingScripts(GameObject[] gameObjects)
     {
-        List<GameObject> selections = new List<GameObject>();
-
-        foreach (GameObject gameObject in gameObjects)
+        try
         {
-            if (GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(gameObject) > 0)
-                selections.Add(gameObject);
-        }
+            if (gameObjects == null)
+            {
+                Debug.LogWarning("GameObjects array is null");
+                return;
+            }
 
-        Selection.objects = selections.ToArray();
+            List<GameObject> selections = new List<GameObject>();
+
+            foreach (GameObject gameObject in gameObjects)
+            {
+                if (gameObject != null && GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(gameObject) > 0)
+                    selections.Add(gameObject);
+            }
+
+            Selection.objects = selections.ToArray();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     public static void RemoveMissingScripts(GameObject[] gameObjects)
     {
-        int missingScriptCount = 0;
-        foreach (GameObject gameObject in gameObjects)
+        try
         {
-            int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(gameObject);
-            if (count > 0)
+            if (gameObjects == null)
             {
-                Undo.RegisterCompleteObjectUndo(gameObject, "Remove missing scripts");
-                GameObjectUtility.RemoveMonoBehavioursWithMissingScript(gameObject);
-                missingScriptCount += count;
+                Debug.LogWarning("GameObjects array is null");
+                return;
             }
-        }
 
-        Debug.Log(
-            string.Format(
-                "Searched {0} GameObjects and removed {1} missing scripts.",
-                gameObjects.Length,
-                missingScriptCount
-            )
-        );
+            int missingScriptCount = 0;
+            foreach (GameObject gameObject in gameObjects)
+            {
+                if (gameObject != null)
+                {
+                    int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(gameObject);
+                    if (count > 0)
+                    {
+                        Undo.RegisterCompleteObjectUndo(gameObject, "Remove missing scripts");
+                        GameObjectUtility.RemoveMonoBehavioursWithMissingScript(gameObject);
+                        missingScriptCount += count;
+                    }
+                }
+            }
+
+            Debug.Log(
+                string.Format(
+                    "Searched {0} GameObjects and removed {1} missing scripts.",
+                    gameObjects.Length,
+                    missingScriptCount
+                )
+            );
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     #region Sub-utilities

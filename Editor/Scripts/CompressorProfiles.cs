@@ -13,22 +13,46 @@ public class TextureCompressionEditor : EditorWindow
 
         public bool apply(CompressionSettings settings, bool force = false)
         {
-            if (!force && !settings.validate(importer, path, guid))
-                return false;
-            importer.textureCompression = settings.compression;
-            importer.maxTextureSize = settings.maxTextureSize;
-            foreach (string _override in settings.overrides)
+            try
             {
-                importer.SetPlatformTextureSettings(
-                    _override,
-                    settings.maxTextureSize,
-                    settings.format,
-                    settings.compressorQuality,
-                    settings.useCrunchCompression
-                );
+                if (importer == null)
+                    return false;
+
+                if (!force && !settings.validate(importer, path, guid))
+                    return false;
+                    
+                importer.textureCompression = settings.compression;
+                importer.maxTextureSize = settings.maxTextureSize;
+                
+                if (settings.overrides != null)
+                {
+                    foreach (string _override in settings.overrides)
+                    {
+                        try
+                        {
+                            importer.SetPlatformTextureSettings(
+                                _override,
+                                settings.maxTextureSize,
+                                settings.format,
+                                settings.compressorQuality,
+                                settings.useCrunchCompression
+                            );
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogWarning($"Error setting platform texture settings for {path} platform {_override}: {e.Message}");
+                        }
+                    }
+                }
+                
+                importer.SaveAndReimport();
+                return true;
             }
-            importer.SaveAndReimport();
-            return true;
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error applying compression to texture {path}: {e.Message}\n{e.StackTrace}");
+                return false;
+            }
         }
     }
 
@@ -53,34 +77,68 @@ public class TextureCompressionEditor : EditorWindow
 
         public List<CompressorTexture> get()
         {
-            List<CompressorTexture> ret = new List<CompressorTexture>();
-            string[] textureGUIDs = AssetDatabase.FindAssets("t:Texture");
-            foreach (string guid in textureGUIDs)
+            try
             {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                if (importer != null && validate(importer, path, guid))
-                    ret.Add(
-                        new CompressorTexture()
-                        {
-                            guid = guid,
-                            path = path,
-                            importer = importer,
-                        }
-                    );
+                List<CompressorTexture> ret = new List<CompressorTexture>();
+                string[] textureGUIDs = AssetDatabase.FindAssets("t:Texture");
+                foreach (string guid in textureGUIDs)
+                {
+                    try
+                    {
+                        string path = AssetDatabase.GUIDToAssetPath(guid);
+                        if (string.IsNullOrEmpty(path))
+                            continue;
+
+                        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                        if (importer != null && validate(importer, path, guid))
+                            ret.Add(
+                                new CompressorTexture()
+                                {
+                                    guid = guid,
+                                    path = path,
+                                    importer = importer,
+                                }
+                            );
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"Error processing texture with GUID {guid}: {e.Message}");
+                    }
+                }
+                return ret;
             }
-            return ret;
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error getting textures: {e.Message}\n{e.StackTrace}");
+                return new List<CompressorTexture>();
+            }
         }
 
         public bool apply(bool force = false)
         {
-            var success = true;
-            foreach (var texture in get())
+            try
             {
-                if (!texture.apply(this, force))
-                    success = false;
+                var success = true;
+                foreach (var texture in get())
+                {
+                    try
+                    {
+                        if (!texture.apply(this, force))
+                            success = false;
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"Error applying compression to texture {texture.path}: {e.Message}");
+                        success = false;
+                    }
+                }
+                return success;
             }
-            return success;
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error applying compression settings: {e.Message}\n{e.StackTrace}");
+                return false;
+            }
         }
     }
 

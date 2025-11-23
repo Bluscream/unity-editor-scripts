@@ -8,21 +8,40 @@ public class SelectDisabledGameObjects : EditorWindow
     [MenuItem("Tools/Select all disabled GameObjects")]
     private static void SelectAllDisabledGameObjects()
     {
-        var toSelect = new List<GameObject>();
-        List<GameObject> rootObjects = new List<GameObject>();
-        Scene scene = SceneManager.GetActiveScene();
-        scene.GetRootGameObjects(rootObjects);
-        for (int i = 0; i < rootObjects.Count; ++i)
+        try
         {
-            GameObject gameObject = rootObjects[i];
-            if (!gameObject.activeSelf)
+            var toSelect = new List<GameObject>();
+            List<GameObject> rootObjects = new List<GameObject>();
+            Scene scene = SceneManager.GetActiveScene();
+            
+            // Unity 2019.3+ uses GetRootGameObjects with List parameter
+            // Older versions use GetRootGameObjects() which returns GameObject[]
+            #if UNITY_2019_3_OR_NEWER
+            scene.GetRootGameObjects(rootObjects);
+            #else
+            GameObject[] rootArray = scene.GetRootGameObjects();
+            if (rootArray != null)
             {
-                toSelect.Add(gameObject);
+                rootObjects.AddRange(rootArray);
             }
-            SelectDisabledChildren(gameObject, toSelect);
-        }
+            #endif
+            
+            for (int i = 0; i < rootObjects.Count; ++i)
+            {
+                GameObject gameObject = rootObjects[i];
+                if (gameObject != null && !gameObject.activeSelf)
+                {
+                    toSelect.Add(gameObject);
+                }
+                SelectDisabledChildren(gameObject, toSelect);
+            }
 
-        Selection.objects = toSelect.ToArray();
+            Selection.objects = toSelect.ToArray();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error selecting disabled GameObjects: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     private static void SelectDisabledChildren(GameObject parent, List<GameObject> toSelect)

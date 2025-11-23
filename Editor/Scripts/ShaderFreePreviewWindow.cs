@@ -34,30 +34,46 @@ public class ShaderFreePreviewWindow : EditorWindow
 
     private void InitializePreview()
     {
-        previewScene = EditorSceneManager.NewPreviewScene();
-        GameObject cameraObj = new GameObject("Preview Camera");
-        previewCamera = cameraObj.AddComponent<Camera>();
-        previewCamera.transform.position = new Vector3(
-            0,
-            currentZoomDistance,
-            -currentZoomDistance
-        );
-        previewCamera.transform.LookAt(Vector3.zero);
-        previewCamera.cameraType = CameraType.Preview;
-        previewCamera.scene = previewScene.Value;
-        renderTexture = new RenderTexture(1024, 768, 16);
-        displayTexture = new Texture2D(
-            renderTexture.width,
-            renderTexture.height,
-            TextureFormat.RGBA32,
-            false
-        );
-        standardMaterial = new Material(Shader.Find("Standard"));
-        previewInstances = new List<GameObject>();
-        originalObjects = new List<GameObject>();
-        if (Selection.objects.Length > 0)
+        try
         {
-            UpdatePreviewObjects();
+            previewScene = EditorSceneManager.NewPreviewScene();
+            GameObject cameraObj = new GameObject("Preview Camera");
+            previewCamera = cameraObj.AddComponent<Camera>();
+            previewCamera.transform.position = new Vector3(
+                0,
+                currentZoomDistance,
+                -currentZoomDistance
+            );
+            previewCamera.transform.LookAt(Vector3.zero);
+            previewCamera.cameraType = CameraType.Preview;
+            previewCamera.scene = previewScene.Value;
+            renderTexture = new RenderTexture(1024, 768, 16);
+            displayTexture = new Texture2D(
+                renderTexture.width,
+                renderTexture.height,
+                TextureFormat.RGBA32,
+                false
+            );
+            Shader standardShader = Shader.Find("Standard");
+            if (standardShader != null)
+            {
+                standardMaterial = new Material(standardShader);
+            }
+            else
+            {
+                Debug.LogWarning("Standard shader not found, using default material");
+                standardMaterial = new Material(Shader.Find("Diffuse"));
+            }
+            previewInstances = new List<GameObject>();
+            originalObjects = new List<GameObject>();
+            if (Selection.objects != null && Selection.objects.Length > 0)
+            {
+                UpdatePreviewObjects();
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error initializing preview: {e.Message}\n{e.StackTrace}");
         }
     }
 
@@ -80,9 +96,18 @@ public class ShaderFreePreviewWindow : EditorWindow
             {
                 if (selectedObj is GameObject gameObject)
                 {
-                    GameObject instance =
-                        PrefabUtility.InstantiatePrefab(gameObject, previewScene.Value)
-                        as GameObject;
+                    GameObject instance = null;
+                    #if UNITY_2018_3_OR_NEWER
+                    // Unity 2018.3+ uses InstantiatePrefab with scene parameter
+                    instance = PrefabUtility.InstantiatePrefab(gameObject, previewScene.Value) as GameObject;
+                    #else
+                    // Older versions don't support scene parameter
+                    instance = PrefabUtility.InstantiatePrefab(gameObject) as GameObject;
+                    if (instance != null && previewScene.HasValue)
+                    {
+                        SceneManager.MoveGameObjectToScene(instance, previewScene.Value);
+                    }
+                    #endif
                     if (instance != null)
                     {
                         previewInstances.Add(instance);
@@ -224,7 +249,14 @@ public class ShaderFreePreviewWindow : EditorWindow
         }
         if (previewScene.HasValue)
         {
-            EditorSceneManager.ClosePreviewScene(previewScene.Value);
+            try
+            {
+                EditorSceneManager.ClosePreviewScene(previewScene.Value);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"Error closing preview scene: {e.Message}");
+            }
         }
         previewScene = null;
         previewCamera = null;

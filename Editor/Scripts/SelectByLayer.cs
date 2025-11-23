@@ -29,19 +29,45 @@ namespace EPPZ.Editor
 
         public static void FindAndSelectObjectsByLayer()
         {
-            GameObject[] objects = Resources
-                .FindObjectsOfTypeAll<GameObject>()
-                .Where(gameObject => gameObject.hideFlags == HideFlags.None)
-                .ToArray();
-            List<GameObject> matches = new List<GameObject>();
-            foreach (GameObject eachGameObject in objects)
+            try
             {
-                if (eachGameObject.layer == layerIndex)
+                GameObject[] objects;
+                
+                // Resources.FindObjectsOfTypeAll is deprecated, use Object.FindObjectsOfType instead
+                // But we need all objects including inactive ones, so we use the deprecated method
+                // with a fallback for newer Unity versions
+                #if UNITY_2023_1_OR_NEWER
+                // Unity 2023.1+ has FindObjectsByType with FindObjectsInactive.Include
+                objects = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .Where(gameObject => gameObject.hideFlags == HideFlags.None)
+                    .ToArray();
+                #elif UNITY_2020_1_OR_NEWER
+                // Unity 2020.1+ has FindObjectsOfType with includeInactive parameter
+                objects = Object.FindObjectsOfType<GameObject>(true)
+                    .Where(gameObject => gameObject.hideFlags == HideFlags.None)
+                    .ToArray();
+                #else
+                // Fallback to deprecated method for older versions
+                objects = Resources
+                    .FindObjectsOfTypeAll<GameObject>()
+                    .Where(gameObject => gameObject.hideFlags == HideFlags.None)
+                    .ToArray();
+                #endif
+                
+                List<GameObject> matches = new List<GameObject>();
+                foreach (GameObject eachGameObject in objects)
                 {
-                    matches.Add(eachGameObject);
+                    if (eachGameObject != null && eachGameObject.layer == layerIndex)
+                    {
+                        matches.Add(eachGameObject);
+                    }
                 }
+                Selection.objects = matches.ToArray();
             }
-            Selection.objects = matches.ToArray();
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error finding objects by layer: {e.Message}\n{e.StackTrace}");
+            }
         }
     }
 }
