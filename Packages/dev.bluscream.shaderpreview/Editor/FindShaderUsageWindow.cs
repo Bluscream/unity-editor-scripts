@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using static Bluscream.Utils;
 
 namespace Bluscream.ShaderTest
 {
@@ -188,7 +188,33 @@ namespace Bluscream.ShaderTest
             }
             else if (!string.IsNullOrEmpty(shaderSearchText))
             {
-                // Search by name or partial path
+                // Check if search text is in quotes (exact match)
+                bool isExactMatch = Utils.IsQuotedPattern(shaderSearchText);
+                string searchPattern = isExactMatch ? Utils.UnquotePattern(shaderSearchText) : shaderSearchText;
+                
+                // First, try to find built-in shaders using Shader.Find()
+                // This handles Unity's built-in shaders like "Standard", "Unlit/Color", etc.
+                // Shader.Find() only works with exact shader names, so we try it for exact matches
+                // or when the pattern doesn't contain wildcards
+                if (isExactMatch || (!searchPattern.Contains("*") && !searchPattern.Contains("?")))
+                {
+                    Shader builtInShader = Shader.Find(searchPattern);
+                    if (builtInShader != null)
+                    {
+                        // For exact matches, verify it matches exactly
+                        // For non-wildcard patterns, check if it matches
+                        bool nameMatches = isExactMatch 
+                            ? string.Equals(builtInShader.name, searchPattern, StringComparison.OrdinalIgnoreCase)
+                            : Utils.GlobMatch(builtInShader.name, searchPattern);
+                        
+                        if (nameMatches)
+                        {
+                            matchingShaders.Add(builtInShader);
+                        }
+                    }
+                }
+                
+                // Also search project shaders using AssetDatabase
                 string[] shaderGuids = AssetDatabase.FindAssets("t:Shader");
                 
                 foreach (string guid in shaderGuids)
@@ -196,21 +222,17 @@ namespace Bluscream.ShaderTest
                     string path = AssetDatabase.GUIDToAssetPath(guid);
                     Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
                     
-                    if (shader != null)
+                    if (shader != null && !matchingShaders.Contains(shader))
                     {
-                        // Check if search text is in quotes (exact match)
-                        bool isExactMatch = IsQuotedPattern(shaderSearchText);
-                        string searchPattern = isExactMatch ? UnquotePattern(shaderSearchText) : shaderSearchText;
-                        
                         // Check shader name (case-insensitive, glob pattern or exact match)
                         bool nameMatches = isExactMatch 
                             ? string.Equals(shader.name, searchPattern, StringComparison.OrdinalIgnoreCase)
-                            : GlobMatch(shader.name, searchPattern);
+                            : Utils.GlobMatch(shader.name, searchPattern);
                         
                         // Check shader path (case-insensitive, glob pattern or exact match)
                         bool pathMatches = isExactMatch
                             ? string.Equals(path, searchPattern, StringComparison.OrdinalIgnoreCase)
-                            : GlobMatch(path, searchPattern);
+                            : Utils.GlobMatch(path, searchPattern);
                         
                         if (nameMatches || pathMatches)
                         {
@@ -259,7 +281,7 @@ namespace Bluscream.ShaderTest
                                 renderer = renderer,
                                 materialIndex = materials.Length > 1 ? i : -1,
                                 materialPath = materialPath,
-                                gameObjectPath = GetGameObjectPath(renderer.gameObject)
+                                gameObjectPath = Utils.GetGameObjectPath(renderer.gameObject)
                             });
                         }
                     }
@@ -296,78 +318,5 @@ namespace Bluscream.ShaderTest
             foundMaterials = foundMaterials.OrderBy(m => m.material.name).ToList();
         }
 
-        private string GetGameObjectPath(GameObject obj)
-        {
-            if (obj == null) return "";
-            
-            string path = obj.name;
-            Transform current = obj.transform.parent;
-            while (current != null)
-            {
-                path = current.name + "/" + path;
-                current = current.parent;
-            }
-            return path;
-        }
-
-        /// <summary>
-        /// Checks if a pattern is in quotes (exact match)
-        /// </summary>
-        private bool IsQuotedPattern(string pattern)
-        {
-            if (string.IsNullOrEmpty(pattern))
-                return false;
-
-            pattern = pattern.Trim();
-            return (pattern.StartsWith("\"") && pattern.EndsWith("\"")) ||
-                   (pattern.StartsWith("'") && pattern.EndsWith("'"));
-        }
-
-        /// <summary>
-        /// Removes quotes from a pattern
-        /// </summary>
-        private string UnquotePattern(string pattern)
-        {
-            if (string.IsNullOrEmpty(pattern))
-                return pattern;
-
-            pattern = pattern.Trim();
-            if ((pattern.StartsWith("\"") && pattern.EndsWith("\"")) ||
-                (pattern.StartsWith("'") && pattern.EndsWith("'")))
-            {
-                return pattern.Substring(1, pattern.Length - 2);
-            }
-            return pattern;
-        }
-
-        /// <summary>
-        /// Matches a string against a glob pattern (case-insensitive)
-        /// Supports * (any sequence) and ? (single character)
-        /// </summary>
-        private bool GlobMatch(string input, string pattern)
-        {
-            if (string.IsNullOrEmpty(pattern))
-                return false;
-
-            if (string.IsNullOrEmpty(input))
-                return false;
-
-            // Convert glob pattern to regex
-            // Escape special regex characters except * and ?
-            string regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\*", ".*")  // * matches any sequence
-                .Replace("\\?", ".")   // ? matches single character
-                + "$";
-
-            try
-            {
-                return Regex.IsMatch(input, regexPattern, RegexOptions.IgnoreCase);
-            }
-            catch
-            {
-                // If regex fails, fall back to simple case-insensitive contains
-                return input.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0;
-            }
-        }
     }
 }

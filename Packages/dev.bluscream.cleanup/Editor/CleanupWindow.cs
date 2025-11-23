@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Bluscream;
+using static Bluscream.Utils;
 
 namespace Bluscream.Cleanup
 {
@@ -88,7 +89,7 @@ namespace Bluscream.Cleanup
                 if (unusedAssets.Count > 0)
                 {
                     long totalSize = unusedAssets.Sum(a => a.sizeInBytes);
-                    EditorGUILayout.LabelField($"Total size: {FormatBytes(totalSize)}");
+                    EditorGUILayout.LabelField($"Total size: {Utils.FormatBytes(totalSize)}");
                     EditorGUILayout.Space(5);
 
                     scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(200));
@@ -97,7 +98,7 @@ namespace Bluscream.Cleanup
                         EditorGUILayout.BeginHorizontal();
                         EditorGUILayout.LabelField(info.assetPath, GUILayout.Width(300));
                         EditorGUILayout.LabelField(info.assetType, GUILayout.Width(100));
-                        EditorGUILayout.LabelField(FormatBytes(info.sizeInBytes), GUILayout.Width(80));
+                        EditorGUILayout.LabelField(Utils.FormatBytes(info.sizeInBytes), GUILayout.Width(80));
                         EditorGUILayout.LabelField(info.reason, GUILayout.Width(200));
                         if (GUILayout.Button("Ping", GUILayout.Width(50)))
                         {
@@ -180,7 +181,7 @@ namespace Bluscream.Cleanup
 
             // Show summary
             long totalSize = unusedAssets.Sum(a => a.sizeInBytes);
-            string message = $"You are about to delete {unusedAssets.Count} unused assets ({FormatBytes(totalSize)}).\n\n" +
+            string message = $"You are about to delete {unusedAssets.Count} unused assets ({Utils.FormatBytes(totalSize)}).\n\n" +
                            "This action cannot be undone.\n\n" +
                            "Continue?";
 
@@ -299,17 +300,5 @@ namespace Bluscream.Cleanup
             }
         }
 
-        private string FormatBytes(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB" };
-            double len = bytes;
-            int order = 0;
-            while (len >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                len = len / 1024;
-            }
-            return $"{len:0.##} {sizes[order]}";
-        }
     }
 }

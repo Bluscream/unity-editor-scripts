@@ -117,22 +117,8 @@ namespace Bluscream.Replacer
                 else if (sourceGameObject != null)
                 {
                     // Check if source is in scene or is a prefab instance
-                    #if UNITY_2018_3_OR_NEWER
-                    bool isPrefabInstance = PrefabUtility.IsPartOfPrefabInstance(sourceGameObject);
-                    bool isPrefabAsset = PrefabUtility.IsPartOfPrefabAsset(sourceGameObject);
-                    #else
-                    PrefabType prefabType;
-                    try
-                    {
-                        prefabType = PrefabUtility.GetPrefabType(sourceGameObject);
-                    }
-                    catch
-                    {
-                        prefabType = PrefabType.None;
-                    }
-                    bool isPrefabInstance = prefabType == PrefabType.PrefabInstance;
-                    bool isPrefabAsset = prefabType == PrefabType.Prefab;
-                    #endif
+                    bool isPrefabInstance = Utils.IsPrefabInstance(sourceGameObject);
+                    bool isPrefabAsset = Utils.IsPrefabAsset(sourceGameObject);
 
                     if (isPrefabAsset)
                     {
@@ -142,11 +128,7 @@ namespace Bluscream.Replacer
                     else if (isPrefabInstance)
                     {
                         // It's a prefab instance, instantiate the prefab asset
-                        #if UNITY_2018_3_OR_NEWER
-                        GameObject prefabAsset = PrefabUtility.GetCorrespondingObjectFromSource(sourceGameObject);
-                        #else
-                        GameObject prefabAsset = PrefabUtility.GetPrefabParent(sourceGameObject) as GameObject;
-                        #endif
+                        GameObject prefabAsset = Utils.GetPrefabAsset(sourceGameObject);
                         if (prefabAsset != null)
                         {
                             sourceInstance = PrefabUtility.InstantiatePrefab(prefabAsset) as GameObject;

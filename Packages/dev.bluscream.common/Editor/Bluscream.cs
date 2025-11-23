@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
@@ -392,6 +393,157 @@ namespace Bluscream
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Formats bytes to human-readable string (B, KB, MB, GB)
+        /// </summary>
+        public static string FormatBytes(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
+        }
+
+        /// <summary>
+        /// Checks if a pattern is in quotes (exact match)
+        /// </summary>
+        public static bool IsQuotedPattern(string pattern)
+        {
+            if (string.IsNullOrEmpty(pattern))
+                return false;
+
+            pattern = pattern.Trim();
+            return (pattern.StartsWith("\"") && pattern.EndsWith("\"")) ||
+                   (pattern.StartsWith("'") && pattern.EndsWith("'"));
+        }
+
+        /// <summary>
+        /// Removes quotes from a pattern
+        /// </summary>
+        public static string UnquotePattern(string pattern)
+        {
+            if (string.IsNullOrEmpty(pattern))
+                return pattern;
+
+            pattern = pattern.Trim();
+            if ((pattern.StartsWith("\"") && pattern.EndsWith("\"")) ||
+                (pattern.StartsWith("'") && pattern.EndsWith("'")))
+            {
+                return pattern.Substring(1, pattern.Length - 2);
+            }
+            return pattern;
+        }
+
+        /// <summary>
+        /// Matches a string against a glob pattern (case-insensitive)
+        /// Supports * (any sequence) and ? (single character)
+        /// </summary>
+        public static bool GlobMatch(string input, string pattern)
+        {
+            if (string.IsNullOrEmpty(pattern))
+                return false;
+
+            if (string.IsNullOrEmpty(input))
+                return false;
+
+            // Convert glob pattern to regex
+            // Escape special regex characters except * and ?
+            string regexPattern = "^" + Regex.Escape(pattern)
+                .Replace("\\*", ".*")  // * matches any sequence
+                .Replace("\\?", ".")   // ? matches single character
+                + "$";
+
+            try
+            {
+                return Regex.IsMatch(input, regexPattern, RegexOptions.IgnoreCase);
+            }
+            catch
+            {
+                // If regex fails, fall back to simple case-insensitive contains
+                return input.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+        }
+
+        /// <summary>
+        /// Checks if a GameObject is part of a prefab instance (cross-version compatible)
+        /// </summary>
+        public static bool IsPrefabInstance(GameObject go)
+        {
+            if (go == null) return false;
+
+            #if UNITY_2018_3_OR_NEWER
+            return PrefabUtility.IsPartOfPrefabInstance(go);
+            #else
+            try
+            {
+                PrefabType prefabType = PrefabUtility.GetPrefabType(go);
+                return prefabType == PrefabType.PrefabInstance;
+            }
+            catch
+            {
+                return false;
+            }
+            #endif
+        }
+
+        /// <summary>
+        /// Checks if a GameObject is a prefab asset (cross-version compatible)
+        /// </summary>
+        public static bool IsPrefabAsset(GameObject go)
+        {
+            if (go == null) return false;
+
+            #if UNITY_2018_3_OR_NEWER
+            return PrefabUtility.IsPartOfPrefabAsset(go);
+            #else
+            try
+            {
+                PrefabType prefabType = PrefabUtility.GetPrefabType(go);
+                return prefabType == PrefabType.Prefab;
+            }
+            catch
+            {
+                return false;
+            }
+            #endif
+        }
+
+        /// <summary>
+        /// Gets the prefab asset from a prefab instance (cross-version compatible)
+        /// Returns null if the GameObject is not a prefab instance
+        /// </summary>
+        public static GameObject GetPrefabAsset(GameObject instance)
+        {
+            if (instance == null) return null;
+
+            #if UNITY_2018_3_OR_NEWER
+            if (PrefabUtility.IsPartOfPrefabInstance(instance))
+            {
+                return PrefabUtility.GetCorrespondingObjectFromSource(instance);
+            }
+            return null;
+            #else
+            try
+            {
+                PrefabType prefabType = PrefabUtility.GetPrefabType(instance);
+                if (prefabType == PrefabType.PrefabInstance)
+                {
+                    return PrefabUtility.GetPrefabParent(instance) as GameObject;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+            #endif
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static Bluscream.Utils;
 
 namespace Bluscream.ComponentRemover
 {
@@ -290,7 +291,7 @@ namespace Bluscream.ComponentRemover
                 if (instance == null)
                     return;
 
-                var source = PrefabUtility.GetCorrespondingObjectFromSource(instance);
+                var source = Utils.GetPrefabAsset(instance);
                 if (source == null || !prefabs.Add(source))
                     return;
                 RecursivePrefabSource(source, prefabs, ref compCount, ref goCount);
@@ -716,7 +717,7 @@ namespace Bluscream.ComponentRemover
 
         private static void PrefabInstances(GameObject instance, HashSet<GameObject> prefabs)
         {
-            GameObject source = PrefabUtility.GetCorrespondingObjectFromSource(instance);
+            GameObject source = Utils.GetPrefabAsset(instance);
             if (source == null || !prefabs.Add(source))
                 return;
 
