@@ -10,7 +10,7 @@ namespace Bluscream.Cleanup
     /// </summary>
     public static class CleanupMenu
     {
-        [MenuItem("Assets/Cleanup/Cleanup This Folder (Recursive)", false, 2000)]
+        [MenuItem("Bluscream/Cleanup/Cleanup This Folder (Recursive)", false, 2000)]
         public static void CleanupFolderRecursive()
         {
             string folderPath = GetSelectedFolderPath();
@@ -28,7 +28,7 @@ namespace Bluscream.Cleanup
             }
         }
 
-        [MenuItem("Assets/Cleanup/Cleanup This Folder (Non-Recursive)", false, 2001)]
+        [MenuItem("Bluscream/Cleanup/Cleanup This Folder (Non-Recursive)", false, 2001)]
         public static void CleanupFolderNonRecursive()
         {
             string folderPath = GetSelectedFolderPath();
@@ -46,8 +46,8 @@ namespace Bluscream.Cleanup
             }
         }
 
-        [MenuItem("Assets/Cleanup/Cleanup This Folder (Recursive)", true)]
-        [MenuItem("Assets/Cleanup/Cleanup This Folder (Non-Recursive)", true)]
+        [MenuItem("Bluscream/Cleanup/Cleanup This Folder (Recursive)", true)]
+        [MenuItem("Bluscream/Cleanup/Cleanup This Folder (Non-Recursive)", true)]
         public static bool ValidateCleanupFolder()
         {
             string folderPath = GetSelectedFolderPath();

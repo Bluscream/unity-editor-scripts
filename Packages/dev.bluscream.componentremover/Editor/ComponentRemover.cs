@@ -16,7 +16,7 @@ namespace Bluscream.ComponentRemover
     {
         #region Context Menu Entries - Remove Missing Scripts
 
-        [MenuItem("Tools/Component Remover/Remove Missing Scripts from Selected (Recursive)", false, 1)]
+        [MenuItem("Bluscream/Component Remover/Remove Missing Scripts from Selected (Recursive)", false, 1)]
         public static void RemoveMissingScriptsRecursively()
         {
             try
@@ -78,7 +78,7 @@ namespace Bluscream.ComponentRemover
             }
         }
 
-        [MenuItem("Tools/Component Remover/Remove Missing Scripts from Selected (Visit Prefabs)", false, 2)]
+        [MenuItem("Bluscream/Component Remover/Remove Missing Scripts from Selected (Visit Prefabs)", false, 2)]
         public static void RemoveMissingScriptsRecursivelyVisitPrefabs()
         {
             try
@@ -144,7 +144,7 @@ namespace Bluscream.ComponentRemover
             }
         }
 
-        [MenuItem("Tools/Component Remover/Remove Missing Scripts from Scene", false, 3)]
+        [MenuItem("Bluscream/Component Remover/Remove Missing Scripts from Scene", false, 3)]
         public static void RemoveMissingScriptsFromScene()
         {
             try
@@ -177,7 +177,7 @@ namespace Bluscream.ComponentRemover
 
         #region Context Menu Entries - Log Missing Scripts
 
-        [MenuItem("Tools/Component Remover/Log Missing Scripts in Scene", false, 11)]
+        [MenuItem("Bluscream/Component Remover/Log Missing Scripts in Scene", false, 11)]
         public static void LogMissingScriptsInScene()
         {
             try
@@ -199,7 +199,7 @@ namespace Bluscream.ComponentRemover
             }
         }
 
-        [MenuItem("Tools/Component Remover/Log Missing Scripts in Selected", false, 12)]
+        [MenuItem("Bluscream/Component Remover/Log Missing Scripts in Selected", false, 12)]
         public static void LogMissingScriptsInSelected()
         {
             try
@@ -221,7 +221,7 @@ namespace Bluscream.ComponentRemover
 
         #region Context Menu Entries - Select Missing Scripts
 
-        [MenuItem("Tools/Component Remover/Select GameObjects with Missing Scripts", false, 21)]
+        [MenuItem("Bluscream/Component Remover/Select GameObjects with Missing Scripts", false, 21)]
         public static void SelectGameObjectsWithMissingScriptsMenu()
         {
             try
@@ -247,13 +247,13 @@ namespace Bluscream.ComponentRemover
 
         #region Context Menu Entries - Windows
 
-        [MenuItem("Tools/Component Remover/Find Missing Scripts Window", false, 31)]
+        [MenuItem("Bluscream/Component Remover/Find Missing Scripts Window", false, 31)]
         public static void ShowFindMissingScriptsWindow()
         {
             EditorWindow.GetWindow<FindMissingScriptsWindow>("Missing Script Finder").Show();
         }
 
-        [MenuItem("Tools/Component Remover/Missing Script Utility Window", false, 32)]
+        [MenuItem("Bluscream/Component Remover/Missing Script Utility Window", false, 32)]
         public static void ShowMissingScriptUtilityWindow()
         {
             EditorWindow.GetWindow<MissingScriptUtility>("Missing Script Utility").Show();

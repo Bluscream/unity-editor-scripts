@@ -21,7 +21,7 @@ namespace Bluscream.BackupSystem
         private string progressMessage = "";
         private float progressValue = 0f;
 
-        [MenuItem("Tools/Backup System")]
+        [MenuItem("Bluscream/Backup System/Backup System")]
         public static void ShowWindow()
         {
             BackupWindow window = GetWindow<BackupWindow>("Backup System");

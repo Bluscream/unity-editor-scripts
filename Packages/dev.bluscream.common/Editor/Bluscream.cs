@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
@@ -544,6 +546,146 @@ namespace Bluscream
                 return null;
             }
             #endif
+        }
+
+        /// <summary>
+        /// Gets all available shaders (built-in Unity shaders + project shaders)
+        /// Returns a list of all unique shaders sorted by name
+        /// </summary>
+        public static List<Shader> GetAllShaders()
+        {
+            List<Shader> allShaders = new List<Shader>();
+            HashSet<string> shaderNamesSet = new HashSet<string>();
+            
+            // Add common built-in shaders
+            string[] commonBuiltInShaders = new string[]
+            {
+                "Standard",
+                "Standard (Specular setup)",
+                "Unlit/Color",
+                "Unlit/Texture",
+                "Unlit/Transparent",
+                "Unlit/Transparent Cutout",
+                "Legacy Shaders/Diffuse",
+                "Legacy Shaders/Specular",
+                "Legacy Shaders/Bumped Diffuse",
+                "Legacy Shaders/Bumped Specular",
+                "Legacy Shaders/Transparent/Diffuse",
+                "Legacy Shaders/Transparent/Specular",
+                "Legacy Shaders/Transparent/Bumped Diffuse",
+                "Legacy Shaders/Transparent/Bumped Specular",
+                "Legacy Shaders/Transparent/Cutout/Diffuse",
+                "Legacy Shaders/Transparent/Cutout/Specular",
+                "Legacy Shaders/Transparent/Cutout/Bumped Diffuse",
+                "Legacy Shaders/Transparent/Cutout/Bumped Specular",
+                "Mobile/Diffuse",
+                "Mobile/Bumped Diffuse",
+                "Mobile/Bumped Specular",
+                "Mobile/Unlit (Supports Lightmap)",
+                "Mobile/VertexLit",
+                "Sprites/Default",
+                "Sprites/Diffuse",
+                "UI/Default",
+                "UI/Unlit/Detail",
+                "UI/Unlit/Text",
+                "UI/Unlit/Transparent",
+                "Particles/Standard Surface",
+                "Particles/Standard Unlit",
+                "Particles/Additive",
+                "Particles/Additive (Soft)",
+                "Particles/Alpha Blended",
+                "Particles/Alpha Blended Premultiply",
+                "Particles/Multiply",
+                "Particles/Multiply (Double)",
+                "Particles/VertexLit Blended",
+                "Skybox/6 Sided",
+                "Skybox/Cubemap",
+                "Skybox/Procedural"
+            };
+            
+            foreach (string shaderName in commonBuiltInShaders)
+            {
+                Shader shader = Shader.Find(shaderName);
+                if (shader != null && !shaderNamesSet.Contains(shader.name))
+                {
+                    allShaders.Add(shader);
+                    shaderNamesSet.Add(shader.name);
+                }
+            }
+            
+            // Add all project shaders
+            string[] shaderGuids = UnityEditor.AssetDatabase.FindAssets("t:Shader");
+            foreach (string guid in shaderGuids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                Shader shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>(path);
+                
+                if (shader != null && !shaderNamesSet.Contains(shader.name))
+                {
+                    allShaders.Add(shader);
+                    shaderNamesSet.Add(shader.name);
+                }
+            }
+            
+            // Sort shaders by name
+            allShaders.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase));
+            
+            return allShaders;
+        }
+
+        /// <summary>
+        /// Gets all project shaders grouped by their folder path
+        /// Returns a dictionary where keys are folder paths and values are lists of shaders in that folder
+        /// Hidden shaders are grouped under "Hidden"
+        /// </summary>
+        public static Dictionary<string, List<Shader>> GetShadersByPath()
+        {
+            Dictionary<string, List<Shader>> shadersByPath = new Dictionary<string, List<Shader>>();
+            
+            // Find all shaders in the project
+            string[] shaderGuids = UnityEditor.AssetDatabase.FindAssets("t:Shader");
+            
+            const string hiddenGroupName = "Hidden";
+            
+            foreach (string guid in shaderGuids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                Shader shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>(path);
+                
+                if (shader != null)
+                {
+                    // Check if this is a Hidden shader
+                    bool isHidden = shader.name.StartsWith("Hidden/");
+                    
+                    string folderPath;
+                    if (isHidden)
+                    {
+                        // Group all Hidden shaders together
+                        folderPath = hiddenGroupName;
+                    }
+                    else
+                    {
+                        // Extract folder path for non-hidden shaders
+                        int lastSlash = path.LastIndexOf('/');
+                        folderPath = lastSlash >= 0 ? path.Substring(0, lastSlash) : "Root";
+                        
+                        // Remove "Assets/" prefix for cleaner display
+                        if (folderPath.StartsWith("Assets/"))
+                        {
+                            folderPath = folderPath.Substring(7);
+                        }
+                    }
+                    
+                    if (!shadersByPath.ContainsKey(folderPath))
+                    {
+                        shadersByPath[folderPath] = new List<Shader>();
+                    }
+                    
+                    shadersByPath[folderPath].Add(shader);
+                }
+            }
+            
+            return shadersByPath;
         }
 
         /// <summary>

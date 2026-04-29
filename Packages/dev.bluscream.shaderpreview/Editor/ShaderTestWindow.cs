@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using static Bluscream.Utils;
 
 namespace Bluscream.ShaderTest
 {
@@ -18,7 +19,7 @@ namespace Bluscream.ShaderTest
         private Dictionary<string, List<Shader>> shadersByPath = new Dictionary<string, List<Shader>>();
         private bool shadersLoaded = false;
 
-        [MenuItem("Tools/Shader Test")]
+        [MenuItem("Bluscream/Shader Preview/Shader Test")]
         public static void ShowWindow()
         {
             ShaderTestWindow window = GetWindow<ShaderTestWindow>("Shader Test");
@@ -167,51 +168,7 @@ namespace Bluscream.ShaderTest
 
         private void LoadShaders()
         {
-            shadersByPath.Clear();
-            
-            // Find all shaders in the project
-            string[] shaderGuids = AssetDatabase.FindAssets("t:Shader");
-            
-            const string hiddenGroupName = "Hidden";
-            
-            foreach (string guid in shaderGuids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
-                
-                if (shader != null)
-                {
-                    // Check if this is a Hidden shader
-                    bool isHidden = shader.name.StartsWith("Hidden/");
-                    
-                    string folderPath;
-                    if (isHidden)
-                    {
-                        // Group all Hidden shaders together
-                        folderPath = hiddenGroupName;
-                    }
-                    else
-                    {
-                        // Extract folder path for non-hidden shaders
-                        int lastSlash = path.LastIndexOf('/');
-                        folderPath = lastSlash >= 0 ? path.Substring(0, lastSlash) : "Root";
-                        
-                        // Remove "Assets/" prefix for cleaner display
-                        if (folderPath.StartsWith("Assets/"))
-                        {
-                            folderPath = folderPath.Substring(7);
-                        }
-                    }
-                    
-                    if (!shadersByPath.ContainsKey(folderPath))
-                    {
-                        shadersByPath[folderPath] = new List<Shader>();
-                    }
-                    
-                    shadersByPath[folderPath].Add(shader);
-                }
-            }
-            
+            shadersByPath = Utils.GetShadersByPath();
             shadersLoaded = true;
         }
 

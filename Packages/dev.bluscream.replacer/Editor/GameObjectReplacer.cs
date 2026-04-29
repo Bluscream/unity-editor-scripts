@@ -70,6 +70,41 @@ namespace Bluscream.Replacer
         }
 
         /// <summary>
+        /// Recursively copies all children from source transform to destination transform
+        /// </summary>
+        private static void CopyChildrenRecursive(Transform sourceParent, Transform destParent)
+        {
+            // Iterate through all children of the source
+            for (int i = 0; i < sourceParent.childCount; i++)
+            {
+                Transform sourceChild = sourceParent.GetChild(i);
+                
+                // Skip inactive children if needed, or copy all regardless
+                // For now, we'll copy all children
+                
+                // Duplicate the child GameObject
+                GameObject duplicatedChild = UnityEngine.Object.Instantiate(sourceChild.gameObject);
+                
+                // Register undo for the new child
+                Undo.RegisterCreatedObjectUndo(duplicatedChild, "Replace GameObject - Copy Children");
+                
+                // Set parent to destination
+                duplicatedChild.transform.SetParent(destParent, false);
+                
+                // Preserve local transform properties
+                duplicatedChild.transform.localPosition = sourceChild.localPosition;
+                duplicatedChild.transform.localRotation = sourceChild.localRotation;
+                duplicatedChild.transform.localScale = sourceChild.localScale;
+                
+                // Preserve name
+                duplicatedChild.name = sourceChild.name;
+                
+                // Recursively copy children of this child
+                CopyChildrenRecursive(sourceChild, duplicatedChild.transform);
+            }
+        }
+
+        /// <summary>
         /// Replaces the target GameObject with the source
         /// </summary>
         public static void ReplaceGameObject(GameObject target)
@@ -165,6 +200,9 @@ namespace Bluscream.Replacer
 
                 // Rename source to target's original name
                 sourceInstance.name = targetName;
+
+                // Copy all child GameObjects from target to source instance
+                CopyChildrenRecursive(target.transform, sourceInstance.transform);
 
                 // Select the new instance
                 Selection.activeGameObject = sourceInstance;

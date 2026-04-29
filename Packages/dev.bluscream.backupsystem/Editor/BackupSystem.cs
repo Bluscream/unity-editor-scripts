@@ -176,6 +176,51 @@ namespace Bluscream.BackupSystem
         }
 
         /// <summary>
+        /// Physically copies an asset file to the backup folder.
+        /// </summary>
+        public static string BackupAssetFile(string assetPath, BackupConfig config, System.Action<string, float> progressCallback = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(assetPath) || !File.Exists(assetPath))
+                {
+                    Debug.LogWarning($"Asset file not found for backup: {assetPath}");
+                    return null;
+                }
+
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+                string backupFolderName = string.IsNullOrEmpty(config.backupName) ? timestamp : $"{config.backupName}_{timestamp}";
+                string backupFolder = Path.Combine(config.backupLocation, backupFolderName, "Assets");
+
+                if (!Directory.Exists(backupFolder))
+                {
+                    Directory.CreateDirectory(backupFolder);
+                }
+
+                string fileName = Path.GetFileName(assetPath);
+                string destPath = Path.Combine(backupFolder, fileName);
+                
+                File.Copy(assetPath, destPath, true);
+                
+                // Also copy the .meta file if it exists
+                string metaPath = assetPath + ".meta";
+                if (File.Exists(metaPath))
+                {
+                    File.Copy(metaPath, destPath + ".meta", true);
+                }
+
+                Debug.Log($"Backed up asset file to: {destPath}");
+                return destPath;
+            }
+            catch (Exception e)
+            {
+                progressCallback?.Invoke("Asset Backup failed!", 1f);
+                Debug.LogError($"Error creating asset file backup: {e.Message}\n{e.StackTrace}");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Loads metadata from a backup folder
         /// </summary>
         public static BackupMetadata LoadMetadata(string backupPath)

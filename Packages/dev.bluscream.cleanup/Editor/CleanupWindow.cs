@@ -21,7 +21,7 @@ namespace Bluscream.Cleanup
         public bool recursive = true;
         private string analysisStatus = "";
 
-        [MenuItem("Tools/Asset Cleanup")]
+        [MenuItem("Bluscream/Cleanup/Asset Cleanup")]
         public static CleanupWindow ShowWindow()
         {
             CleanupWindow window = GetWindow<CleanupWindow>("Asset Cleanup");

@@ -184,7 +184,7 @@ namespace Bluscream.TextureCompressor
         };
 
         // DON'T EDIT THIS
-        [MenuItem("Window/Texture Compression Editor")]
+        [MenuItem("Bluscream/Texture Compressor/Texture Compression Editor")]
         public static void ShowWindow()
         {
             TextureCompressionEditor window = GetWindow<TextureCompressionEditor>();

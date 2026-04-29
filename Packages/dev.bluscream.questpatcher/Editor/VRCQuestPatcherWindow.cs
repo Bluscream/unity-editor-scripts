@@ -20,7 +20,7 @@ namespace VRCQuestPatcher
         private Vector2 scrollPosition;
         private string lastBackupPath = "";
 
-        [MenuItem("VRChat/Quest Patcher")]
+        [MenuItem("Bluscream/Quest Patcher/Quest Patcher")]
         public static void ShowWindow()
         {
             VRCQuestPatcherWindow window = GetWindow<VRCQuestPatcherWindow>("QuestPatcher");

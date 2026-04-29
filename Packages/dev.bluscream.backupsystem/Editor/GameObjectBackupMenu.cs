@@ -8,7 +8,7 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class GameObjectBackupMenu
     {
-        [MenuItem("GameObject/Backup/Backup GameObject", false, 0)]
+        [MenuItem("Bluscream/Backup System/Backup GameObject", false, 0)]
         public static void BackupGameObject(MenuCommand command)
         {
             GameObject target = command.context as GameObject;
@@ -29,7 +29,7 @@ namespace Bluscream.BackupSystem
             CreateBackupForGameObject(target, BackupScope.SingleGameObject);
         }
 
-        [MenuItem("GameObject/Backup/Backup Recursively", false, 1)]
+        [MenuItem("Bluscream/Backup System/Backup Recursively", false, 1)]
         public static void BackupGameObjectRecursively(MenuCommand command)
         {
             GameObject target = command.context as GameObject;
@@ -50,8 +50,8 @@ namespace Bluscream.BackupSystem
             CreateBackupForGameObject(target, BackupScope.GameObjectRecursive);
         }
 
-        [MenuItem("GameObject/Backup/Backup GameObject", true)]
-        [MenuItem("GameObject/Backup/Backup Recursively", true)]
+        [MenuItem("Bluscream/Backup System/Backup GameObject", true)]
+        [MenuItem("Bluscream/Backup System/Backup Recursively", true)]
         public static bool ValidateBackupMenu()
         {
             // Only show menu items when a GameObject is selected

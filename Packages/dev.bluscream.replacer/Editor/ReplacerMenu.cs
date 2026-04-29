@@ -8,7 +8,7 @@ namespace Bluscream.Replacer
     /// </summary>
     public static class ReplacerMenu
     {
-        [MenuItem("GameObject/Replace with ...", false, 10)]
+        [MenuItem("Bluscream/Replacer/Replace with ...", false, 10)]
         public static void SetSourceFromGameObject()
         {
             GameObject selected = Selection.activeGameObject;
@@ -22,13 +22,13 @@ namespace Bluscream.Replacer
             EditorUtility.DisplayDialog("Source Set", $"Source GameObject set to:\n{selected.name}\n\nRight-click on another GameObject and select '... Replace this' to replace it.", "OK");
         }
 
-        [MenuItem("GameObject/Replace with ...", true)]
+        [MenuItem("Bluscream/Replacer/Replace with ...", true)]
         public static bool ValidateSetSourceFromGameObject()
         {
             return Selection.activeGameObject != null;
         }
 
-        [MenuItem("Assets/Replace with ...", false, 1)]
+        [MenuItem("Bluscream/Replacer/Replace with ... (Prefab)", false, 1)]
         public static void SetSourceFromPrefab()
         {
             UnityEngine.Object selected = Selection.activeObject;
@@ -57,7 +57,7 @@ namespace Bluscream.Replacer
             EditorUtility.DisplayDialog("Source Set", $"Source Prefab set to:\n{prefab.name}\n\nRight-click on a GameObject in the hierarchy and select '... Replace this' to replace it.", "OK");
         }
 
-        [MenuItem("Assets/Replace with ...", true)]
+        [MenuItem("Bluscream/Replacer/Replace with ... (Prefab)", true)]
         public static bool ValidateSetSourceFromPrefab()
         {
             UnityEngine.Object selected = Selection.activeObject;
@@ -70,7 +70,7 @@ namespace Bluscream.Replacer
             return !string.IsNullOrEmpty(path);
         }
 
-        [MenuItem("GameObject/... Replace this", false, 11)]
+        [MenuItem("Bluscream/Replacer/Replace this", false, 11)]
         public static void ReplaceThisGameObject()
         {
             GameObject selected = Selection.activeGameObject;
@@ -97,7 +97,7 @@ namespace Bluscream.Replacer
             }
         }
 
-        [MenuItem("GameObject/... Replace this", true)]
+        [MenuItem("Bluscream/Replacer/Replace this", true)]
         public static bool ValidateReplaceThisGameObject()
         {
             return Selection.activeGameObject != null && GameObjectReplacer.HasSource();
