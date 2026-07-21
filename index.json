@@ -259,6 +259,29 @@
           "zipSHA256": "abf85c84f67d969a593d3293d7c4e38c00d4a9227f7ac14ca1462853bc3ad45a"
         }
       }
+    },
+    "dev.crescent3983.unitymeshdecimation": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.crescent3983.unitymeshdecimation",
+          "version": "1.0.0",
+          "displayName": "Unity Mesh Decimation",
+          "description": "A high-performance mesh decimation library for Unity.",
+          "unity": "2019.4",
+          "license": "MIT",
+          "author": {
+            "name": "crescent3983",
+            "url": "https://github.com/crescent3983/UnityMeshDecimation"
+          },
+          "keywords": [
+            "mesh",
+            "decimation",
+            "optimization"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.crescent3983.unitymeshdecimation-1.0.0/dev.crescent3983.unitymeshdecimation-1.0.0.zip",
+          "zipSHA256": "c9eb1721a4a1c2f3503050f763179e80bf09b5294246702a704bfd34e019cde6"
+        }
+      }
     }
   }
 }
