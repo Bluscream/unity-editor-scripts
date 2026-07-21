@@ -76,3 +76,7 @@ crashlytics-build.properties
 # VPM build artifacts
 /dist/
 /_site/
+
+# Track .meta files inside VPM packages
+!Packages/**/
+!Packages/**/*.meta

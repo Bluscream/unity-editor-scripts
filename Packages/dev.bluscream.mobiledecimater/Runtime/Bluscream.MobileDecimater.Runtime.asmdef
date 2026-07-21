@@ -1,0 +1,16 @@
+{
+    "name": "Bluscream.MobileDecimater.Runtime",
+    "rootNamespace": "Bluscream.MobileDecimater",
+    "references": [
+        "UnityMeshDecimation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
