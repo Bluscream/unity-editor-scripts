@@ -56,7 +56,7 @@
       <a class="btn" href="https://vcc.docs.vrchat.com/" target="_blank" rel="noopener">What is VCC?</a>
     </div>
     <div class="urlbox">
-      <code id="listingUrl">{{LISTING_URL}}</code>
+      <code id="listingUrl">https://bluscream.github.io/unity-editor-scripts/index.json</code>
       <button class="btn copy" id="copyBtn" type="button">Copy</button>
     </div>
     <p class="steps">
@@ -73,7 +73,7 @@
   </div>
 
   <script>
-    const LISTING = "{{LISTING_URL}}";
+    const LISTING = "https://bluscream.github.io/unity-editor-scripts/index.json";
     document.getElementById("listingUrl").textContent = LISTING;
     document.getElementById("addBtn").href = "vcc://vpm/addRepo?url=" + encodeURIComponent(LISTING);
     document.getElementById("copyBtn").addEventListener("click", async () => {

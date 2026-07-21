@@ -1,0 +1,264 @@
+{
+  "name": "Bluscream's Unity Editor Scripts",
+  "id": "dev.bluscream.vpm",
+  "author": "Bluscream",
+  "url": "https://bluscream.github.io/unity-editor-scripts/index.json",
+  "packages": {
+    "dev.bluscream.backupsystem": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.backupsystem",
+          "version": "1.0.0",
+          "displayName": "Backup System",
+          "description": "A flexible backup and restore system for Unity assets, GameObjects, and components with configurable backup options.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "backup",
+            "restore",
+            "assets",
+            "gameobject",
+            "materials",
+            "components",
+            "textures"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.backupsystem-1.0.0/dev.bluscream.backupsystem-1.0.0.zip",
+          "zipSHA256": "3a94451535be0890aa2178a7be0b81c96f0067a3302950adf364a670ec70ed18"
+        }
+      }
+    },
+    "dev.bluscream.cleanup": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.cleanup",
+          "version": "1.0.0",
+          "displayName": "Bluscream Cleanup",
+          "description": "Smart asset cleanup tool for removing unused assets from Unity projects.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "cleanup",
+            "assets",
+            "optimization",
+            "unused"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.cleanup-1.0.0/dev.bluscream.cleanup-1.0.0.zip",
+          "zipSHA256": "a3f0cccdba30e5d4cb19db617c3846a04f4b3e37e95479a5a8ff6be6c7629f64"
+        }
+      }
+    },
+    "dev.bluscream.common": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.common",
+          "version": "1.0.0",
+          "displayName": "Bluscream Common",
+          "description": "Common utilities and shared code for Bluscream Unity packages.",
+          "unity": "2019.4",
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "utilities",
+            "common",
+            "shared"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.common-1.0.0/dev.bluscream.common-1.0.0.zip",
+          "zipSHA256": "bc7d110c54fa65966732a113b76e9a5f21c8962ad665146ed8c899cca6454606"
+        }
+      }
+    },
+    "dev.bluscream.componentremover": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.componentremover",
+          "version": "1.0.0",
+          "displayName": "Component Remover",
+          "description": "Tool for finding and removing missing scripts from GameObjects with optional backup support.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "component",
+            "missing",
+            "script",
+            "remover",
+            "cleanup"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.componentremover-1.0.0/dev.bluscream.componentremover-1.0.0.zip",
+          "zipSHA256": "aefe44915bb5ace2b6dc0131234e05ca8be207eb8fe346fcd3634a64d6429e02"
+        }
+      }
+    },
+    "dev.bluscream.menumanager": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.menumanager",
+          "version": "1.0.0",
+          "displayName": "VRCFury Menu Manager",
+          "description": "A tool to mass re-organize and visually edit VRChat avatar menus using VRCFury.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "com.vrcfury.vrcfury": "1.0.0",
+            "com.vrchat.avatars": "3.0.0",
+            "dev.bluscream.common": "1.0.0",
+            "dev.bluscream.backupsystem": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "vrcfury",
+            "vrchat",
+            "menu",
+            "manager"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.menumanager-1.0.0/dev.bluscream.menumanager-1.0.0.zip",
+          "zipSHA256": "1625c4951d7a4971f94d589cd9ab1c08ef96bbcea0edaf0debf567aa193a656d"
+        }
+      }
+    },
+    "dev.bluscream.mobiledecimater": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.mobiledecimater",
+          "version": "1.0.0",
+          "displayName": "Mobile Mesh Decimater",
+          "description": "Automatically decimates meshes on build when targeting mobile platforms (Android, iOS).",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0",
+            "dev.crescent3983.unitymeshdecimation": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "mesh",
+            "decimation",
+            "android",
+            "optimization",
+            "build"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.mobiledecimater-1.0.0/dev.bluscream.mobiledecimater-1.0.0.zip",
+          "zipSHA256": "9968c32906cf1f3dc50e57e47dfbd97af4e37abeef55e1b8592e4df010ba89c2"
+        }
+      }
+    },
+    "dev.bluscream.questpatcher": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.questpatcher",
+          "version": "1.0.0",
+          "displayName": "VRC-QuestPatcher",
+          "description": "Automated tool to convert VRChat avatars for Quest/Android compatibility by removing incompatible components, replacing shaders, and applying optimizations.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "VRC-QuestPatcher"
+          },
+          "keywords": [
+            "vrchat",
+            "quest",
+            "android",
+            "avatar",
+            "optimization"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.questpatcher-1.0.0/dev.bluscream.questpatcher-1.0.0.zip",
+          "zipSHA256": "08707f2e3865349efa2d8a694b064fecd05e47f1c45fd472a678e3b10e9c32f2"
+        }
+      }
+    },
+    "dev.bluscream.replacer": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.replacer",
+          "version": "1.0.0",
+          "displayName": "Bluscream Replacer",
+          "description": "Tool for replacing GameObjects in the scene with other GameObjects or prefabs.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "replace",
+            "gameobject",
+            "prefab",
+            "transform"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.replacer-1.0.0/dev.bluscream.replacer-1.0.0.zip",
+          "zipSHA256": "1329348be9cdfae03690a11fc7cb351d8f59731345cf8ed45f12e67cecd3943d"
+        }
+      }
+    },
+    "dev.bluscream.shadertest": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.shadertest",
+          "version": "1.0.0",
+          "displayName": "Bluscream Shader Test",
+          "description": "Quick shader preview tool for testing different shaders on materials.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "shader",
+            "material",
+            "preview",
+            "test"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.shadertest-1.0.0/dev.bluscream.shadertest-1.0.0.zip",
+          "zipSHA256": "56f92579ed780342c60fe50ed08bc662e1609970e3864f7a550ee6b3e60085a4"
+        }
+      }
+    },
+    "dev.bluscream.texturecompressor": {
+      "versions": {
+        "1.0.0": {
+          "name": "dev.bluscream.texturecompressor",
+          "version": "1.0.0",
+          "displayName": "Texture Compressor",
+          "description": "Editor tool for applying texture compression settings to textures in your project with optional backup support.",
+          "unity": "2019.4",
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "texture",
+            "compression",
+            "optimization",
+            "importer"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.texturecompressor-1.0.0/dev.bluscream.texturecompressor-1.0.0.zip",
+          "zipSHA256": "abf85c84f67d969a593d3293d7c4e38c00d4a9227f7ac14ca1462853bc3ad45a"
+        }
+      }
+    }
+  }
+}
