@@ -11,11 +11,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: vpm-listing
   cancel-in-progress: false
 
 jobs:
@@ -58,16 +56,11 @@ jobs:
       - name: Generate index.json and landing page
         run: node .github/scripts/build-index.mjs
 
-      - uses: actions/upload-pages-artifact@v3
+      # Pages is served from the gh-pages branch (branch source), so publish there.
+      - name: Publish listing to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: _site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ github.token }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          enable_jekyll: false

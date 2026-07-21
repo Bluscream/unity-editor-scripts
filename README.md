@@ -33,11 +33,13 @@ Once the repository is added, the packages below appear in VCC and can be added 
 1. Zips each `Packages/*/` folder.
 2. Publishes each zip as a GitHub **Release** (`<name>-<version>`).
 3. Generates a VPM `index.json` (via `.github/scripts/build-index.mjs`) referencing those release zips with their SHA-256.
-4. Deploys `index.json` + a landing page to **GitHub Pages**.
+4. Publishes `index.json` + a landing page to the **`gh-pages`** branch, which **GitHub Pages** serves.
 
 To release a new version, bump the `version` in that package's `package.json` and push.
 
-> **One-time setup:** in the repo *Settings → Pages*, set **Source: GitHub Actions** so the deploy step can publish.
+> **Pages setup:** *Settings → Pages* is configured to deploy from the **`gh-pages` branch** (root). The
+> initial release was built and published manually; the workflow above takes over automatically once
+> GitHub Actions is available on the account.
 
 ## Note on `.meta` files
 
