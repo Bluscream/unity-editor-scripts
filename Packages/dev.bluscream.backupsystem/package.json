@@ -4,7 +4,7 @@
   "displayName": "Backup System",
   "description": "A flexible backup and restore system for Unity assets, GameObjects, and components with configurable backup options.",
   "unity": "2019.4",
-  "dependencies": {
+  "vpmDependencies": {
     "dev.bluscream.common": "1.0.0"
   },
   "author": {

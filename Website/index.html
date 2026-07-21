@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bluscream's Unity Editor Scripts — VCC Listing</title>
+  <style>
+    :root {
+      --bg: #0f1115; --panel: #191c22; --border: #2a2f38; --text: #e7e9ee;
+      --muted: #9aa2ad; --accent: #4f8cff; --accent-fg: #fff; --chip: #232833;
+      --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f5f6f8; --panel:#fff; --border:#e0e3e8; --text:#1c2024; --muted:#5b6472; --chip:#eef1f5; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); line-height:1.55; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+    header h1 { margin:0 0 6px; font-size: 28px; }
+    header p { margin:0; color: var(--muted); }
+    .cta { display:flex; flex-wrap:wrap; gap:12px; margin: 26px 0 10px; }
+    .btn { display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:15px;
+      padding: 11px 18px; border-radius: 9px; border:1px solid var(--border); text-decoration:none;
+      color: var(--text); background: var(--panel); cursor:pointer; }
+    .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+    .btn:hover { border-color: var(--accent); }
+    .urlbox { display:flex; gap:8px; align-items:center; margin-top:6px; }
+    .urlbox code { flex:1; font-family:var(--mono); font-size:13px; background:var(--chip);
+      padding:10px 12px; border-radius:8px; overflow:auto; white-space:nowrap; border:1px solid var(--border); }
+    .copy { padding:10px 14px; }
+    h2 { margin: 38px 0 14px; font-size: 16px; text-transform: uppercase; letter-spacing:.05em; color:var(--muted); }
+    .grid { display:grid; gap:12px; }
+    .card { border:1px solid var(--border); background:var(--panel); border-radius:11px; padding:16px 18px; }
+    .card h3 { margin:0 0 4px; font-size:17px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+    .card .ver { font-family:var(--mono); font-size:12px; color:var(--muted); font-weight:500; }
+    .card p { margin:6px 0 10px; color:var(--muted); font-size:14px; }
+    .card .id { font-family:var(--mono); font-size:12px; color:var(--muted); }
+    .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .tag { font-size:11px; padding:3px 8px; border-radius:20px; background:var(--chip); color:var(--muted); }
+    .steps { color:var(--muted); font-size:14px; }
+    .steps ol { margin:8px 0 0; padding-left:20px; }
+    footer { margin-top:50px; color:var(--muted); font-size:13px; border-top:1px solid var(--border); padding-top:16px; }
+    a { color: var(--accent); }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Bluscream's Unity Editor Scripts</h1>
+      <p>A VRChat Creator Companion (VCC) / VPM package listing of editor tools for Unity &amp; VRChat avatars.</p>
+    </header>
+
+    <div class="cta">
+      <a id="addBtn" class="btn primary" href="#">➕ Add to VCC</a>
+      <a class="btn" href="https://vcc.docs.vrchat.com/" target="_blank" rel="noopener">What is VCC?</a>
+    </div>
+    <div class="urlbox">
+      <code id="listingUrl">{{LISTING_URL}}</code>
+      <button class="btn copy" id="copyBtn" type="button">Copy</button>
+    </div>
+    <p class="steps">
+      Click <strong>Add to VCC</strong> (requires the VCC app installed), or in VCC go to
+      <em>Settings → Packages → Add Repository</em> and paste the URL above.
+    </p>
+
+    <h2>Packages</h2>
+    <div class="grid" id="packages"><p class="muted">Loading packages…</p></div>
+
+    <footer>
+      Source: <a id="repoLink" href="#">GitHub repository</a> · Listing generated automatically on every push.
+    </footer>
+  </div>
+
+  <script>
+    const LISTING = "{{LISTING_URL}}";
+    document.getElementById("listingUrl").textContent = LISTING;
+    document.getElementById("addBtn").href = "vcc://vpm/addRepo?url=" + encodeURIComponent(LISTING);
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(LISTING); document.getElementById("copyBtn").textContent = "Copied"; }
+      catch { document.getElementById("copyBtn").textContent = "Copy failed"; }
+    });
+
+    function esc(s){ return String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+    fetch(LISTING).then(r => r.json()).then(data => {
+      const repo = (data.url||"").split("/").slice(2,4); // best-effort
+      const grid = document.getElementById("packages");
+      const pkgs = data.packages || {};
+      const names = Object.keys(pkgs).sort();
+      if (!names.length) { grid.innerHTML = '<p class="muted">No packages found.</p>'; return; }
+      grid.innerHTML = names.map(name => {
+        const versions = pkgs[name].versions;
+        const latest = versions[Object.keys(versions).sort().pop()];
+        const tags = (latest.keywords||[]).map(k => '<span class="tag">'+esc(k)+'</span>').join("");
+        return '<div class="card">'
+          + '<h3>'+esc(latest.displayName||name)+' <span class="ver">v'+esc(latest.version)+'</span></h3>'
+          + '<div class="id">'+esc(name)+'</div>'
+          + '<p>'+esc(latest.description||"")+'</p>'
+          + (tags ? '<div class="tags">'+tags+'</div>' : '')
+          + '</div>';
+      }).join("");
+    }).catch(() => {
+      document.getElementById("packages").innerHTML =
+        '<p class="muted">Could not load the listing yet. If this repo was just published, wait for the Pages build to finish.</p>';
+    });
+  </script>
+</body>
+</html>

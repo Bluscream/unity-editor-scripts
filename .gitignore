@@ -73,3 +73,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
 .references/
+# VPM build artifacts
+/dist/
+/_site/

@@ -4,7 +4,7 @@
   "displayName": "Bluscream Shader Test",
   "description": "Quick shader preview tool for testing different shaders on materials.",
   "unity": "2019.4",
-  "dependencies": {
+  "vpmDependencies": {
     "dev.bluscream.common": "1.0.0"
   },
   "author": {
