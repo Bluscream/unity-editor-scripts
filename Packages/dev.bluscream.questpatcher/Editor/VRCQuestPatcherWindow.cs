@@ -2,29 +2,28 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using static Bluscream.Utils;
 
 namespace VRCQuestPatcher
 {
     /// <summary>
-    /// Main editor window for VRC-QuestPatcher
+    /// Modern Editor Window for VRC-QuestPatcher
     /// </summary>
     public class VRCQuestPatcherWindow : EditorWindow
     {
         private GameObject avatarRoot;
         private VRCQuestPatcherCore.ConversionConfig config = new VRCQuestPatcherCore.ConversionConfig();
         private ConversionSummary summary;
+        private QuestSDKEvaluator.AvatarStats currentStats;
         private bool isConverting = false;
         private string progressMessage = "";
         private float progressValue = 0f;
         private Vector2 scrollPosition;
-        private string lastBackupPath = "";
 
         [MenuItem("Bluscream/Quest Patcher/Quest Patcher")]
         public static void ShowWindow()
         {
             VRCQuestPatcherWindow window = GetWindow<VRCQuestPatcherWindow>("QuestPatcher");
-            window.minSize = new Vector2(500, 600);
+            window.minSize = new Vector2(520, 650);
             window.Show();
         }
 
@@ -33,66 +32,94 @@ namespace VRCQuestPatcher
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
 
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("QuestPatcher", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Convert VRChat avatars for Quest/Android compatibility by removing incompatible components, replacing shaders, and applying optimizations.", MessageType.Info);
+            EditorGUILayout.LabelField("VRC-QuestPatcher", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Convert PC VRChat avatars into fully compliant Quest/Android avatars with one click. Automatically duplicates materials, remaps VRCFury toggles & material swaps, optimizes texture memory budgets, decimates meshes, and prunes PhysBones to hit target performance ranks.", MessageType.Info);
             EditorGUILayout.Space(10);
 
             // Avatar Root Selection
-            EditorGUILayout.LabelField("Avatar Root", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("1. Avatar Root Selection", EditorStyles.boldLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             
-            // Drag and drop area
             Rect dropArea = GUILayoutUtility.GetRect(0, 50, GUILayout.ExpandWidth(true));
-            GUI.Box(dropArea, avatarRoot != null ? $"Avatar: {avatarRoot.name}" : "Drag Avatar Root GameObject here\n(Must have VRC_AvatarDescriptor)", EditorStyles.helpBox);
+            GUI.Box(dropArea, avatarRoot != null ? $"Selected Avatar: {avatarRoot.name}" : "Drag Avatar Root GameObject Here\n(Must have VRC_AvatarDescriptor)", EditorStyles.helpBox);
             
             HandleDragAndDrop(dropArea);
             
             if (avatarRoot != null)
             {
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.ObjectField("Avatar Root", avatarRoot, typeof(GameObject), true);
+                var newRoot = (GameObject)EditorGUILayout.ObjectField("Avatar Root", avatarRoot, typeof(GameObject), true);
+                if (newRoot != avatarRoot)
+                {
+                    avatarRoot = newRoot;
+                    UpdateStats();
+                }
                 if (GUILayout.Button("Clear", GUILayout.Width(60)))
                 {
                     avatarRoot = null;
+                    currentStats = null;
                 }
                 EditorGUILayout.EndHorizontal();
 
-                // Validate avatar descriptor
-                if (!HasAvatarDescriptor(avatarRoot))
+                if (currentStats != null)
                 {
-                    EditorGUILayout.HelpBox("Warning: Selected GameObject does not have VRC_AvatarDescriptor component.", MessageType.Warning);
+                    EditorGUILayout.HelpBox(
+                        $"Current Avatar Rating Estimate: {currentStats.RatingName}\n" +
+                        $"• Poly Count: {currentStats.TriangleCount:N0} tris\n" +
+                        $"• Material Slots: {currentStats.MaterialSlotCount}\n" +
+                        $"• PhysBones: {currentStats.PhysBoneComponentCount} components ({currentStats.PhysBoneTransformCount} transforms)",
+                        MessageType.None
+                    );
                 }
             }
             
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
 
-            // Configuration
-            EditorGUILayout.LabelField("Configuration", EditorStyles.boldLabel);
+            // Target Performance Level & Options
+            EditorGUILayout.LabelField("2. Conversion Preferences", EditorStyles.boldLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            
-            config.removeComponents = EditorGUILayout.Toggle("Remove Incompatible Components", config.removeComponents);
-            EditorGUILayout.HelpBox("Removes DynamicBones, Cloth, Cameras, Lights, AudioSources, Physics components, etc.", MessageType.None);
-            
+
+            config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
+            EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: Max {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxTriangles:N0} Tris, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxMaterialSlots} Material Slots, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxPhysBoneComponents} PhysBones.", MessageType.None);
+
             EditorGUILayout.Space(5);
-            config.replaceShaders = EditorGUILayout.Toggle("Replace Shaders", config.replaceShaders);
-            EditorGUILayout.HelpBox("Replaces PC shaders with Quest-compatible VRChat/Mobile shaders.", MessageType.None);
-            
-            EditorGUILayout.Space(5);
-            config.optimizeTextures = EditorGUILayout.Toggle("Optimize Textures", config.optimizeTextures);
-            if (config.optimizeTextures)
+            config.DuplicateAvatar = EditorGUILayout.Toggle("Duplicate Avatar GameObject", config.DuplicateAvatar);
+            if (config.DuplicateAvatar)
             {
                 EditorGUI.indentLevel++;
-                config.maxTextureSize = EditorGUILayout.IntSlider("Max Texture Size", config.maxTextureSize, 256, 2048);
-                config.compressionQuality = EditorGUILayout.IntSlider("Compression Quality", config.compressionQuality, 0, 100);
-                config.useCrunchCompression = EditorGUILayout.Toggle("Use Crunch Compression", config.useCrunchCompression);
+                config.AvatarSuffix = EditorGUILayout.TextField("Avatar Suffix", config.AvatarSuffix);
                 EditorGUI.indentLevel--;
             }
-            
+
+            config.PlacementLocation = (AssetPlacementLocation)EditorGUILayout.EnumPopup("Asset Placement Location", config.PlacementLocation);
+            EditorGUILayout.HelpBox(
+                config.PlacementLocation == AssetPlacementLocation.SeparateFolder
+                    ? "Saves generated Quest materials and animation clips into 'Assets/QuestPatched/<AvatarName>/'."
+                    : "Saves generated Quest materials and animation clips in the same folder as the original assets with ' (Quest)' suffix.",
+                MessageType.None
+            );
+
             EditorGUILayout.Space(5);
-            config.backupLocation = EditorGUILayout.TextField("Backup Location", config.backupLocation);
-            EditorGUILayout.HelpBox("Location where backups will be stored. Default: Assets/VRCQuestPatcherBackups", MessageType.None);
-            
+            config.RemapAnimationsAndVRCFury = EditorGUILayout.Toggle("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
+            config.ReplaceShaders = EditorGUILayout.Toggle("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
+            config.OptimizeTextures = EditorGUILayout.Toggle("Optimize Texture Memory Budget", config.OptimizeTextures);
+            if (config.OptimizeTextures)
+            {
+                EditorGUI.indentLevel++;
+                config.MaxTextureSize = EditorGUILayout.IntSlider("Max Texture Size", config.MaxTextureSize, 256, 2048);
+                EditorGUI.indentLevel--;
+            }
+            config.PrunePhysBones = EditorGUILayout.Toggle("Prune Excess PhysBones to Target Rank", config.PrunePhysBones);
+            if (config.PrunePhysBones)
+            {
+                EditorGUI.indentLevel++;
+                config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("Pruning Strategy", config.PruningStrategy);
+                EditorGUI.indentLevel--;
+            }
+            config.DecimateMeshes = EditorGUILayout.Toggle("Decimate Meshes to Poly Limit", config.DecimateMeshes);
+            config.RemoveIncompatibleComponents = EditorGUILayout.Toggle("Remove Incompatible Components", config.RemoveIncompatibleComponents);
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
 
@@ -107,37 +134,18 @@ namespace VRCQuestPatcher
                 EditorGUILayout.Space(10);
             }
 
-            // Action Buttons
+            // Action Button
             EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null);
-            EditorGUILayout.BeginHorizontal();
             
-            if (GUILayout.Button("Start Conversion", GUILayout.Height(30)))
+            if (GUILayout.Button("Patch Avatar for Quest", GUILayout.Height(38)))
             {
                 StartConversion();
             }
             
             EditorGUI.EndDisabledGroup();
-            
-            // Check if backup path exists (can be file or folder)
-            bool backupPathExists = !string.IsNullOrEmpty(lastBackupPath) && 
-                (System.IO.File.Exists(lastBackupPath) || System.IO.Directory.Exists(lastBackupPath));
-            
-            EditorGUI.BeginDisabledGroup(isConverting || !backupPathExists || !IsBackupSystemAvailable());
-            if (GUILayout.Button("Restore from Backup", GUILayout.Height(30)))
-            {
-                RestoreBackup();
-            }
-            EditorGUI.EndDisabledGroup();
-            
-            if (!IsBackupSystemAvailable())
-            {
-                EditorGUILayout.HelpBox("BackupSystem package not found. Restore functionality is disabled. Install dev.bluscream.backupsystem to enable restore.", MessageType.Warning);
-            }
-            
-            EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(10);
 
-            // Summary
+            // Summary Results
             if (summary != null)
             {
                 summary.RenderGUI();
@@ -145,7 +153,6 @@ namespace VRCQuestPatcher
 
             EditorGUILayout.EndScrollView();
 
-            // Handle progress updates
             if (isConverting)
             {
                 Repaint();
@@ -155,98 +162,46 @@ namespace VRCQuestPatcher
         private void HandleDragAndDrop(Rect dropArea)
         {
             Event currentEvent = Event.current;
-
             if (currentEvent.type == EventType.DragUpdated || currentEvent.type == EventType.DragPerform)
             {
                 if (dropArea.Contains(currentEvent.mousePosition))
                 {
                     DragAndDrop.visualMode = DragAndDrop.objectReferences.Length > 0 ? DragAndDropVisualMode.Copy : DragAndDropVisualMode.Rejected;
-
                     if (currentEvent.type == EventType.DragPerform)
                     {
                         DragAndDrop.AcceptDrag();
-
                         if (DragAndDrop.objectReferences.Length > 0)
                         {
                             GameObject draggedObject = DragAndDrop.objectReferences[0] as GameObject;
                             if (draggedObject != null)
                             {
                                 avatarRoot = draggedObject;
+                                UpdateStats();
                             }
                         }
-
                         currentEvent.Use();
                     }
                 }
             }
         }
 
-        private bool HasAvatarDescriptor(GameObject obj)
+        private void UpdateStats()
         {
-            if (obj == null) return false;
-
-            Component[] components = obj.GetComponents<Component>();
-            foreach (Component comp in components)
+            if (avatarRoot != null)
             {
-                if (comp == null) continue;
-                string typeName = comp.GetType().FullName;
-                if (typeName.Contains("VRC_AvatarDescriptor") || typeName.Contains("VRCAvatarDescriptor"))
-                {
-                    return true;
-                }
+                currentStats = QuestSDKEvaluator.EvaluateAvatar(avatarRoot);
             }
-
-            return false;
         }
 
         private void StartConversion()
         {
-            if (avatarRoot == null)
-            {
-                EditorUtility.DisplayDialog("Error", "Please select an avatar root GameObject.", "OK");
-                return;
-            }
-
-            if (!HasAvatarDescriptor(avatarRoot))
-            {
-                bool proceed = EditorUtility.DisplayDialog(
-                    "Warning",
-                    "Selected GameObject does not have VRC_AvatarDescriptor component. Continue anyway?",
-                    "Yes",
-                    "No"
-                );
-
-                if (!proceed)
-                    return;
-            }
-
-            // Check for BackupSystem and confirm
-            if (!IsBackupSystemAvailable())
-            {
-                bool proceedWithoutBackup = BackupSystemHelper.ConfirmWithoutBackupSystem();
-                if (!proceedWithoutBackup)
-                    return;
-            }
-            else
-            {
-                // Confirm conversion (with backup available)
-                bool confirmed = EditorUtility.DisplayDialog(
-                    "Confirm Conversion",
-                    "This will modify your avatar. A backup will be created. Continue?",
-                    "Yes",
-                    "No"
-                );
-
-                if (!confirmed)
-                    return;
-            }
+            if (avatarRoot == null) return;
 
             isConverting = true;
             summary = new ConversionSummary();
             progressMessage = "Starting conversion...";
             progressValue = 0f;
 
-            // Run conversion
             try
             {
                 summary = VRCQuestPatcherCore.ConvertAvatar(
@@ -260,19 +215,9 @@ namespace VRCQuestPatcher
                     }
                 );
 
-                // Store backup path if available
-                if (!string.IsNullOrEmpty(config.backupLocation))
-                {
-                    string[] backupFiles = Directory.GetFiles(config.backupLocation, "backup.json", SearchOption.AllDirectories);
-                    if (backupFiles.Length > 0)
-                    {
-                        lastBackupPath = backupFiles[backupFiles.Length - 1]; // Get most recent
-                    }
-                }
-
                 EditorUtility.DisplayDialog(
-                    "Conversion Complete",
-                    $"Conversion completed!\n\n" +
+                    "Quest Patch Complete",
+                    $"Quest conversion completed successfully!\n\n" +
                     $"Materials Replaced: {summary.materialsReplaced}\n" +
                     $"Components Removed: {summary.componentsRemoved}\n" +
                     $"Textures Optimized: {summary.texturesOptimized}\n" +
@@ -284,7 +229,7 @@ namespace VRCQuestPatcher
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Conversion failed: {e.Message}", "OK");
-                Debug.LogError($"QuestPatcher error: {e}");
+                Debug.LogError($"[VRCQuestPatcherWindow] Conversion error: {e}");
             }
             finally
             {
@@ -292,105 +237,6 @@ namespace VRCQuestPatcher
                 progressMessage = "";
                 progressValue = 0f;
                 Repaint();
-            }
-        }
-
-        private void RestoreBackup()
-        {
-            if (string.IsNullOrEmpty(lastBackupPath))
-            {
-                EditorUtility.DisplayDialog("Error", "No backup path available.", "OK");
-                return;
-            }
-
-            if (!IsBackupSystemAvailable())
-            {
-                EditorUtility.DisplayDialog("Error", "BackupSystem package is required for restore functionality. Please install dev.bluscream.backupsystem.", "OK");
-                return;
-            }
-
-            bool confirmed = EditorUtility.DisplayDialog(
-                "Restore Backup",
-                $"Restore from backup?\n\n{lastBackupPath}",
-                "Yes",
-                "No"
-            );
-
-            if (!confirmed)
-                return;
-
-            // Try to use BackupSystem for restore
-            try
-            {
-                System.Type backupSystemType = System.Type.GetType("Bluscream.BackupSystem.BackupSystem, Assembly-CSharp-Editor")
-                    ?? System.Type.GetType("Bluscream.BackupSystem.BackupSystem");
-                
-                if (backupSystemType != null)
-                {
-                    System.Type configType = System.Type.GetType("Bluscream.BackupSystem.BackupConfig, Assembly-CSharp-Editor")
-                        ?? System.Type.GetType("Bluscream.BackupSystem.BackupConfig");
-                    
-                    if (configType != null)
-                    {
-                        object restoreConfig = Activator.CreateInstance(configType);
-                        configType.GetProperty("backupMaterials").SetValue(restoreConfig, true);
-                        configType.GetProperty("backupComponents").SetValue(restoreConfig, true);
-                        configType.GetProperty("backupTextures").SetValue(restoreConfig, true);
-                        configType.GetProperty("backupGameObjectHierarchy").SetValue(restoreConfig, false);
-                        configType.GetProperty("includeMaterialProperties").SetValue(restoreConfig, true);
-                        configType.GetProperty("includeComponentData").SetValue(restoreConfig, true);
-
-                        var restoreMethod = backupSystemType.GetMethod("RestoreFromBackup",
-                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        
-                        if (restoreMethod != null)
-                        {
-                            // Handle both file and folder paths
-                            string backupFolder = lastBackupPath;
-                            if (System.IO.File.Exists(lastBackupPath))
-                            {
-                                // If it's a file, get the directory
-                                backupFolder = System.IO.Path.GetDirectoryName(lastBackupPath);
-                            }
-                            
-                            object result = restoreMethod.Invoke(null, new object[] { backupFolder, restoreConfig, null });
-                            bool success = result is bool b && b;
-                            
-                            if (success)
-                            {
-                                EditorUtility.DisplayDialog("Success", "Backup restored successfully!", "OK");
-                                summary = null;
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Failed to use BackupSystem for restore: {e.Message}");
-            }
-
-            // Fallback to BackupManager (legacy format - single JSON file)
-            // Only try if it's a file path, not a folder
-            if (System.IO.File.Exists(lastBackupPath))
-            {
-                bool success2 = BackupManager.RestoreFromBackup(lastBackupPath);
-                if (success2)
-                {
-                    EditorUtility.DisplayDialog("Success", "Backup restored successfully!", "OK");
-                    summary = null;
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog("Error", "Failed to restore backup. Check console for details.", "OK");
-                }
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Error", 
-                    "BackupSystem package is required for folder-based backups. Please install dev.bluscream.backupsystem.", 
-                    "OK");
             }
         }
     }

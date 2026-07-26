@@ -115,5 +115,81 @@ namespace Bluscream.MobileDecimater.Editor
                 return originalMesh;
             }
         }
+
+        /// <summary>
+        /// Public static API to decimate avatar renderers to hit a target overall triangle count budget
+        /// </summary>
+        public static int DecimateAvatarMeshesToTargetTris(GameObject avatarRoot, int targetTriangles, System.Action<string> progressCallback = null)
+        {
+            if (avatarRoot == null || targetTriangles <= 0) return 0;
+
+            var renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
+            int currentTriCount = 0;
+            var meshTargets = new System.Collections.Generic.List<(Renderer renderer, Mesh mesh, int triCount)>();
+
+            foreach (var r in renderers)
+            {
+                Mesh m = null;
+                if (r is SkinnedMeshRenderer smr) m = smr.sharedMesh;
+                else if (r is MeshRenderer mr && r.GetComponent<MeshFilter>() != null) m = r.GetComponent<MeshFilter>().sharedMesh;
+
+                if (m != null && m.triangles != null)
+                {
+                    int tris = m.triangles.Length / 3;
+                    currentTriCount += tris;
+                    meshTargets.Add((r, m, tris));
+                }
+            }
+
+            if (currentTriCount <= targetTriangles)
+            {
+                progressCallback?.Invoke($"Mesh poly count ({currentTriCount} tris) is already within target ({targetTriangles} tris).");
+                return currentTriCount;
+            }
+
+            float reductionRatio = (float)targetTriangles / currentTriCount;
+            progressCallback?.Invoke($"Decimating avatar meshes from {currentTriCount} to ~{targetTriangles} tris (Ratio: {reductionRatio:P1})...");
+
+            int finalTotalTris = 0;
+            var settings = new MobileDecimater
+            {
+                decimationRatio = reductionRatio,
+                preserveBlendShapes = true,
+                preserveBoundary = true,
+                preventIntersection = true
+            };
+
+            var processor = new MobileDecimationProcessor();
+
+            foreach (var item in meshTargets)
+            {
+                Mesh decimatedMesh = processor.Decimate(item.mesh, settings);
+                if (decimatedMesh != null)
+                {
+                    if (item.renderer is SkinnedMeshRenderer smr)
+                    {
+                        Undo.RecordObject(smr, "Decimate Mesh");
+                        smr.sharedMesh = decimatedMesh;
+                    }
+                    else if (item.renderer is MeshRenderer mr)
+                    {
+                        var mf = mr.GetComponent<MeshFilter>();
+                        if (mf != null)
+                        {
+                            Undo.RecordObject(mf, "Decimate Mesh");
+                            mf.sharedMesh = decimatedMesh;
+                        }
+                    }
+                    finalTotalTris += decimatedMesh.triangles.Length / 3;
+                }
+                else
+                {
+                    finalTotalTris += item.triCount;
+                }
+            }
+
+            Debug.Log($"[MobileDecimater] Decimated avatar from {currentTriCount} tris down to {finalTotalTris} tris.");
+            return finalTotalTris;
+        }
     }
 }

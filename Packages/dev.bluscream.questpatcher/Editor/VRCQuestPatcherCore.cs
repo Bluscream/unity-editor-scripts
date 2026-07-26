@@ -1,34 +1,37 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
 namespace VRCQuestPatcher
 {
     /// <summary>
-    /// Core conversion logic that orchestrates the Quest patching process
+    /// Core conversion pipeline orchestrating the PC-to-Quest avatar patching process
     /// </summary>
     public static class VRCQuestPatcherCore
     {
-        /// <summary>
-        /// Configuration for the conversion process
-        /// </summary>
         public class ConversionConfig
         {
-            public bool removeComponents = true;
-            public bool replaceShaders = true;
-            public bool optimizeTextures = false;
-            public int maxTextureSize = 1024;
-            public int compressionQuality = 75;
-            public bool useCrunchCompression = true;
-            public string backupLocation = "Assets/VRCQuestPatcherBackups";
+            public QuestPerformanceRank TargetRank = QuestPerformanceRank.Medium;
+            public AssetPlacementLocation PlacementLocation = AssetPlacementLocation.SeparateFolder;
+            public PhysBonePruningStrategy PruningStrategy = PhysBonePruningStrategy.DeepestFirst;
+            public bool DuplicateAvatar = true;
+            public string AvatarSuffix = " (Quest)";
+            public bool RemoveIncompatibleComponents = true;
+            public bool ReplaceShaders = true;
+            public bool OptimizeTextures = true;
+            public bool DecimateMeshes = true;
+            public bool PrunePhysBones = true;
+            public bool RemapAnimationsAndVRCFury = true;
+            public int MaxTextureSize = 1024;
+            public string BackupLocation = "Assets/VRCQuestPatcherBackups";
         }
 
-        /// <summary>
-        /// Performs the complete conversion process
-        /// </summary>
-        public static ConversionSummary ConvertAvatar(GameObject avatarRoot, ConversionConfig config, System.Action<string, float> progressCallback = null)
+        public static ConversionSummary ConvertAvatar(
+            GameObject avatarRoot, 
+            ConversionConfig config, 
+            Action<string, float> progressCallback = null)
         {
             ConversionSummary summary = new ConversionSummary();
 
@@ -38,361 +41,217 @@ namespace VRCQuestPatcher
                 return summary;
             }
 
-            // Validate avatar has VRC_AvatarDescriptor
-            if (!HasAvatarDescriptor(avatarRoot))
-            {
-                summary.AddError("Avatar root does not have VRC_AvatarDescriptor component", avatarRoot);
-                return summary;
-            }
+            GameObject targetAvatar = avatarRoot;
+            QuestPerformanceProfile profile = QuestPerformanceProfile.GetProfile(config.TargetRank);
+            profile.Placement = config.PlacementLocation;
+            profile.PruningStrategy = config.PruningStrategy;
 
             try
             {
-                // Phase 1: Backup
-                progressCallback?.Invoke("Creating backup...", 0.1f);
-                string backupPath = null;
-                if (!string.IsNullOrEmpty(config.backupLocation))
+                // Step 1: Duplicate Avatar GameObject
+                if (config.DuplicateAvatar)
                 {
-                    // Check if BackupSystem is available, otherwise use BackupManager
-                    backupPath = BackupSystemHelper.CreateBackup(avatarRoot, config.backupLocation, 
-                        (msg, progress) => progressCallback?.Invoke(msg, 0.1f + progress * 0.05f));
-                    
-                    if (backupPath != null)
-                    {
-                        summary.AddSuccess($"Backup created: {backupPath}");
-                    }
-                    else
-                    {
-                        summary.AddWarning("Failed to create backup, continuing anyway...");
-                    }
+                    progressCallback?.Invoke("Duplicating avatar GameObject for Quest...", 0.05f);
+                    targetAvatar = UnityEngine.Object.Instantiate(avatarRoot, avatarRoot.transform.parent);
+                    targetAvatar.name = avatarRoot.name + config.AvatarSuffix;
+                    Undo.RegisterCreatedObjectUndo(targetAvatar, "Create Quest Avatar Clone");
+                    summary.AddSuccess($"Created Quest Avatar clone: {targetAvatar.name}", targetAvatar);
                 }
 
-                // Show confirmation dialog after backup, before modifications
-                if (backupPath != null)
+                // Step 2: Remove Quest-Incompatible Components
+                if (config.RemoveIncompatibleComponents)
                 {
-                    progressCallback?.Invoke("Waiting for confirmation...", 0.15f);
-                    
-                    // Build summary of what will be modified
-                    System.Text.StringBuilder changesSummary = new System.Text.StringBuilder();
-                    changesSummary.AppendLine("Backup created successfully!");
-                    changesSummary.AppendLine($"Location: {backupPath}");
-                    changesSummary.AppendLine();
-                    changesSummary.AppendLine("The following modifications will be made:");
-                    
-                    if (config.removeComponents)
-                    {
-                        // Count components that will be removed
-                        Component[] allComponents = avatarRoot.GetComponentsInChildren<Component>(true);
-                        int incompatibleCount = 0;
-                        foreach (Component comp in allComponents)
-                        {
-                            if (comp != null && IsQuestIncompatibleComponent(comp))
-                            {
-                                incompatibleCount++;
-                            }
-                        }
-                        changesSummary.AppendLine($"• Remove {incompatibleCount} incompatible component(s)");
-                    }
-                    
-                    if (config.replaceShaders)
-                    {
-                        // Count materials that will be replaced
-                        HashSet<Material> materials = new HashSet<Material>();
-                        Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
-                        foreach (Renderer renderer in renderers)
-                        {
-                            if (renderer != null)
-                            {
-                                foreach (Material mat in renderer.sharedMaterials)
-                                {
-                                    if (mat != null && mat.shader != null)
-                                    {
-                                        string shaderName = mat.shader.name;
-                                        if (!shaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            materials.Add(mat);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        changesSummary.AppendLine($"• Replace shaders on {materials.Count} material(s)");
-                    }
-                    
-                    if (config.optimizeTextures)
-                    {
-                        changesSummary.AppendLine($"• Optimize textures (max size: {config.maxTextureSize}, quality: {config.compressionQuality})");
-                    }
-                    
-                    changesSummary.AppendLine();
-                    changesSummary.AppendLine("Proceed with modifications?");
-                    
-                    bool proceed = EditorUtility.DisplayDialog(
-                        "Backup Complete - Confirm Modifications",
-                        changesSummary.ToString(),
-                        "Yes, Proceed",
-                        "Cancel"
+                    progressCallback?.Invoke("Removing incompatible components...", 0.15f);
+                    var removedComps = Bluscream.ComponentRemover.ComponentRemover.RemoveQuestIncompatibleComponents(
+                        targetAvatar, 
+                        (msg) => progressCallback?.Invoke(msg, 0.15f)
                     );
-                    
-                    if (!proceed)
-                    {
-                        summary.AddWarning("Conversion cancelled by user after backup creation.");
-                        progressCallback?.Invoke("Conversion cancelled.", 1.0f);
-                        return summary;
-                    }
+                    summary.componentsRemoved = removedComps.Count;
                 }
 
-                // Phase 2: Remove incompatible components
-                if (config.removeComponents)
+                // Step 3: Duplicate Materials & Remap Shaders
+                Dictionary<Material, Material> materialMap = new Dictionary<Material, Material>();
+                if (config.ReplaceShaders)
                 {
-                    progressCallback?.Invoke("Removing incompatible components...", 0.2f);
-                    var removedComponents = QuestComponentRemover.RemoveIncompatibleComponents(
-                        avatarRoot,
-                        (msg) => progressCallback?.Invoke(msg, 0.3f)
+                    progressCallback?.Invoke("Duplicating materials and replacing shaders...", 0.30f);
+                    DuplicateAndReplaceMaterials(targetAvatar, config, summary, materialMap, (msg, prog) => progressCallback?.Invoke(msg, 0.30f + prog * 0.20f));
+                }
+
+                // Step 4: Remap AnimatorControllers, AnimationClips, and VRCFury Components
+                if (config.RemapAnimationsAndVRCFury && materialMap.Count > 0)
+                {
+                    progressCallback?.Invoke("Rewriting Animator, Clips, Material Swaps, and VRCFury...", 0.55f);
+                    QuestAnimationRewriter.ProcessAvatarAnimationsAndVRCFury(
+                        targetAvatar, 
+                        materialMap, 
+                        config.PlacementLocation == AssetPlacementLocation.SeparateFolder ? "Assets/QuestPatched/" + targetAvatar.name : null, 
+                        (msg) => progressCallback?.Invoke(msg, 0.55f)
                     );
-
-                    summary.componentsRemoved = removedComponents.Count;
-                    foreach (var removed in removedComponents)
-                    {
-                        summary.AddSuccess($"Removed {removed.componentType} from {removed.gameObjectPath}", removed.gameObject);
-                    }
                 }
 
-                // Phase 3: Replace shaders
-                if (config.replaceShaders)
+                // Step 5: Texture Optimization & Memory Budget
+                if (config.OptimizeTextures)
                 {
-                    progressCallback?.Invoke("Replacing shaders...", 0.4f);
-                    ReplaceShaders(avatarRoot, summary, (msg, progress) => progressCallback?.Invoke(msg, 0.4f + progress * 0.3f));
-                }
-
-                // Phase 4: Optimize textures
-                if (config.optimizeTextures)
-                {
-                    progressCallback?.Invoke("Optimizing textures...", 0.7f);
-                    var optimizedTextures = TextureOptimizer.OptimizeTextures(
-                        avatarRoot,
-                        config.maxTextureSize,
-                        config.compressionQuality,
-                        config.useCrunchCompression,
-                        (msg) => progressCallback?.Invoke(msg, 0.8f)
+                    progressCallback?.Invoke("Optimizing texture memory budget for Quest...", 0.70f);
+                    int texCount = Bluscream.TextureCompressor.TextureCompressionEditor.OptimizeForTextureMemoryBudget(
+                        targetAvatar, 
+                        profile.MaxTextureMemoryBytes, 
+                        config.MaxTextureSize, 
+                        (msg) => progressCallback?.Invoke(msg, 0.70f)
                     );
-
-                    summary.texturesOptimized = optimizedTextures.Count;
-                    foreach (var opt in optimizedTextures)
-                    {
-                        summary.AddSuccess($"Optimized texture: {opt.texturePath}");
-                    }
+                    summary.texturesOptimized = texCount;
                 }
 
-                // Phase 5: Additional optimizations
-                progressCallback?.Invoke("Applying optimizations...", 0.9f);
-                EnableGPUInstancing(avatarRoot, summary);
+                // Step 6: PhysBone Budget Pruner
+                if (config.PrunePhysBones)
+                {
+                    progressCallback?.Invoke("Pruning PhysBones to hit target rank limits...", 0.85f);
+                    int pruned = QuestPhysBonePruner.PrunePhysBones(targetAvatar, profile, (msg) => progressCallback?.Invoke(msg, 0.85f));
+                    summary.AddSuccess($"Pruned {pruned} PhysBone components/colliders to comply with rank '{profile.Rank}'.");
+                }
 
-                // Save all changes
+                // Step 7: Mesh Decimation to hit Target Poly Count Limit
+                if (config.DecimateMeshes)
+                {
+                    progressCallback?.Invoke("Decimating avatar meshes to target triangle budget...", 0.92f);
+                    int finalTris = Bluscream.MobileDecimater.Editor.MobileDecimationProcessor.DecimateAvatarMeshesToTargetTris(
+                        targetAvatar, 
+                        profile.MaxTriangles, 
+                        (msg) => progressCallback?.Invoke(msg, 0.92f)
+                    );
+                    summary.AddSuccess($"Mesh decimation complete. Final triangle count: {finalTris} (Target: {profile.MaxTriangles}).");
+                }
+
+                // Step 8: Save Assets & Final Rating Check
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
-                progressCallback?.Invoke("Conversion complete!", 1.0f);
+                QuestSDKEvaluator.AvatarStats stats = QuestSDKEvaluator.EvaluateAvatar(targetAvatar);
+                summary.AddSuccess($"Conversion complete! Avatar: '{targetAvatar.name}', Final Estimated Rank: '{stats.RatingName}' ({stats.TriangleCount} Tris, {stats.MaterialSlotCount} Mat Slots).");
+
+                progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
             }
             catch (Exception e)
             {
                 summary.AddError($"Conversion failed: {e.Message}\n{e.StackTrace}");
-                Debug.LogError($"VRC-QuestPatcher conversion error: {e}");
+                Debug.LogError($"[VRCQuestPatcherCore] Conversion error: {e}");
             }
 
             return summary;
         }
 
-        /// <summary>
-        /// Checks if the GameObject has a VRC_AvatarDescriptor component
-        /// </summary>
-        private static bool HasAvatarDescriptor(GameObject obj)
+        private static void DuplicateAndReplaceMaterials(
+            GameObject avatarRoot, 
+            ConversionConfig config, 
+            ConversionSummary summary, 
+            Dictionary<Material, Material> materialMap, 
+            Action<string, float> progressCallback)
         {
-            if (obj == null) return false;
-
-            // Try to find VRC_AvatarDescriptor using reflection (since it's from VRChat SDK)
-            Component[] components = obj.GetComponents<Component>();
-            foreach (Component comp in components)
-            {
-                if (comp == null) continue;
-                string typeName = comp.GetType().FullName;
-                if (typeName.Contains("VRC_AvatarDescriptor") || typeName.Contains("VRCAvatarDescriptor"))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Replaces all shaders in the avatar with Quest-compatible alternatives
-        /// </summary>
-        private static void ReplaceShaders(GameObject avatarRoot, ConversionSummary summary, System.Action<string, float> progressCallback = null)
-        {
-            HashSet<Material> processedMaterials = new HashSet<Material>();
-            List<Material> allMaterials = new List<Material>();
-
-            // Collect all materials
             Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer renderer in renderers)
-            {
-                if (renderer == null) continue;
+            List<(Renderer renderer, int materialIndex, Material originalMat)> matList = new List<(Renderer, int, Material)>();
 
-                Material[] materials = renderer.sharedMaterials;
-                foreach (Material mat in materials)
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                Material[] sharedMats = r.sharedMaterials;
+                for (int i = 0; i < sharedMats.Length; i++)
                 {
-                    if (mat != null && !processedMaterials.Contains(mat))
+                    if (sharedMats[i] != null)
                     {
-                        processedMaterials.Add(mat);
-                        allMaterials.Add(mat);
+                        matList.Add((r, i, sharedMats[i]));
                     }
                 }
             }
 
-            int total = allMaterials.Count;
-            for (int i = 0; i < allMaterials.Count; i++)
+            int total = matList.Count;
+            for (int i = 0; i < matList.Count; i++)
             {
-                Material mat = allMaterials[i];
-                progressCallback?.Invoke($"Replacing shaders ({i + 1}/{total})...", (float)i / total);
+                var entry = matList[i];
+                Material srcMat = entry.originalMat;
+                progressCallback?.Invoke($"Processing material ({i + 1}/{total}): {srcMat.name}", (float)i / total);
 
-                try
+                if (!materialMap.TryGetValue(srcMat, out Material questMat))
                 {
-                    if (mat == null || mat.shader == null)
-                        continue;
-
-                    string originalShaderName = mat.shader.name;
-
-                    // Check if already Quest-compatible
-                    if (originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
+                    questMat = DuplicateMaterial(srcMat, config.PlacementLocation == AssetPlacementLocation.SameFolderAsOriginal, avatarRoot.name);
+                    if (questMat != null)
                     {
-                        summary.materialsSkipped++;
-                        continue;
-                    }
-
-                    // Find replacement
-                    var replacement = ShaderMapping.FindReplacementShader(originalShaderName);
-
-                    if (replacement.Success && replacement.ReplacementShader != null)
-                    {
-                        Undo.RegisterCompleteObjectUndo(mat, "Replace shader for Quest compatibility");
-                        
-                        // Create a temporary material copy to preserve properties before shader replacement
-                        Material tempMaterial = new Material(mat);
-                        
-                        // Replace shader (this clears properties)
-                        mat.shader = replacement.ReplacementShader;
-                        
-                        // Transfer compatible properties from the temporary copy
-                        var propertyTransfer = ShaderPropertyMapper.TransferProperties(
-                            tempMaterial, // Source material with original shader
-                            mat, // Target material with new shader
-                            replacement.ReplacementShader
-                        );
-                        
-                        // Clean up temporary material
-                        UnityEngine.Object.DestroyImmediate(tempMaterial);
-                        
-                        if (propertyTransfer.PropertiesTransferred > 0)
-                        {
-                            Debug.Log($"Transferred {propertyTransfer.PropertiesTransferred} properties from {originalShaderName} to {replacement.ReplacementShader.name} on material {mat.name}");
-                        }
-                        
-                        EditorUtility.SetDirty(mat);
-
-                        // Enable GPU Instancing if supported
-                        if (replacement.ReplacementShader.name.Contains("Mobile"))
-                        {
-                            mat.enableInstancing = true;
-                        }
-
-                        summary.materialsReplaced++;
-                        string materialPath = AssetDatabase.GetAssetPath(mat);
-                        string transferInfo = propertyTransfer.PropertiesTransferred > 0 
-                            ? $" ({propertyTransfer.PropertiesTransferred} properties transferred)" 
-                            : "";
-                        summary.AddSuccess($"Replaced shader: {originalShaderName} → {replacement.ReplacementShader.name} ({replacement.MatchType}){transferInfo}", mat, materialPath);
-                    }
-                    else if (replacement.IsAlreadyCompatible)
-                    {
-                        summary.materialsSkipped++;
+                        materialMap[srcMat] = questMat;
+                        ReplaceShaderOnMaterial(srcMat, questMat, summary);
                     }
                     else
                     {
-                        summary.materialsFailed++;
-                        string materialPath = AssetDatabase.GetAssetPath(mat);
-                        summary.AddError($"Could not find Quest replacement for shader: {originalShaderName}", mat, materialPath);
+                        questMat = srcMat;
                     }
                 }
-                catch (Exception e)
-                {
-                    summary.materialsFailed++;
-                    string materialPath = AssetDatabase.GetAssetPath(mat);
-                    summary.AddError($"Error replacing shader in material: {e.Message}", mat, materialPath);
-                }
+
+                // Assign duplicated quest material to cloned renderer
+                Material[] mats = entry.renderer.sharedMaterials;
+                mats[entry.materialIndex] = questMat;
+                Undo.RecordObject(entry.renderer, "Assign Quest Material");
+                entry.renderer.sharedMaterials = mats;
             }
         }
 
-        /// <summary>
-        /// Checks if a component is Quest-incompatible (same logic as BackupManager)
-        /// </summary>
-        private static bool IsQuestIncompatibleComponent(Component comp)
+        private static Material DuplicateMaterial(Material srcMat, bool saveInSameFolder, string avatarName)
         {
-            if (comp == null) return false;
-            
-            string typeName = comp.GetType().FullName;
-            string typeNameLower = typeName.ToLowerInvariant();
-            
-            return typeNameLower.Contains("dynamicbone") ||
-                   comp is Cloth ||
-                   comp is Camera ||
-                   comp is Light ||
-                   comp is AudioSource ||
-                   comp is Rigidbody ||
-                   comp is Collider ||
-                   comp is Joint ||
-                   comp is ParticleSystem ||
-                   typeNameLower.Contains("constraint") ||
-                   typeNameLower.Contains("finalik");
+            if (srcMat == null) return null;
+
+            string srcPath = AssetDatabase.GetAssetPath(srcMat);
+            if (string.IsNullOrEmpty(srcPath)) return new Material(srcMat);
+
+            string filename = Path.GetFileNameWithoutExtension(srcPath);
+            if (filename.EndsWith(" (Quest)"))
+                return srcMat;
+
+            string dir = Path.GetDirectoryName(srcPath);
+            if (!saveInSameFolder)
+            {
+                dir = "Assets/QuestPatched/" + avatarName;
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            }
+
+            string destPath = Path.Combine(dir, filename + " (Quest).mat").Replace('\\', '/');
+            if (File.Exists(destPath))
+            {
+                return AssetDatabase.LoadAssetAtPath<Material>(destPath);
+            }
+
+            AssetDatabase.CopyAsset(srcPath, destPath);
+            return AssetDatabase.LoadAssetAtPath<Material>(destPath);
         }
 
-        /// <summary>
-        /// Enables GPU Instancing on all materials
-        /// </summary>
-        private static void EnableGPUInstancing(GameObject avatarRoot, ConversionSummary summary)
+        private static void ReplaceShaderOnMaterial(Material srcMat, Material questMat, ConversionSummary summary)
         {
-            HashSet<Material> processedMaterials = new HashSet<Material>();
+            if (questMat == null || questMat.shader == null) return;
+            string originalShaderName = questMat.shader.name;
 
-            Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer renderer in renderers)
+            if (originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
             {
-                if (renderer == null) continue;
+                summary.materialsSkipped++;
+                return;
+            }
 
-                Material[] materials = renderer.sharedMaterials;
-                foreach (Material mat in materials)
-                {
-                    if (mat != null && !processedMaterials.Contains(mat))
-                    {
-                        processedMaterials.Add(mat);
+            var replacement = ShaderMapping.FindReplacementShader(originalShaderName);
+            if (replacement.Success && replacement.ReplacementShader != null)
+            {
+                Undo.RegisterCompleteObjectUndo(questMat, "Replace Shader for Quest");
+                Material tempMat = new Material(questMat);
 
-                        try
-                        {
-                            if (mat.shader != null && mat.shader.name.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (!mat.enableInstancing)
-                                {
-                                    Undo.RegisterCompleteObjectUndo(mat, "Enable GPU Instancing");
-                                    mat.enableInstancing = true;
-                                    EditorUtility.SetDirty(mat);
-                                    summary.gpuInstancingEnabled++;
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogWarning($"Failed to enable GPU instancing on material {mat.name}: {e.Message}");
-                        }
-                    }
-                }
+                questMat.shader = replacement.ReplacementShader;
+
+                var transfer = ShaderPropertyMapper.TransferProperties(tempMat, questMat, replacement.ReplacementShader);
+                UnityEngine.Object.DestroyImmediate(tempMat);
+
+                questMat.enableInstancing = true;
+                EditorUtility.SetDirty(questMat);
+
+                summary.materialsReplaced++;
+                summary.AddSuccess($"Replaced shader: {originalShaderName} → {replacement.ReplacementShader.name} on {questMat.name}");
+            }
+            else
+            {
+                summary.materialsFailed++;
+                summary.AddError($"Could not find Quest replacement for shader: {originalShaderName} on material {questMat.name}");
             }
         }
     }

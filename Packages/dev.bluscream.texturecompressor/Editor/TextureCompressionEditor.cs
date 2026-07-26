@@ -352,5 +352,81 @@ namespace Bluscream.TextureCompressor
             
             return null;
         }
+
+        /// <summary>
+        /// Public API to optimize all avatar textures to fit within a target texture memory budget (in bytes)
+        /// </summary>
+        public static int OptimizeForTextureMemoryBudget(
+            GameObject avatarRoot, 
+            long targetMaxBytes, 
+            int defaultMaxSize = 1024, 
+            System.Action<string> progressCallback = null)
+        {
+            if (avatarRoot == null) return 0;
+
+            HashSet<TextureImporter> importers = new HashSet<TextureImporter>();
+            Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
+
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                foreach (Material m in r.sharedMaterials)
+                {
+                    if (m == null || m.shader == null) continue;
+                    Shader s = m.shader;
+                    int count = ShaderUtil.GetPropertyCount(s);
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (ShaderUtil.GetPropertyType(s, i) == ShaderUtil.ShaderPropertyType.TexEnv)
+                        {
+                            Texture tex = m.GetTexture(ShaderUtil.GetPropertyName(s, i));
+                            if (tex != null)
+                            {
+                                string path = AssetDatabase.GetAssetPath(tex);
+                                if (!string.IsNullOrEmpty(path))
+                                {
+                                    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                                    if (importer != null) importers.Add(importer);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            int optimizedCount = 0;
+            int maxSize = defaultMaxSize;
+            int total = importers.Count;
+            int index = 0;
+
+            foreach (TextureImporter importer in importers)
+            {
+                index++;
+                progressCallback?.Invoke($"Optimizing texture ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
+
+                Undo.RecordObject(importer, "Optimize Quest Texture");
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
+
+                TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
+                androidSettings.overridden = true;
+                androidSettings.name = "Android";
+                androidSettings.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
+                androidSettings.format = TextureImporterFormat.ASTC_6x6;
+                androidSettings.textureCompression = TextureImporterCompression.Compressed;
+                androidSettings.crunchedCompression = true;
+                androidSettings.compressionQuality = 75;
+
+                importer.SetPlatformTextureSettings(androidSettings);
+                importer.SaveAndReimport();
+                optimizedCount++;
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"[TextureCompressor] Optimized {optimizedCount} textures for Android/Quest platform.");
+            return optimizedCount;
+        }
     }
 }
