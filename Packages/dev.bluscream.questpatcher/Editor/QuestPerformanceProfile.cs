@@ -129,10 +129,10 @@ namespace VRCQuestPatcher
                     return new QuestPerformanceProfile
                     {
                         Rank = QuestPerformanceRank.VeryPoor,
-                        MaxTriangles = 20000,
-                        MaxSkinnedMeshes = 2,
-                        MaxMeshRenderers = 2,
-                        MaxMaterialSlots = 4,
+                        MaxTriangles = int.MaxValue,
+                        MaxSkinnedMeshes = int.MaxValue,
+                        MaxMeshRenderers = int.MaxValue,
+                        MaxMaterialSlots = int.MaxValue,
                         MaxTextureMemoryBytes = 40 * 1024 * 1024L, // 40 MB (VRChat Quest hard limit)
                         DefaultMaxTextureSize = 1024,
                         MaxPhysBoneComponents = 8,
