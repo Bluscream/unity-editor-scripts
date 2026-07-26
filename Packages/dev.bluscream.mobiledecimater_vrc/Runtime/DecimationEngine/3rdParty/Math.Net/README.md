@@ -1,1 +1,0 @@
-mathnet-numerics from https://github.com/mathnet/mathnet-numerics at commit 1357f17766d549a7fdf72b4b2ebb450fdf395d3c (4.15.0)

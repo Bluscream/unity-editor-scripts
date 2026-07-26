@@ -2,7 +2,8 @@
     "name": "Bluscream.MobileDecimater.Editor",
     "rootNamespace": "Bluscream.MobileDecimater",
     "references": [
-        "Bluscream.MobileDecimater.Runtime"
+        "Bluscream.MobileDecimater.Runtime",
+        "UnityMeshDecimation"
     ],
     "includePlatforms": [
         "Editor"
