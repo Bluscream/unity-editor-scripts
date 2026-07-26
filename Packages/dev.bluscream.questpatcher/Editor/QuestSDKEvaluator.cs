@@ -222,25 +222,31 @@ namespace VRCQuestPatcher
 
                     if (builderInstance != null)
                     {
-                        // Force VRChat SDK to run validation pass to populate GUI issue dictionaries
-                        try
-                        {
-                            MethodInfo validateMethod = avatarBuilderType.GetMethod("ValidateFeatures", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                            if (validateMethod != null)
-                            {
-                                Component desc = avatarRoot.GetComponent("VRC_AvatarDescriptor");
-                                Animator anim = avatarRoot.GetComponent<Animator>();
-                                validateMethod.Invoke(builderInstance, new object[] { desc, anim, null });
-                            }
-                        }
-                        catch { }
-
                         FieldInfo panelField = avatarBuilderType.GetField("_builder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                         object sdkPanel = panelField?.GetValue(builderInstance);
 
                         if (sdkPanel != null)
                         {
                             Type panelType = sdkPanel.GetType();
+                            FieldInfo selBuilderField = panelType.GetField("_selectedBuilder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                            if (selBuilderField != null && selBuilderField.GetValue(sdkPanel) == null)
+                            {
+                                selBuilderField.SetValue(sdkPanel, builderInstance);
+                            }
+
+                            // Force VRChat SDK to run validation pass to populate GUI issue dictionaries
+                            try
+                            {
+                                MethodInfo validateMethod = avatarBuilderType.GetMethod("ValidateFeatures", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                                if (validateMethod != null)
+                                {
+                                    Component desc = avatarRoot.GetComponent("VRC_AvatarDescriptor");
+                                    Animator anim = avatarRoot.GetComponent<Animator>();
+                                    validateMethod.Invoke(builderInstance, new object[] { desc, anim, null });
+                                }
+                            }
+                            catch { }
+
                             object descriptorObj = avatarRoot.GetComponent("VRC_AvatarDescriptor") ?? (object)avatarRoot;
 
                             PrintDictIssues(sdkPanel, panelType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
