@@ -319,15 +319,17 @@ namespace Bluscream.TextureCompressor
             Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F1} MB ({importers.Count} unique textures)");
 
             // Define ASTC Compression Profiles: (Format, CrunchQuality, DisplayName, EstimatedCrunchRatio)
-            // CrunchRatio: fraction of raw ASTC size that remains after crunch compression
-            // Derived from typical game texture content benchmarks; conservative (overestimates file size)
+            // CrunchRatio: fraction of raw ASTC (VRAM) size that ends up in the asset bundle on disk.
+            // IMPORTANT: These are empirically calibrated for avatar textures (photos, gradients, skin/hair).
+            // Avatar textures are hard to crunch — measured ratio at ASTC_12x12 q=25 was 0.51 (14.73 MB / 29.08 MB).
+            // We use conservative (high) ratios so we never underestimate bundle size.
             var compressionSteps = new (TextureImporterFormat format, int quality, string name, double crunchRatio)[]
             {
-                (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 0.55),
-                (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.45),
-                (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.38),
-                (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.30),
-                (TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 q=25", 0.22),
+                (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00), // crunch barely helps at q=100
+                (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.90),
+                (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.80),
+                (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.70),
+                (TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 q=25", 0.55), // measured ~0.51 on Mayu; use 0.55 for headroom
             };
 
             int[] resolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
