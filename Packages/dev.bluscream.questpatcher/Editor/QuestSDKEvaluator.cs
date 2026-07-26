@@ -229,13 +229,18 @@ namespace VRCQuestPatcher
                         if (sdkPanel != null)
                         {
                             Type panelType = sdkPanel.GetType();
+                            object prevSelectedBuilder = null;
+                            FieldInfo targetSelBuilderField = null;
+
                             Type currType = panelType;
                             while (currType != null && currType != typeof(object))
                             {
                                 FieldInfo selBuilderField = currType.GetField("_selectedBuilder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                                 if (selBuilderField != null)
                                 {
-                                    if (selBuilderField.GetValue(sdkPanel) == null)
+                                    targetSelBuilderField = selBuilderField;
+                                    prevSelectedBuilder = selBuilderField.GetValue(sdkPanel);
+                                    if (prevSelectedBuilder == null)
                                     {
                                         selBuilderField.SetValue(sdkPanel, builderInstance);
                                     }
@@ -244,25 +249,35 @@ namespace VRCQuestPatcher
                                 currType = currType.BaseType;
                             }
 
-                            // Force VRChat SDK to run validation pass to populate GUI issue dictionaries
                             try
                             {
-                                MethodInfo validateMethod = avatarBuilderType.GetMethod("ValidateFeatures", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                                if (validateMethod != null)
+                                // Force VRChat SDK to run validation pass to populate GUI issue dictionaries
+                                try
                                 {
-                                    Component desc = avatarRoot.GetComponent("VRC_AvatarDescriptor");
-                                    Animator anim = avatarRoot.GetComponent<Animator>();
-                                    validateMethod.Invoke(builderInstance, new object[] { desc, anim, null });
+                                    MethodInfo validateMethod = avatarBuilderType.GetMethod("ValidateFeatures", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                                    if (validateMethod != null)
+                                    {
+                                        Component desc = avatarRoot.GetComponent("VRC_AvatarDescriptor");
+                                        Animator anim = avatarRoot.GetComponent<Animator>();
+                                        validateMethod.Invoke(builderInstance, new object[] { desc, anim, null });
+                                    }
+                                }
+                                catch { }
+
+                                object descriptorObj = avatarRoot.GetComponent("VRC_AvatarDescriptor") ?? (object)avatarRoot;
+
+                                PrintDictIssues(sdkPanel, panelType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(sdkPanel, panelType, "GUIWarnings", "🟡 [SDK GUI WARNING]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(sdkPanel, panelType, "GUIInfos", "ℹ️ [SDK GUI INFO]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(sdkPanel, panelType, "GUIStats", "📊 [SDK GUI STAT]", descriptorObj, ref sdkAlertCount);
+                            }
+                            finally
+                            {
+                                if (targetSelBuilderField != null && prevSelectedBuilder == null)
+                                {
+                                    targetSelBuilderField.SetValue(sdkPanel, null);
                                 }
                             }
-                            catch { }
-
-                            object descriptorObj = avatarRoot.GetComponent("VRC_AvatarDescriptor") ?? (object)avatarRoot;
-
-                            PrintDictIssues(sdkPanel, panelType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
-                            PrintDictIssues(sdkPanel, panelType, "GUIWarnings", "🟡 [SDK GUI WARNING]", descriptorObj, ref sdkAlertCount);
-                            PrintDictIssues(sdkPanel, panelType, "GUIInfos", "ℹ️ [SDK GUI INFO]", descriptorObj, ref sdkAlertCount);
-                            PrintDictIssues(sdkPanel, panelType, "GUIStats", "📊 [SDK GUI STAT]", descriptorObj, ref sdkAlertCount);
                         }
                     }
                 }
