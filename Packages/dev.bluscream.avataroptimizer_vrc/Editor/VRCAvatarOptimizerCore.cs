@@ -132,7 +132,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     progressCallback?.Invoke("Duplicating materials and replacing shaders...", 0.30f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 3] Duplicating materials and remapping shaders on '{targetAvatar.name}'...");
-                    DuplicateAndReplaceMaterials(targetAvatar, config, summary, materialMap, (msg, prog) => progressCallback?.Invoke(msg, 0.30f + prog * 0.20f));
+                    DuplicateAndReplaceMaterials(targetAvatar, config, profile, summary, materialMap, (msg, prog) => progressCallback?.Invoke(msg, 0.30f + prog * 0.20f));
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 3] Materials processed: {materialMap.Count} unique. Replaced: {summary.materialsReplaced}, Skipped: {summary.materialsSkipped}, Failed: {summary.materialsFailed}.");
                 }
                 else
@@ -250,6 +250,7 @@ namespace Bluscream.VRCAvatarOptimizer
         private static void DuplicateAndReplaceMaterials(
             GameObject avatarRoot, 
             ConversionConfig config, 
+            PlatformProfile profile,
             ConversionSummary summary, 
             Dictionary<Material, Material> materialMap, 
             Action<string, float> progressCallback)

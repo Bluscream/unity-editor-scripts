@@ -733,7 +733,7 @@ namespace Bluscream
             System.Reflection.FieldInfo field = typeof(T).GetField(value.ToString());
             if (field == null) return value.ToString();
             System.ComponentModel.DescriptionAttribute attr =
-                field.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
+                (System.ComponentModel.DescriptionAttribute)System.Attribute.GetCustomAttribute(field, typeof(System.ComponentModel.DescriptionAttribute));
             return attr != null ? attr.Description : value.ToString();
         }
     }
