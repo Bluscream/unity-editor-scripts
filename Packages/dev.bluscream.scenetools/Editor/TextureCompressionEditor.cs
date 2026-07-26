@@ -346,8 +346,8 @@ namespace Bluscream.TextureCompressor
             // Resolution Scale Steps from highest to lowest (4096, 2048, 1024, 512, 256, 128)
             int[] resolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
 
-            // Target 90% of max budget to maximize visual fidelity while maintaining build bundle safety
-            long effectiveTargetBudget = (long)(targetMaxBytes * 0.90);
+            // Target 39.0 MB (leaving 1.0 MB safety headroom for mesh vertex data and animation clips)
+            long effectiveTargetBudget = Math.Max(1024 * 1024L, targetMaxBytes - (1024 * 1024L));
 
             int bestResolutionCap = 2048;
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_4x4;
