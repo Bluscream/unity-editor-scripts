@@ -372,12 +372,19 @@ namespace Bluscream.TextureCompressor
                 Debug.LogWarning($"[TextureCompressor] Could not meet dual budget within any resolution/format — applying minimum: 128px ASTC_12x12 Crunch 25%. Bundle may still exceed 10 MB.");
             }
 
-            // Apply selected optimal settings to all importers
-            int optimizedCount = 0;
+            ApplyTextureSettings(importers, bestResolutionCap, bestFormat, bestQuality, progressCallback);
+            return importers.Count;
+        }
+
+        public static void ApplyTextureSettings(
+            HashSet<TextureImporter> importers,
+            int maxResolutionCap,
+            TextureImporterFormat format,
+            int compressionQuality,
+            System.Action<string> progressCallback = null)
+        {
             int total = importers.Count;
             int index = 0;
-
-            // Collect paths for reimport after StopAssetEditing
             var pathsToReimport = new System.Collections.Generic.List<string>();
 
             AssetDatabase.StartAssetEditing();
@@ -391,18 +398,17 @@ namespace Bluscream.TextureCompressor
                     Undo.RecordObject(importer, "Optimize Quest Texture");
 
                     TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
-                    androidSettings.overridden        = true;
-                    androidSettings.name              = "Android";
-                    androidSettings.maxTextureSize    = bestResolutionCap;
-                    androidSettings.format            = bestFormat;
+                    androidSettings.overridden = true;
+                    androidSettings.name = "Android";
+                    androidSettings.maxTextureSize = maxResolutionCap;
+                    androidSettings.format = format;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
                     androidSettings.crunchedCompression = true;
-                    androidSettings.compressionQuality = bestQuality;
+                    androidSettings.compressionQuality = compressionQuality;
 
                     importer.SetPlatformTextureSettings(androidSettings);
                     EditorUtility.SetDirty(importer);
                     pathsToReimport.Add(importer.assetPath);
-                    optimizedCount++;
                 }
             }
             finally
@@ -410,8 +416,6 @@ namespace Bluscream.TextureCompressor
                 AssetDatabase.StopAssetEditing();
             }
 
-            // Reimport all textures now that StartAssetEditing block is closed
-            // (SaveAndReimport inside StartAssetEditing is a no-op — settings would never apply to the build)
             index = 0;
             foreach (string path in pathsToReimport)
             {
@@ -420,11 +424,7 @@ namespace Bluscream.TextureCompressor
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             }
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            Debug.Log($"[TextureCompressor] Done: {optimizedCount} texture(s) set to {bestResolutionCap}px {bestFormat} Crunch {bestQuality}%.");
-            return optimizedCount;
+            Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
         }
 
         [MenuItem("Bluscream/Texture Compressor/Reset Default PC Texture Settings for Selection")]

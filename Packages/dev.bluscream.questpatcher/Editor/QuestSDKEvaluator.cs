@@ -315,6 +315,59 @@ namespace VRCQuestPatcher
                     }
                 }
             }
+        /// <summary>
+        /// Attempts to build the avatar AssetBundle via VRChat SDK reflection to inspect exact compressed bundle size on disk.
+        /// </summary>
+        public static long BuildAvatarBundleDryRun(GameObject avatarRoot, out string bundlePath)
+        {
+            bundlePath = null;
+            if (avatarRoot == null) return -1;
+
+            try
+            {
+                Type avatarBuilderType = Type.GetType("VRC.SDK3.Builder.VRCAvatarBuilder, VRCSDK3A-Editor")
+                    ?? Type.GetType("VRC.SDK3.Builder.VRCAvatarBuilder");
+
+                if (avatarBuilderType != null)
+                {
+                    MethodInfo exportBlueprintMethod = avatarBuilderType.GetMethod("ExportAvatarBlueprint", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (exportBlueprintMethod != null)
+                    {
+                        Debug.Log($"[QuestSDKEvaluator] Invoking VRCAvatarBuilder.ExportAvatarBlueprint for '{avatarRoot.name}'...");
+                        exportBlueprintMethod.Invoke(null, new object[] { avatarRoot });
+
+                        // Search temporary cache & temp directories for generated .vrca or asset bundle files
+                        string tempDir = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+                        string[] candidateFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories);
+                        
+                        FileInfo newestBundle = null;
+                        foreach (string file in candidateFiles)
+                        {
+                            if (file.EndsWith(".vrca") || file.EndsWith(".vrcb") || file.Contains("vrcAvatar"))
+                            {
+                                FileInfo fi = new FileInfo(file);
+                                if (newestBundle == null || fi.LastWriteTime > newestBundle.LastWriteTime)
+                                {
+                                    newestBundle = fi;
+                                }
+                            }
+                        }
+
+                        if (newestBundle != null)
+                        {
+                            bundlePath = newestBundle.FullName;
+                            Debug.Log($"[QuestSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
+                            return newestBundle.Length;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[QuestSDKEvaluator] Dry-run bundle build check skipped/failed: {e.Message}");
+            }
+
+            return -1;
         }
     }
 }

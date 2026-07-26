@@ -211,12 +211,24 @@ namespace VRCQuestPatcher
                     Debug.Log($"[VRCQuestPatcherCore] [Step 7] Skipped mesh decimation (disabled in config).");
                 }
 
-                // Step 8: Save Assets & Final Rating Check
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-
-                Selection.activeGameObject = targetAvatar;
-                EditorGUIUtility.PingObject(targetAvatar);
+                // Step 8.5: Dry-Run AssetBundle Build & Verification
+                progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
+                Debug.Log($"[VRCQuestPatcherCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
+                long bundleSizeBytes = QuestSDKEvaluator.BuildAvatarBundleDryRun(targetAvatar, out string bundlePath);
+                if (bundleSizeBytes > 0)
+                {
+                    double bundleMB = bundleSizeBytes / (1024.0 * 1024.0);
+                    if (bundleSizeBytes > 10L * 1024 * 1024)
+                    {
+                        Debug.LogWarning($"[VRCQuestPatcherCore] [Step 8.5] ⚠️ WARNING: Built AssetBundle size is {bundleMB:F2} MB (exceeds VRChat Quest 10.00 MB limit!).");
+                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds VRChat Quest 10 MB limit!");
+                    }
+                    else
+                    {
+                        Debug.Log($"[VRCQuestPatcherCore] [Step 8.5] ✓ Verified AssetBundle size: {bundleMB:F2} MB (within 10 MB limit). Bundle file: {bundlePath}");
+                        summary.AddSuccess($"Verified Quest AssetBundle size: {bundleMB:F2} MB (Max 10 MB).");
+                    }
+                }
 
                 QuestSDKEvaluator.AvatarStats stats = QuestSDKEvaluator.EvaluateAvatar(targetAvatar);
                 summary.FinalStats = stats;
