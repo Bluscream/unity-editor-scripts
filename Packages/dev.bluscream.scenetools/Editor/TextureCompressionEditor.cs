@@ -331,37 +331,45 @@ namespace Bluscream.TextureCompressor
             }
 
             int optimizedCount = 0;
-            int maxSize = defaultMaxSize;
+            int maxSize = (targetMaxBytes <= 40 * 1024 * 1024L) ? Math.Min(defaultMaxSize, 512) : defaultMaxSize;
             int total = importers.Count;
             int index = 0;
 
-            foreach (TextureImporter importer in importers)
+            AssetDatabase.StartAssetEditing();
+            try
             {
-                index++;
-                progressCallback?.Invoke($"Optimizing texture ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
+                foreach (TextureImporter importer in importers)
+                {
+                    index++;
+                    progressCallback?.Invoke($"Compressing texture for Quest ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
 
-                Undo.RecordObject(importer, "Optimize Quest Texture");
-                importer.textureCompression = TextureImporterCompression.Compressed;
-                importer.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
+                    Undo.RecordObject(importer, "Optimize Quest Texture");
+                    importer.textureCompression = TextureImporterCompression.Compressed;
+                    importer.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
 
-                TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
-                androidSettings.overridden = true;
-                androidSettings.name = "Android";
-                androidSettings.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
-                androidSettings.format = TextureImporterFormat.ASTC_6x6;
-                androidSettings.textureCompression = TextureImporterCompression.Compressed;
-                androidSettings.crunchedCompression = true;
-                androidSettings.compressionQuality = 75;
+                    TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
+                    androidSettings.overridden = true;
+                    androidSettings.name = "Android";
+                    androidSettings.maxTextureSize = Math.Min(androidSettings.maxTextureSize > 0 ? androidSettings.maxTextureSize : importer.maxTextureSize, maxSize);
+                    androidSettings.format = TextureImporterFormat.ASTC_6x6;
+                    androidSettings.textureCompression = TextureImporterCompression.Compressed;
+                    androidSettings.crunchedCompression = true;
+                    androidSettings.compressionQuality = 50;
 
-                importer.SetPlatformTextureSettings(androidSettings);
-                EditorUtility.SetDirty(importer);
-                optimizedCount++;
+                    importer.SetPlatformTextureSettings(androidSettings);
+                    importer.SaveAndReimport();
+                    optimizedCount++;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[TextureCompressor] Optimized {optimizedCount} textures for Android/Quest platform.");
+            Debug.Log($"[TextureCompressor] Compressed {optimizedCount} textures for Android/Quest platform.");
             return optimizedCount;
         }
     }
