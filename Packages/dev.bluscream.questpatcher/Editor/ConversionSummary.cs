@@ -38,6 +38,8 @@ namespace VRCQuestPatcher
             }
         }
 
+        public long AssetBundleSizeBytes = -1;
+
         public QuestSDKEvaluator.AvatarStats InitialStats;
         public QuestSDKEvaluator.AvatarStats FinalStats;
 
@@ -59,7 +61,11 @@ namespace VRCQuestPatcher
 
                 RenderMetricRow("Performance Rating", InitialStats.RatingName, FinalStats.RatingName);
                 RenderMetricRow("Triangles", $"{InitialStats.TriangleCount:N0}", $"{FinalStats.TriangleCount:N0}");
-                RenderMetricRow("Texture Memory", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
+                RenderMetricRow("Texture Memory (VRAM)", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
+                if (AssetBundleSizeBytes > 0)
+                {
+                    RenderMetricRow("AssetBundle Size (Disk)", "N/A", $"{AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+                }
                 RenderMetricRow("Material Slots", $"{InitialStats.MaterialSlotCount}", $"{FinalStats.MaterialSlotCount}");
                 RenderMetricRow("PhysBone Components", $"{InitialStats.PhysBoneComponentCount}", $"{FinalStats.PhysBoneComponentCount}");
                 RenderMetricRow("PhysBone Colliders", $"{InitialStats.PhysBoneColliderCount}", $"{FinalStats.PhysBoneColliderCount}");
@@ -125,7 +131,11 @@ namespace VRCQuestPatcher
             Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
             Debug.Log($"[VRC-QuestPatcher Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
             Debug.Log($"[VRC-QuestPatcher Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • Texture Memory:            {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / 40.00 MB");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / 40.00 MB");
+            if (AssetBundleSizeBytes > 0)
+            {
+                Debug.Log($"[VRC-QuestPatcher Summary] • AssetBundle Size (Disk):   {AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+            }
             Debug.Log($"[VRC-QuestPatcher Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
             Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");
             Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Colliders:        {InitialStats.PhysBoneColliderCount}  →  {FinalStats.PhysBoneColliderCount} / 16");

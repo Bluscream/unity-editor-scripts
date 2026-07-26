@@ -215,6 +215,7 @@ namespace VRCQuestPatcher
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
                 Debug.Log($"[VRCQuestPatcherCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
                 long bundleSizeBytes = QuestSDKEvaluator.BuildAvatarBundleDryRun(targetAvatar, out string bundlePath);
+                summary.AssetBundleSizeBytes = bundleSizeBytes;
                 if (bundleSizeBytes > 0)
                 {
                     double bundleMB = bundleSizeBytes / (1024.0 * 1024.0);
