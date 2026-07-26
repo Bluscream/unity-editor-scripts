@@ -27,7 +27,6 @@ namespace VRCQuestPatcher
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
-            public int MaxTextureSize = 1024;
             public string BackupLocation = "Assets/VRCQuestPatcherBackups";
         }
 
@@ -163,11 +162,10 @@ namespace VRCQuestPatcher
                 if (config.OptimizeTextures)
                 {
                     progressCallback?.Invoke("Optimizing texture memory budget for Quest...", 0.70f);
-                    Debug.Log($"[VRCQuestPatcherCore] [Step 5] Optimizing textures: max size={config.MaxTextureSize}px, VRAM budget={profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB");
+                    Debug.Log($"[VRCQuestPatcherCore] [Step 5] Optimizing textures — VRAM budget: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB, Bundle budget: 10 MB (dynamic resolution selection)");
                     int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
                         targetAvatar, 
                         profile.MaxTextureMemoryBytes, 
-                        config.MaxTextureSize, 
                         (msg) => progressCallback?.Invoke(msg, 0.70f)
                     );
                     summary.texturesOptimized = texCount;

@@ -42,7 +42,6 @@ namespace VRCQuestPatcher
             config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", true);
             config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
-            config.MaxTextureSize = EditorPrefs.GetInt("VRCQuestPatcher_MaxTextureSize", 1024);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCQuestPatcher_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCQuestPatcher_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCQuestPatcher_RemoveIncompatibleComponents", true);
@@ -58,7 +57,6 @@ namespace VRCQuestPatcher
             EditorPrefs.SetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
             EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
-            EditorPrefs.SetInt("VRCQuestPatcher_MaxTextureSize", config.MaxTextureSize);
             EditorPrefs.SetBool("VRCQuestPatcher_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCQuestPatcher_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCQuestPatcher_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
