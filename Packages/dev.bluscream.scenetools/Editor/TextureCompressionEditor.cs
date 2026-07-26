@@ -394,8 +394,8 @@ namespace Bluscream.TextureCompressor
             return optimizedCount;
         }
 
-        [MenuItem("Bluscream/Texture Compressor/Reset Default PC Texture Max Sizes for Selection")]
-        [MenuItem("GameObject/VRCQuestPatcher/Reset PC Max Texture Sizes", false, 40)]
+        [MenuItem("Bluscream/Texture Compressor/Reset Default PC Texture Settings for Selection")]
+        [MenuItem("GameObject/VRCQuestPatcher/Reset PC Texture Settings", false, 40)]
         public static void ResetDefaultPCTexturesForSelection()
         {
             GameObject selected = Selection.activeGameObject;
@@ -414,6 +414,18 @@ namespace Bluscream.TextureCompressor
                 {
                     Undo.RecordObject(imp, "Reset PC Max Texture Size");
                     imp.maxTextureSize = 4096;
+                    imp.crunchedCompression = false;
+                    imp.textureCompression = TextureImporterCompression.Uncompressed;
+
+                    TextureImporterPlatformSettings standaloneSettings = imp.GetPlatformTextureSettings("Standalone");
+                    if (standaloneSettings != null && standaloneSettings.overridden)
+                    {
+                        standaloneSettings.crunchedCompression = false;
+                        standaloneSettings.maxTextureSize = 4096;
+                        standaloneSettings.textureCompression = TextureImporterCompression.Uncompressed;
+                        imp.SetPlatformTextureSettings(standaloneSettings);
+                    }
+
                     imp.SaveAndReimport();
                     count++;
                 }
@@ -424,7 +436,45 @@ namespace Bluscream.TextureCompressor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[TextureCompressor] Reset default PC max texture size to 4096 for {count} textures.");
+            Debug.Log($"[TextureCompressor] Reset default PC texture settings (Max Size 4096, Uncompressed, No Crunch) for {count} textures.");
+        }
+
+        [MenuItem("Bluscream/Texture Compressor/Clear Android Platform Overrides for Selection")]
+        [MenuItem("GameObject/VRCQuestPatcher/Clear Android Overrides", false, 41)]
+        public static void ClearAndroidOverridesForSelection()
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected == null)
+            {
+                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                return;
+            }
+
+            HashSet<TextureImporter> importers = GetUniqueTextureImporters(selected);
+            int count = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (TextureImporter imp in importers)
+                {
+                    Undo.RecordObject(imp, "Clear Android Platform Override");
+                    TextureImporterPlatformSettings androidSettings = imp.GetPlatformTextureSettings("Android");
+                    if (androidSettings != null && androidSettings.overridden)
+                    {
+                        androidSettings.overridden = false;
+                        imp.SetPlatformTextureSettings(androidSettings);
+                        imp.SaveAndReimport();
+                        count++;
+                    }
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[TextureCompressor] Cleared Android platform overrides for {count} textures.");
         }
 
         public static HashSet<TextureImporter> GetUniqueTextureImporters(GameObject avatarRoot)
