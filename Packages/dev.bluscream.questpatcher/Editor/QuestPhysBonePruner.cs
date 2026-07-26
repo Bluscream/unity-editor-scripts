@@ -88,12 +88,13 @@ namespace VRCQuestPatcher
 
                     try
                     {
-                        var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
-                        if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list && list.Count > 0)
+                        SerializedObject so = new SerializedObject(pb);
+                        SerializedProperty collidersProp = so.FindProperty("colliders");
+                        if (collidersProp != null && collidersProp.isArray && collidersProp.arraySize > 0)
                         {
-                            Undo.RecordObject(pb, "Trim PhysBone Colliders");
                             int before = GetCollisionCheckCount(pb);
-                            list.Clear();
+                            collidersProp.ClearArray();
+                            so.ApplyModifiedProperties();
                             int after = GetCollisionCheckCount(pb);
                             totalCollisionChecks -= (before - after);
                             removedCount++;

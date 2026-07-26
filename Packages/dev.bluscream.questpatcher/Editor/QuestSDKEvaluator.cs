@@ -119,31 +119,33 @@ namespace VRCQuestPatcher
         private static void CalculatePhysBoneStats(GameObject avatarRoot, AvatarStats stats)
         {
             Component[] components = avatarRoot.GetComponentsInChildren<Component>(true);
+            int totalChecks = 0;
+
             foreach (Component c in components)
             {
                 if (c == null) continue;
-                string typeName = c.GetType().FullName;
-                if (typeName.Contains("VRCPhysBone"))
+                string typeName = c.GetType().Name;
+                if (typeName == "VRCPhysBone" || typeName == "VRCPhysBoneBase")
                 {
-                    if (typeName.EndsWith("VRCPhysBone"))
-                    {
-                        stats.PhysBoneComponentCount++;
-                        // Inspect affected transforms if possible via SerializedObject
-                        SerializedObject so = new SerializedObject(c);
-                        SerializedProperty rootTransformProp = so.FindProperty("rootTransform");
-                        Transform rootT = rootTransformProp != null ? rootTransformProp.objectReferenceValue as Transform : c.transform;
-                        if (rootT != null)
-                        {
-                            stats.PhysBoneTransformCount += rootT.GetComponentsInChildren<Transform>(true).Length;
-                        }
-                    }
-                    else if (typeName.Contains("VRCPhysBoneCollider"))
-                    {
-                        stats.PhysBoneColliderCount++;
-                    }
+                    stats.PhysBoneComponentCount++;
+                    SerializedObject so = new SerializedObject(c);
+                    SerializedProperty rootTProp = so.FindProperty("rootTransform");
+                    Transform rootT = rootTProp != null && rootTProp.objectReferenceValue != null ? (Transform)rootTProp.objectReferenceValue : c.transform;
+                    int chainTransforms = rootT != null ? rootT.GetComponentsInChildren<Transform>(true).Length : 1;
+                    stats.PhysBoneTransformCount += chainTransforms;
+
+                    SerializedProperty collidersProp = so.FindProperty("colliders");
+                    int referencedColliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
+
+                    totalChecks += (chainTransforms * referencedColliders);
+                }
+                else if (typeName.Contains("VRCPhysBoneCollider"))
+                {
+                    stats.PhysBoneColliderCount++;
                 }
             }
-            stats.PhysBoneCollisionCheckCount = stats.PhysBoneTransformCount * Math.Max(1, stats.PhysBoneColliderCount);
+
+            stats.PhysBoneCollisionCheckCount = totalChecks;
         }
 
         private static long CalculateTextureMemory(GameObject avatarRoot)
