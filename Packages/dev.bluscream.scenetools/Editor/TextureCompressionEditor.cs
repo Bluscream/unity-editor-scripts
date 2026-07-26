@@ -497,10 +497,6 @@ namespace Bluscream.TextureCompressor
                 {
                     Undo.RecordObject(imp, "Optimize PC Textures");
                     int maxRes = 2048;
-                    imp.maxTextureSize = Math.Min(imp.maxTextureSize > 0 ? imp.maxTextureSize : maxRes, maxRes);
-                    imp.textureCompression = TextureImporterCompression.Compressed;
-                    imp.crunchedCompression = true;
-                    imp.compressionQuality = 75;
 
                     TextureImporterPlatformSettings standaloneSettings = imp.GetPlatformTextureSettings("Standalone");
                     standaloneSettings.overridden = true;
