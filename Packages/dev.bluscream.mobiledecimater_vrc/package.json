@@ -1,16 +1,16 @@
 {
   "name": "dev.bluscream.mobiledecimater_vrc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Mobile Mesh Decimater",
   "description": "Automatically decimates avatar and scene meshes on build when targeting mobile platforms (Android, iOS) with integrated high-performance mesh decimation engine.",
   "unity": "2019.4",
   "dependencies": {
-    "dev.bluscream.common": "1.0.0",
-    "dev.bluscream.common_vrc": "1.0.0"
+    "dev.bluscream.common": "1.0.1",
+    "dev.bluscream.common_vrc": "1.0.1"
   },
   "vpmDependencies": {
-    "dev.bluscream.common": "1.0.0",
-    "dev.bluscream.common_vrc": "1.0.0"
+    "dev.bluscream.common": "1.0.1",
+    "dev.bluscream.common_vrc": "1.0.1"
   },
   "author": {
     "name": "Bluscream"

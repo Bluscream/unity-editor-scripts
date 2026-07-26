@@ -1,19 +1,21 @@
-# VRC-QuestPatcher
+# Avatar Optimizer (VRChat)
 
-Automated tool to convert VRChat avatars for Quest/Android compatibility.
+Automated tool to convert and optimize VRChat avatars across platforms (PC & Android/Quest) according to SDK performance limits and profiles.
 
 ## Features
 
 - **Component Removal**: Automatically removes Quest-incompatible components (DynamicBones, Cloth, Cameras, Lights, AudioSources, Physics components, etc.)
 - **Shader Replacement**: Replaces PC shaders with Quest-compatible VRChat/Mobile shaders using intelligent matching
-- **Texture Optimization**: Optional texture compression to save VRAM
-- **Backup & Restore**: Creates backups before conversion and allows restoration
-- **Progress Monitoring**: Real-time progress display during conversion
-- **Detailed Summary**: Shows what was changed with clickable object references
+- **Texture Optimization**: Multi-stage ASTC / ETC2 texture compression with fine 5% Crunch quality steps and uncompressed/compressed headroom controls
+- **Mesh Decimation**: Automatic polygon reduction to fit target performance rank poly limits
+- **PhysBone Pruning**: Prunes PhysBone components, transforms, colliders, and collision checks to hit target rank limits
+- **VRCFury & Animation Remap**: Automatically remaps VRCFury toggles, material swaps, and animation clips for converted avatars
+- **Dry-run Build Verification**: Verifies both uncompressed texture memory and real `.vrca` AssetBundle disk size before upload
+- **Detailed Summary**: Shows before/after performance stats with clickable object references
 
 ## Usage
 
-1. Open the window: `Tools > VRC-QuestPatcher`
+1. Open the window: `Tools > Avatar Optimizer`
 2. Drag your avatar root GameObject (with VRC_AvatarDescriptor) into the drop area
 3. Configure options:
    - Enable/disable component removal
