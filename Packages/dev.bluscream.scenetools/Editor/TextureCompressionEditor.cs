@@ -396,13 +396,11 @@ namespace Bluscream.TextureCompressor
                     progressCallback?.Invoke($"Optimizing texture ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
 
                     Undo.RecordObject(importer, "Optimize Quest Texture");
-                    importer.textureCompression = TextureImporterCompression.Compressed;
-                    importer.maxTextureSize = Math.Min(importer.maxTextureSize, bestResolutionCap);
 
                     TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
                     androidSettings.overridden = true;
                     androidSettings.name = "Android";
-                    androidSettings.maxTextureSize = Math.Min(androidSettings.maxTextureSize > 0 ? androidSettings.maxTextureSize : importer.maxTextureSize, bestResolutionCap);
+                    androidSettings.maxTextureSize = bestResolutionCap;
                     androidSettings.format = bestFormat;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
                     androidSettings.crunchedCompression = true;
@@ -423,6 +421,38 @@ namespace Bluscream.TextureCompressor
 
             Debug.Log($"[TextureCompressor] Dynamically optimized {optimizedCount} textures for Android/Quest platform.");
             return optimizedCount;
+        }
+
+        [MenuItem("Tools/Bluscream/Texture Compressor/Reset Default PC Texture Max Sizes for Selection")]
+        public static void ResetDefaultPCTexturesForSelection()
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected == null)
+            {
+                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                return;
+            }
+
+            HashSet<TextureImporter> importers = GetUniqueTextureImporters(selected);
+            int count = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (TextureImporter imp in importers)
+                {
+                    Undo.RecordObject(imp, "Reset PC Max Texture Size");
+                    imp.maxTextureSize = 4096;
+                    imp.SaveAndReimport();
+                    count++;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[TextureCompressor] Reset default PC max texture size to 4096 for {count} textures.");
         }
 
         private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
