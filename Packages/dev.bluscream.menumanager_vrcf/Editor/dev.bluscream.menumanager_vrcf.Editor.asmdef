@@ -1,5 +1,5 @@
 {
-    "name": "dev.bluscream.menumanager_vrc.Editor",
+    "name": "dev.bluscream.menumanager_vrcf.Editor",
     "references": [],
     "includePlatforms": [
         "Editor"
