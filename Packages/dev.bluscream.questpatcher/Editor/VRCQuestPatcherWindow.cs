@@ -27,6 +27,43 @@ namespace VRCQuestPatcher
             window.Show();
         }
 
+        private void OnEnable()
+        {
+            LoadPreferences();
+        }
+
+        private void LoadPreferences()
+        {
+            config.TargetRank = (QuestPerformanceRank)EditorPrefs.GetInt("VRCQuestPatcher_TargetRank", (int)QuestPerformanceRank.Medium);
+            config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCQuestPatcher_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
+            config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCQuestPatcher_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
+            config.DuplicateAvatar = EditorPrefs.GetBool("VRCQuestPatcher_DuplicateAvatar", true);
+            config.AvatarSuffix = EditorPrefs.GetString("VRCQuestPatcher_AvatarSuffix", " (Quest)");
+            config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", true);
+            config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
+            config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
+            config.MaxTextureSize = EditorPrefs.GetInt("VRCQuestPatcher_MaxTextureSize", 1024);
+            config.PrunePhysBones = EditorPrefs.GetBool("VRCQuestPatcher_PrunePhysBones", true);
+            config.DecimateMeshes = EditorPrefs.GetBool("VRCQuestPatcher_DecimateMeshes", true);
+            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCQuestPatcher_RemoveIncompatibleComponents", true);
+        }
+
+        private void SavePreferences()
+        {
+            EditorPrefs.SetInt("VRCQuestPatcher_TargetRank", (int)config.TargetRank);
+            EditorPrefs.SetInt("VRCQuestPatcher_PlacementLocation", (int)config.PlacementLocation);
+            EditorPrefs.SetInt("VRCQuestPatcher_PruningStrategy", (int)config.PruningStrategy);
+            EditorPrefs.SetBool("VRCQuestPatcher_DuplicateAvatar", config.DuplicateAvatar);
+            EditorPrefs.SetString("VRCQuestPatcher_AvatarSuffix", config.AvatarSuffix ?? " (Quest)");
+            EditorPrefs.SetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
+            EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
+            EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
+            EditorPrefs.SetInt("VRCQuestPatcher_MaxTextureSize", config.MaxTextureSize);
+            EditorPrefs.SetBool("VRCQuestPatcher_PrunePhysBones", config.PrunePhysBones);
+            EditorPrefs.SetBool("VRCQuestPatcher_DecimateMeshes", config.DecimateMeshes);
+            EditorPrefs.SetBool("VRCQuestPatcher_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
+        }
+
         private void OnGUI()
         {
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
@@ -80,6 +117,8 @@ namespace VRCQuestPatcher
             EditorGUILayout.LabelField("2. Conversion Preferences", EditorStyles.boldLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
+            EditorGUI.BeginChangeCheck();
+
             config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
             EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: Max {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxTriangles:N0} Tris, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxMaterialSlots} Material Slots, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxPhysBoneComponents} PhysBones.", MessageType.None);
 
@@ -119,6 +158,11 @@ namespace VRCQuestPatcher
             }
             config.DecimateMeshes = EditorGUILayout.Toggle("Decimate Meshes to Poly Limit", config.DecimateMeshes);
             config.RemoveIncompatibleComponents = EditorGUILayout.Toggle("Remove Incompatible Components", config.RemoveIncompatibleComponents);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                SavePreferences();
+            }
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
