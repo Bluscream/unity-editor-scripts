@@ -119,6 +119,8 @@ namespace VRCQuestPatcher
 
             EditorGUI.BeginChangeCheck();
 
+            config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
+
             QuestPerformanceProfile currentProfile = QuestPerformanceProfile.GetProfile(config.TargetRank);
             string triStr = currentProfile.MaxTriangles == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxTriangles:N0}";
             string matStr = currentProfile.MaxMaterialSlots == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxMaterialSlots}";
