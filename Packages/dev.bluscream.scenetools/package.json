@@ -1,0 +1,26 @@
+{
+  "name": "dev.bluscream.scenetools",
+  "version": "1.0.0",
+  "displayName": "Bluscream Scene & Asset Tools",
+  "description": "Comprehensive suite of Unity editor tools including Component Remover, Unused Asset Cleanup, GameObject Replacer, Texture Compressor, and Shader Usage Inspector.",
+  "unity": "2019.4",
+  "dependencies": {
+    "dev.bluscream.common": "1.0.0"
+  },
+  "vpmDependencies": {
+    "dev.bluscream.common": "1.0.0"
+  },
+  "author": {
+    "name": "Bluscream"
+  },
+  "keywords": [
+    "scenetools",
+    "component",
+    "remover",
+    "cleanup",
+    "replacer",
+    "texture",
+    "compression",
+    "shader"
+  ]
+}

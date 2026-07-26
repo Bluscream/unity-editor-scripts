@@ -1,8 +1,8 @@
 {
   "name": "dev.bluscream.common",
   "version": "1.0.0",
-  "displayName": "Bluscream Common",
-  "description": "Common utilities and shared code for Bluscream Unity packages.",
+  "displayName": "Bluscream Common & Backup System",
+  "description": "Common utilities, shared code, and flexible backup/restore system for Unity assets, GameObjects, materials, and textures.",
   "unity": "2019.4",
   "dependencies": {},
   "vpmDependencies": {},
@@ -12,6 +12,8 @@
   "keywords": [
     "utilities",
     "common",
-    "shared"
+    "shared",
+    "backup",
+    "restore"
   ]
 }
