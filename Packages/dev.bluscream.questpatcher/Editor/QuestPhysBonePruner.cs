@@ -101,9 +101,27 @@ namespace VRCQuestPatcher
                             progressCallback?.Invoke($"Cleared colliders from PhysBone component on {pb.gameObject.name} to reduce collision checks.");
                         }
                     }
-                    catch (Exception e)
+                }
+            }
+
+            // 4. If total collision checks still > maxChecks, prune PhysBones with largest check counts until total <= maxChecks
+            pbList.RemoveAll(c => c == null);
+            totalCollisionChecks = CalculateTotalCollisionChecks(pbList);
+            if (totalCollisionChecks > maxChecks)
+            {
+                pbList.Sort((a, b) => GetCollisionCheckCount(b).CompareTo(GetCollisionCheckCount(a)));
+
+                for (int i = 0; i < pbList.Count; i++)
+                {
+                    if (totalCollisionChecks <= maxChecks) break;
+                    Component pb = pbList[i];
+                    if (pb != null)
                     {
-                        Debug.LogWarning($"[QuestPhysBonePruner] Could not clear colliders on {pb.name}: {e.Message}");
+                        int checks = GetCollisionCheckCount(pb);
+                        Undo.DestroyObjectImmediate(pb);
+                        totalCollisionChecks -= checks;
+                        removedCount++;
+                        progressCallback?.Invoke($"Pruned PhysBone component on {pb.gameObject.name} to enforce <= {maxChecks} collision checks.");
                     }
                 }
             }
