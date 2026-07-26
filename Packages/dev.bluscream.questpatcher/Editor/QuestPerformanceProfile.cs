@@ -49,7 +49,6 @@ namespace VRCQuestPatcher
         public int MaxMeshRenderers = 4;
         public int MaxMaterialSlots = 4;
         public long MaxTextureMemoryBytes = 2048 * 1024 * 1024L; // 2048 MB limit
-        public int DefaultMaxTextureSize = 1024;
         public int MaxPhysBoneComponents = 16;
         public int MaxPhysBoneTransforms = 32;
         public int MaxPhysBoneColliders = 16;
@@ -70,7 +69,6 @@ namespace VRCQuestPatcher
                         MaxMeshRenderers = 1,
                         MaxMaterialSlots = 1,
                         MaxTextureMemoryBytes = 10 * 1024 * 1024L, // 10 MB
-                        DefaultMaxTextureSize = 512,
                         MaxPhysBoneComponents = 0,
                         MaxPhysBoneTransforms = 0,
                         MaxPhysBoneColliders = 0,
@@ -86,7 +84,6 @@ namespace VRCQuestPatcher
                         MaxMeshRenderers = 2,
                         MaxMaterialSlots = 2,
                         MaxTextureMemoryBytes = 10 * 1024 * 1024L, // 10 MB
-                        DefaultMaxTextureSize = 512,
                         MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 16,
                         MaxPhysBoneColliders = 8,
@@ -102,7 +99,6 @@ namespace VRCQuestPatcher
                         MaxMeshRenderers = 2,
                         MaxMaterialSlots = 4,
                         MaxTextureMemoryBytes = 20 * 1024 * 1024L, // 20 MB
-                        DefaultMaxTextureSize = 1024,
                         MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 32,
                         MaxPhysBoneColliders = 16,
@@ -118,7 +114,6 @@ namespace VRCQuestPatcher
                         MaxMeshRenderers = 2,
                         MaxMaterialSlots = 4,
                         MaxTextureMemoryBytes = 40 * 1024 * 1024L, // 40 MB (VRChat Quest hard limit)
-                        DefaultMaxTextureSize = 1024,
                         MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 64,
                         MaxPhysBoneColliders = 16,
@@ -135,7 +130,6 @@ namespace VRCQuestPatcher
                         MaxMeshRenderers = int.MaxValue,
                         MaxMaterialSlots = int.MaxValue,
                         MaxTextureMemoryBytes = 40 * 1024 * 1024L, // 40 MB (VRChat Quest hard limit)
-                        DefaultMaxTextureSize = 1024,
                         MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 64,
                         MaxPhysBoneColliders = 16,
