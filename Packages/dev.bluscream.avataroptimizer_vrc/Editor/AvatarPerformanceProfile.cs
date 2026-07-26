@@ -368,25 +368,4 @@ namespace VRCQuestPatcher
             MaxAudioSources = 0;
         }
     }
-
-    // Legacy alias for backward compatibility
-    [Obsolete("Use PlatformProfile instead.")]
-    public class QuestPerformanceProfile : Android_VeryPoor_Profile
-    {
-        public static QuestPerformanceProfile GetProfile(QuestPerformanceRank rank)
-        {
-            var p = PlatformProfile.GetProfile(TargetPlatform.Android, rank);
-            var q = new QuestPerformanceProfile();
-            q.MaxTriangles = p.MaxTriangles;
-            q.MaxSkinnedMeshes = p.MaxSkinnedMeshes;
-            q.MaxMeshRenderers = p.MaxMeshRenderers;
-            q.MaxMaterialSlots = p.MaxMaterialSlots;
-            q.MaxTextureMemoryBytes = p.MaxTextureMemoryBytes;
-            q.MaxPhysBoneComponents = p.MaxPhysBoneComponents;
-            q.MaxPhysBoneTransforms = p.MaxPhysBoneTransforms;
-            q.MaxPhysBoneColliders = p.MaxPhysBoneColliders;
-            q.MaxPhysBoneCollisionChecks = p.MaxPhysBoneCollisionChecks;
-            return q;
-        }
-    }
 }
