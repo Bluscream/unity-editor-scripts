@@ -33,7 +33,8 @@ namespace VRCQuestPatcher
     }
 
     /// <summary>
-    /// Base class for platform performance profiles defining resource and component limits.
+    /// Base class for platform performance profiles defining resource and component limits
+    /// according to official VRChat SDK Performance Rank specifications.
     /// </summary>
     [Serializable]
     public abstract class PlatformProfile
@@ -95,7 +96,9 @@ namespace VRCQuestPatcher
         }
     }
 
-    // --- PC Platform Profiles ---
+    // =========================================================================
+    // PC PLATFORM PROFILES (Official VRChat PC Performance Limits)
+    // =========================================================================
     public class PC_Excellent_Profile : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.PC;
@@ -106,7 +109,7 @@ namespace VRCQuestPatcher
             MaxSkinnedMeshes = 1;
             MaxMeshRenderers = 4;
             MaxMaterialSlots = 8;
-            MaxBones = 150;
+            MaxBones = 75;
             MaxAnimators = 1;
             MaxTextureMemoryBytes = 40 * 1024 * 1024L;
             MaxPhysBoneComponents = 4;
@@ -130,7 +133,7 @@ namespace VRCQuestPatcher
             MaxSkinnedMeshes = 2;
             MaxMeshRenderers = 8;
             MaxMaterialSlots = 16;
-            MaxBones = 250;
+            MaxBones = 150;
             MaxAnimators = 2;
             MaxTextureMemoryBytes = 75 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
@@ -154,7 +157,7 @@ namespace VRCQuestPatcher
             MaxSkinnedMeshes = 8;
             MaxMeshRenderers = 16;
             MaxMaterialSlots = 32;
-            MaxBones = 400;
+            MaxBones = 250;
             MaxAnimators = 4;
             MaxTextureMemoryBytes = 150 * 1024 * 1024L;
             MaxPhysBoneComponents = 16;
@@ -178,7 +181,7 @@ namespace VRCQuestPatcher
             MaxSkinnedMeshes = 16;
             MaxMeshRenderers = 32;
             MaxMaterialSlots = 64;
-            MaxBones = 600;
+            MaxBones = 400;
             MaxAnimators = 8;
             MaxTextureMemoryBytes = 300 * 1024 * 1024L;
             MaxPhysBoneComponents = 32;
@@ -216,7 +219,9 @@ namespace VRCQuestPatcher
         }
     }
 
-    // --- Android / Quest Platform Profiles ---
+    // =========================================================================
+    // ANDROID / QUEST PLATFORM PROFILES (Official VRChat Android Limits)
+    // =========================================================================
     public class Android_Excellent_Profile : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.Android;
@@ -325,11 +330,11 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = int.MaxValue;
             MaxBones = int.MaxValue;
             MaxAnimators = int.MaxValue;
-            MaxTextureMemoryBytes = 40 * 1024 * 1024L;
-            MaxPhysBoneComponents = 8;
-            MaxPhysBoneTransforms = 64;
-            MaxPhysBoneColliders = 16;
-            MaxPhysBoneCollisionChecks = 64;
+            MaxTextureMemoryBytes = 40 * 1024 * 1024L; // Quest VRAM hard limit
+            MaxPhysBoneComponents = 8;                  // Quest PhysBone script cap
+            MaxPhysBoneTransforms = 64;                 // Quest PhysBone transform cap
+            MaxPhysBoneColliders = 16;                  // Quest PhysBone collider cap
+            MaxPhysBoneCollisionChecks = 64;            // Quest PhysBone collision check cap
             MaxMeshParticlePolyCount = 0;
             MaxParticleSystems = 0;
             MaxLights = 0;
