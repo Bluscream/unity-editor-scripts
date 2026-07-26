@@ -325,15 +325,29 @@ namespace Bluscream.TextureCompressor
 
             Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
-            // Define ASTC Compression Profiles: (Format, CrunchQuality, DisplayName, EstimatedCrunchRatio)
-            var compressionSteps = new (TextureImporterFormat format, int quality, string name, double crunchRatio)[]
+            // Define ASTC Compression Profiles: All ASTC block formats (4x4 to 12x12) with 5% Crunch quality steps
+            var stepsList = new List<(TextureImporterFormat format, int quality, string name, double crunchRatio)>();
+            var astcFormats = new (TextureImporterFormat format, string name, double baseRatio)[]
             {
-                (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00),
-                (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.85),
-                (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.70),
-                (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.50),
-                (TextureImporterFormat.ASTC_12x12,  unityCrunchQuality, $"ASTC 12x12 (Crunch {crunchCompressionRatio}%)", isCrunchEnabled ? 0.25 : 0.40),
+                (TextureImporterFormat.ASTC_4x4,   "ASTC 4x4",   1.00),
+                (TextureImporterFormat.ASTC_5x5,   "ASTC 5x5",   0.85),
+                (TextureImporterFormat.ASTC_6x6,   "ASTC 6x6",   0.70),
+                (TextureImporterFormat.ASTC_8x8,   "ASTC 8x8",   0.50),
+                (TextureImporterFormat.ASTC_10x10, "ASTC 10x10", 0.35),
+                (TextureImporterFormat.ASTC_12x12, "ASTC 12x12", 0.25),
             };
+
+            foreach (var fmt in astcFormats)
+            {
+                stepsList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)", fmt.baseRatio));
+                for (int q = 95; q >= 0; q -= 5)
+                {
+                    int crunchPercent = 100 - q;
+                    double crunchRatio = fmt.baseRatio * (q / 100.0);
+                    stepsList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)", crunchRatio));
+                }
+            }
+            var compressionSteps = stepsList.ToArray();
 
             int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
             var resolutionLimits = allResolutionLimits.Where(r => r <= maxResolutionCap).ToArray();
