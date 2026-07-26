@@ -49,36 +49,43 @@ namespace Bluscream.VRCAvatarOptimizer
                 Component[] components = go.GetComponents<Component>();
 
                 // Pass: Remove blacklisted / incompatible components
-                // Note: VRCSpatialAudioSource is handled via BlacklistedComponentNames on mobile profiles
-                foreach (Component comp in components)
+                // Sort components so dependent scripts (e.g. VRCSpatialAudioSource) are removed BEFORE base components (e.g. AudioSource)
+                var toRemoveList = components.Where(c => c != null && ShouldRemoveComponent(c, profile)).ToList();
+                toRemoveList.Sort((a, b) =>
+                {
+                    bool isABase = a is AudioSource || a is Transform;
+                    bool isBBase = b is AudioSource || b is Transform;
+                    if (!isABase && isBBase) return -1;
+                    if (isABase && !isBBase) return 1;
+                    return 0;
+                });
+
+                foreach (Component comp in toRemoveList)
                 {
                     if (comp == null) continue;
 
-                    if (ShouldRemoveComponent(comp, profile))
+                    RemovedComponent removedComp = new RemovedComponent
                     {
-                        RemovedComponent removedComp = new RemovedComponent
-                        {
-                            gameObject = go,
-                            componentType = comp.GetType().FullName,
-                            gameObjectPath = GetGameObjectPath(go)
-                        };
+                        gameObject = go,
+                        componentType = comp.GetType().FullName,
+                        gameObjectPath = GetGameObjectPath(go)
+                    };
 
-                        try
-                        {
-                            Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
-                            
-                            if (Application.isPlaying)
-                                UnityEngine.Object.Destroy(comp);
-                            else
-                                UnityEngine.Object.DestroyImmediate(comp, true);
-                            
-                            Debug.Log($"[AvatarComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
-                            removed.Add(removedComp);
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
-                        }
+                    try
+                    {
+                        Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
+                        
+                        if (Application.isPlaying)
+                            UnityEngine.Object.Destroy(comp);
+                        else
+                            UnityEngine.Object.DestroyImmediate(comp, true);
+                        
+                        Debug.Log($"[AvatarComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
+                        removed.Add(removedComp);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
                     }
                 }
             }
