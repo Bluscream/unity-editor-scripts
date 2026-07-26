@@ -412,21 +412,12 @@ namespace Bluscream.TextureCompressor
                     androidSettings.compressionQuality = compressionQuality;
 
                     importer.SetPlatformTextureSettings(androidSettings);
-                    EditorUtility.SetDirty(importer);
-                    pathsToReimport.Add(importer.assetPath);
+                    importer.SaveAndReimport();
                 }
             }
             finally
             {
                 AssetDatabase.StopAssetEditing();
-            }
-
-            index = 0;
-            foreach (string path in pathsToReimport)
-            {
-                index++;
-                progressCallback?.Invoke($"Reimporting texture ({index}/{pathsToReimport.Count}): {System.IO.Path.GetFileName(path)}");
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             }
 
             Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
