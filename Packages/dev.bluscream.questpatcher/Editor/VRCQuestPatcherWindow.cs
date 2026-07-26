@@ -96,17 +96,6 @@ namespace VRCQuestPatcher
                     currentStats = null;
                 }
                 EditorGUILayout.EndHorizontal();
-
-                if (currentStats != null)
-                {
-                    EditorGUILayout.HelpBox(
-                        $"Current Avatar Rating Estimate: {currentStats.RatingName}\n" +
-                        $"• Poly Count: {currentStats.TriangleCount:N0} tris\n" +
-                        $"• Material Slots: {currentStats.MaterialSlotCount}\n" +
-                        $"• PhysBones: {currentStats.PhysBoneComponentCount} components ({currentStats.PhysBoneTransformCount} transforms)",
-                        MessageType.None
-                    );
-                }
             }
             
             EditorGUILayout.EndVertical();
@@ -183,6 +172,21 @@ namespace VRCQuestPatcher
             
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.Space(10);
+
+            // Current Avatar Rating Estimate (positioned below Patch button to avoid shifting UI layout)
+            if (avatarRoot != null && currentStats != null)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.HelpBox(
+                    $"Current Avatar Rating Estimate: {currentStats.RatingName}\n" +
+                    $"• Poly Count: {currentStats.TriangleCount:N0} tris\n" +
+                    $"• Material Slots: {currentStats.MaterialSlotCount}\n" +
+                    $"• PhysBones: {currentStats.PhysBoneComponentCount} components ({currentStats.PhysBoneTransformCount} transforms)",
+                    MessageType.None
+                );
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(10);
+            }
 
             // Summary Results
             if (summary != null)
