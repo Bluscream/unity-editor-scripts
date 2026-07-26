@@ -311,16 +311,17 @@ namespace Bluscream.TextureCompressor
             HashSet<TextureImporter> importers = GetUniqueTextureImporters(avatarRoot);
             if (importers.Count == 0) return 0;
 
-            // VRChat hard limits for Quest/Android: 40 MB total uncompressed avatar size limit
+            // VRChat hard limits for Quest/Android: 40 MB total uncompressed limit & 10 MB compressed bundle limit
             // Subtract user-configured headroom for mesh, skeleton, and animation payload
-            long headroomBytes = (long)(uncompressedHeadroomMB * 1024 * 1024);
-            long effectiveUncompressedAvatarBudget = Math.Max(1024 * 1024L, Math.Min(uncompressedAvatarBudgetBytes, (40L * 1024 * 1024) - headroomBytes));
-            // Target compressed avatar AssetBundle size (based on user-configured compressed headroom/budget)
-            long effectiveCompressedAvatarBudget = (long)(compressedHeadroomMB * 1024 * 1024);
+            long uncompressedHeadroomBytes = (long)(uncompressedHeadroomMB * 1024 * 1024);
+            long effectiveUncompressedAvatarBudget = Math.Max(1024 * 1024L, Math.Min(uncompressedAvatarBudgetBytes, (40L * 1024 * 1024) - uncompressedHeadroomBytes));
+            // Subtract user-configured compressed headroom from VRChat's 10.0 MB hard compressed bundle limit
+            long compressedHeadroomBytes = (long)(compressedHeadroomMB * 1024 * 1024);
+            long effectiveCompressedAvatarBudget = Math.Max(512 * 1024L, (10L * 1024 * 1024) - compressedHeadroomBytes);
 
             int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
 
-            Debug.Log($"[TextureCompressor] Budgets — UncompressedAvatar: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB (Headroom: {uncompressedHeadroomMB:F1} MB), CompressedAvatar: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
+            Debug.Log($"[TextureCompressor] Budgets — UncompressedAvatar: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB (Headroom: {uncompressedHeadroomMB:F1} MB), CompressedAvatar: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB (Headroom: {compressedHeadroomMB:F1} MB, {importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
             // Define ASTC Compression Profiles: All ASTC block formats (4x4 to 12x12) with 5% Crunch quality steps
             var stepsList = new List<(TextureImporterFormat format, int quality, string name, double crunchRatio)>();

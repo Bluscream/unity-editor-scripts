@@ -172,9 +172,9 @@ namespace Bluscream.VRCAvatarOptimizer
                     MessageType.None
                 );
 
-                config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Compressed Bundle Target (MB)", config.CompressedAvatarHeadroomMB, 1.0f, 10.0f);
+                config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Compressed Headroom (MB)", config.CompressedAvatarHeadroomMB, 0.0f, 9.0f);
                 EditorGUILayout.HelpBox(
-                    $"Compressed Bundle Target: {config.CompressedAvatarHeadroomMB:F1} MB — Target AssetBundle disk size for texture optimization (Must be ≤ 10.00 MB).",
+                    $"Compressed Headroom: {config.CompressedAvatarHeadroomMB:F1} MB — Reserves space for non-texture bundle payload out of the 10.00 MB limit (Compressed texture bundle target: {Math.Max(0.5f, 10.0f - config.CompressedAvatarHeadroomMB):F1} MB).",
                     MessageType.None
                 );
                 EditorGUI.indentLevel--;
