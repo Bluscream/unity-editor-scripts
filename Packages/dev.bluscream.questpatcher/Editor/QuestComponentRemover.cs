@@ -117,6 +117,28 @@ namespace VRCQuestPatcher
                         }
                     }
                 }
+            // Third pass: Prune excess VRCContactSender and VRCContactReceiver components to Quest hard limit (max 16)
+            List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
+                .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
+                .ToList();
+
+            if (contactComps.Count > 16)
+            {
+                progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> 16)...");
+                for (int i = 16; i < contactComps.Count; i++)
+                {
+                    Component c = contactComps[i];
+                    if (c != null)
+                    {
+                        removed.Add(new RemovedComponent
+                        {
+                            gameObject = c.gameObject,
+                            componentType = c.GetType().FullName,
+                            gameObjectPath = GetGameObjectPath(c.gameObject)
+                        });
+                        Undo.DestroyObjectImmediate(c);
+                    }
+                }
             }
 
             return removed;
