@@ -148,10 +148,8 @@ namespace Bluscream.VRC
         private static void CalculatePhysBoneStats(GameObject avatarRoot, AvatarStats stats)
         {
             Component[] components = avatarRoot.GetComponentsInChildren<Component>(true);
-            int pbs = 0;
-            int transforms = 0;
+            var pbList = new System.Collections.Generic.List<Component>();
             int colliders = 0;
-            int totalChecks = 0;
 
             foreach (Component c in components)
             {
@@ -159,7 +157,7 @@ namespace Bluscream.VRC
                 string typeName = c.GetType().Name;
                 if (typeName == "VRCPhysBone" || typeName == "VRCPhysBoneBase")
                 {
-                    pbs++;
+                    pbList.Add(c);
                 }
                 else if (typeName.Contains("VRCPhysBoneCollider"))
                 {
@@ -167,10 +165,57 @@ namespace Bluscream.VRC
                 }
             }
 
-            stats.PhysBoneComponentCount = pbs;
+            int transforms = 0;
+            int totalChecks = 0;
+
+            foreach (Component pb in pbList)
+            {
+                int tCount = GetPhysBoneTransformCount(pb);
+                transforms += tCount;
+
+                int explicitColliders = GetPhysBoneColliderCount(pb);
+                int effectiveColliders = explicitColliders > 0 ? explicitColliders : colliders;
+                totalChecks += tCount * effectiveColliders;
+            }
+
+            stats.PhysBoneComponentCount = pbList.Count;
             stats.PhysBoneTransformCount = transforms;
             stats.PhysBoneColliderCount = colliders;
             stats.PhysBoneCollisionCheckCount = totalChecks;
+        }
+
+        private static int GetPhysBoneTransformCount(Component pb)
+        {
+            if (pb == null) return 1;
+            try
+            {
+                Transform root = pb.transform;
+                var rootProp = pb.GetType().GetProperty("rootTransform") ?? pb.GetType().GetProperty("RootTransform");
+                if (rootProp != null && rootProp.GetValue(pb) is Transform customRoot && customRoot != null)
+                {
+                    root = customRoot;
+                }
+                return Bluscream.TransformExtensions.CountDescendants(root);
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
+        private static int GetPhysBoneColliderCount(Component pb)
+        {
+            if (pb == null) return 0;
+            try
+            {
+                SerializedObject so = new SerializedObject(pb);
+                SerializedProperty collidersProp = so.FindProperty("colliders");
+                return (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         private static long CalculateTextureMemory(GameObject avatarRoot)
