@@ -374,9 +374,9 @@ namespace Bluscream.VRC
                     if (buildMethod != null)
                     {
                         object builderInstance = Activator.CreateInstance(builderType);
-                        Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK production build verification for '{avatarRoot.name}'...");
-                        // Pass testAvatar: false so full upload pipeline (including VRCFury & shader locking) executes for 100% accurate bundle size
-                        object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, false, null });
+                        Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}'...");
+                        // Pass testAvatar: true so SDK uploader UI panels are skipped and do not trigger DetachFromPanelEvent NullReferenceExceptions
+                        object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
                         if (taskObj is Task task)
                         {
                             double startWait = UnityEditor.EditorApplication.timeSinceStartup;
