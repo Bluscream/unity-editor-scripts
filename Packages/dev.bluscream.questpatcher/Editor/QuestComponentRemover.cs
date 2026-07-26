@@ -35,6 +35,7 @@ namespace VRCQuestPatcher
             // Get all GameObjects recursively
             List<GameObject> allGameObjects = new List<GameObject>();
             CollectAllGameObjects(avatarRoot.transform, allGameObjects);
+            Debug.Log($"[QuestComponentRemover] Starting incompatible component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects).");
 
             int total = allGameObjects.Count;
             for (int i = 0; i < allGameObjects.Count; i++)
@@ -71,6 +72,7 @@ namespace VRCQuestPatcher
                         else
                             UnityEngine.Object.DestroyImmediate(comp, true);
                         
+                        Debug.Log($"[QuestComponentRemover] [Pass 1] Removed dependent component '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
                         removed.Add(new RemovedComponent
                         {
                             gameObject = go,
@@ -80,7 +82,7 @@ namespace VRCQuestPatcher
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to remove component {comp.GetType().Name} from {go.name}: {e.Message}");
+                        Debug.LogWarning($"[QuestComponentRemover] Failed to remove dependent component {comp.GetType().Name} from {go.name}: {e.Message}");
                     }
                 }
                 
@@ -109,11 +111,12 @@ namespace VRCQuestPatcher
                             else
                                 UnityEngine.Object.DestroyImmediate(comp, true);
                             
+                            Debug.Log($"[QuestComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
                             removed.Add(removedComp);
                         }
                         catch (Exception e)
                         {
-                            Debug.LogWarning($"Failed to remove component {comp.GetType().Name} from {go.name}: {e.Message}");
+                            Debug.LogWarning($"[QuestComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
                         }
                     }
                 }
@@ -126,12 +129,14 @@ namespace VRCQuestPatcher
 
             if (contactComps.Count > 16)
             {
+                Debug.Log($"[QuestComponentRemover] [Pass 3] VRCContact components: {contactComps.Count} > 16 limit. Pruning {contactComps.Count - 16}.");
                 progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> 16)...");
                 for (int i = 16; i < contactComps.Count; i++)
                 {
                     Component c = contactComps[i];
                     if (c != null)
                     {
+                        Debug.Log($"[QuestComponentRemover] [Pass 3] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
                         removed.Add(new RemovedComponent
                         {
                             gameObject = c.gameObject,
@@ -142,7 +147,12 @@ namespace VRCQuestPatcher
                     }
                 }
             }
+            else
+            {
+                Debug.Log($"[QuestComponentRemover] [Pass 3] VRCContact count OK: {contactComps.Count} / 16 limit.");
+            }
 
+            Debug.Log($"[QuestComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
         }
 
