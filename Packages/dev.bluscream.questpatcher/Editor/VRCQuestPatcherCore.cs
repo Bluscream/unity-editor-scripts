@@ -218,15 +218,15 @@ namespace VRCQuestPatcher
                 if (bundleSizeBytes > 0)
                 {
                     double bundleMB = bundleSizeBytes / (1024.0 * 1024.0);
-                    if (bundleSizeBytes > 10L * 1024 * 1024)
+                    if (bundleSizeBytes > (long)(10.00 * 1024 * 1024))
                     {
                         Debug.LogWarning($"[VRCQuestPatcherCore] [Step 8.5] ⚠️ WARNING: Built AssetBundle size is {bundleMB:F2} MB (exceeds VRChat Quest 10.00 MB limit!).");
-                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds VRChat Quest 10 MB limit!");
+                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds VRChat Quest 10.00 MB limit!");
                     }
                     else
                     {
-                        Debug.Log($"[VRCQuestPatcherCore] [Step 8.5] ✓ Verified AssetBundle size: {bundleMB:F2} MB (within 10 MB limit). Bundle file: {bundlePath}");
-                        summary.AddSuccess($"Verified Quest AssetBundle size: {bundleMB:F2} MB (Max 10 MB).");
+                        Debug.Log($"[VRCQuestPatcherCore] [Step 8.5] ✓ Verified AssetBundle size: {bundleMB:F2} MB (Target budget: ≤ 9.99 MB / Limit: 10.00 MB). Bundle file: {bundlePath}");
+                        summary.AddSuccess($"Verified Quest AssetBundle size: {bundleMB:F2} MB (Limit: 10.00 MB).");
                     }
                 }
 

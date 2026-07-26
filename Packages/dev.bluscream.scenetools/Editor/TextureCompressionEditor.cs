@@ -314,9 +314,10 @@ namespace Bluscream.TextureCompressor
             long effectiveVramBudget = Math.Min(vramBudgetBytes, QUEST_VRAM_BUDGET_BYTES);
             // Leave 1 MB headroom for mesh and animation data
             effectiveVramBudget = Math.Max(1024 * 1024L, effectiveVramBudget - (1024 * 1024L));
-            long effectiveBundleBudget = QUEST_BUNDLE_BUDGET_BYTES - (512 * 1024L); // 0.5 MB headroom
+            // Target up to 9.99 MB for packed AssetBundle (leaving minimal 10 KB safety headroom before 10.00 MB limit)
+            long effectiveBundleBudget = (long)(9.99 * 1024 * 1024);
 
-            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F1} MB ({importers.Count} unique textures)");
+            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures)");
 
             // Define ASTC Compression Profiles: (Format, CrunchQuality, DisplayName, EstimatedCrunchRatio)
             // CrunchRatio: fraction of raw ASTC (VRAM) size that ends up in the asset bundle on disk.
