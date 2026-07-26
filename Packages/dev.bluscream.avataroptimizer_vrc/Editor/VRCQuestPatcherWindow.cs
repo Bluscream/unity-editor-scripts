@@ -20,10 +20,10 @@ namespace VRCQuestPatcher
         private float progressValue = 0f;
         private Vector2 scrollPosition;
 
-        [MenuItem("Bluscream/Quest Patcher/Quest Patcher")]
+        [MenuItem("Bluscream/VRChat/Avatar Optimizer")]
         public static void ShowWindow()
         {
-            VRCQuestPatcherWindow window = GetWindow<VRCQuestPatcherWindow>("QuestPatcher");
+            VRCQuestPatcherWindow window = GetWindow<VRCQuestPatcherWindow>("Avatar Optimizer");
             window.minSize = new Vector2(520, 650);
             window.Show();
         }
