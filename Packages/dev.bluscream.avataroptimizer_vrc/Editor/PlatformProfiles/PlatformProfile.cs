@@ -70,6 +70,15 @@ namespace Bluscream.VRCAvatarOptimizer
         public int MaxLights = int.MaxValue;
         public int MaxAudioSources = int.MaxValue;
 
+        // Contact Limits
+        public int MaxContacts = int.MaxValue;
+
+        // Asset Bundle Size Limit (bytes; int.MaxValue = unlimited)
+        public virtual long MaxAssetBundleSizeBytes => long.MaxValue;
+
+        // Platform suffix used when naming duplicated avatars and optimized materials
+        public virtual string PlatformSuffix => " (Optimized)";
+
         // Component Whitelists & Blacklists
         public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

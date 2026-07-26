@@ -47,46 +47,9 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke($"Removing incompatible components ({i + 1}/{total})...");
 
                 Component[] components = go.GetComponents<Component>();
-                
-                // First pass: Remove dependent VRChat components (e.g. VRCSpatialAudioSource before AudioSource)
-                List<Component> toRemove = new List<Component>();
-                foreach (Component comp in components)
-                {
-                    if (comp == null) continue;
-                    
-                    string typeName = comp.GetType().FullName;
-                    if (typeName != null && typeName.Contains("VRCSpatialAudioSource"))
-                    {
-                        toRemove.Add(comp);
-                    }
-                }
-                
-                foreach (Component comp in toRemove)
-                {
-                    try
-                    {
-                        Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
-                        if (Application.isPlaying)
-                            UnityEngine.Object.Destroy(comp);
-                        else
-                            UnityEngine.Object.DestroyImmediate(comp, true);
-                        
-                        Debug.Log($"[AvatarComponentRemover] [Pass 1] Removed dependent component '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
-                        removed.Add(new RemovedComponent
-                        {
-                            gameObject = go,
-                            componentType = comp.GetType().FullName,
-                            gameObjectPath = GetGameObjectPath(go)
-                        });
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"[AvatarComponentRemover] Failed to remove dependent component {comp.GetType().Name} from {go.name}: {e.Message}");
-                    }
-                }
-                
-                // Second pass: Remove blacklisted / incompatible components
-                components = go.GetComponents<Component>();
+
+                // Pass: Remove blacklisted / incompatible components
+                // Note: VRCSpatialAudioSource is handled via BlacklistedComponentNames on mobile profiles
                 foreach (Component comp in components)
                 {
                     if (comp == null) continue;
@@ -120,21 +83,22 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
             }
 
-            // Third pass: Prune excess VRCContactSender and VRCContactReceiver components to profile limit (default 16 for Quest)
+            // Pass: Prune excess VRCContactSender and VRCContactReceiver components to profile limit
+            int maxContacts = profile.MaxContacts;
             List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
                 .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
                 .ToList();
 
-            if (contactComps.Count > 16)
+            if (contactComps.Count > maxContacts)
             {
-                Debug.Log($"[AvatarComponentRemover] [Pass 3] VRCContact components: {contactComps.Count} > 16 limit. Pruning {contactComps.Count - 16}.");
-                progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> 16)...");
-                for (int i = 16; i < contactComps.Count; i++)
+                Debug.Log($"[AvatarComponentRemover] VRCContact components: {contactComps.Count} > {maxContacts} limit. Pruning {contactComps.Count - maxContacts}.");
+                progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> {maxContacts})...");
+                for (int i = maxContacts; i < contactComps.Count; i++)
                 {
                     Component c = contactComps[i];
                     if (c != null)
                     {
-                        Debug.Log($"[AvatarComponentRemover] [Pass 3] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
+                        Debug.Log($"[AvatarComponentRemover] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
                         removed.Add(new RemovedComponent
                         {
                             gameObject = c.gameObject,

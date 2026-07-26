@@ -21,7 +21,7 @@ namespace Bluscream.VRCAvatarOptimizer
             public PhysBonePruningStrategy PruningStrategy = PhysBonePruningStrategy.DeepestFirst;
             public bool DuplicateAvatar = true;
             public bool AddPlatformSuffixes = true;
-            public string AvatarSuffix = " (Quest)";
+            public string AvatarSuffix = null; // null = use profile.PlatformSuffix
             public bool RemoveIncompatibleComponents = true;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
@@ -65,13 +65,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     progressCallback?.Invoke("Duplicating avatar GameObject...", 0.05f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Duplicating avatar '{avatarRoot.name}' for target platform '{config.Platform}'...");
-
                     string cleanName = avatarRoot.name;
-                    if (cleanName.EndsWith(" (PC)")) cleanName = cleanName.Substring(0, cleanName.Length - 5);
-                    if (cleanName.EndsWith(" (Quest)")) cleanName = cleanName.Substring(0, cleanName.Length - 8);
-                    if (cleanName.EndsWith(" (Android)")) cleanName = cleanName.Substring(0, cleanName.Length - 10);
+                    // Strip any known platform suffixes from the source name
+                    foreach (var knownSuffix in new[] { " (PC)", " (Quest)", " (Android)", " (iOS)", " (Optimized)" })
+                        if (cleanName.EndsWith(knownSuffix)) { cleanName = cleanName.Substring(0, cleanName.Length - knownSuffix.Length); break; }
 
-                    string suffix = config.Platform == TargetPlatform.PC ? " (PC)" : " (Quest)";
+                    string suffix = profile.PlatformSuffix;
                     if (config.AddPlatformSuffixes)
                     {
                         Undo.RecordObject(avatarRoot, "Rename Original Avatar");
@@ -205,10 +204,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (bundleSizeBytes > 0)
                 {
                     double bundleMB = bundleSizeBytes / (1024.0 * 1024.0);
-                    if (config.Platform == TargetPlatform.Android && bundleSizeBytes > (long)(10.00 * 1024 * 1024))
+                    long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
+                    if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                     {
-                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ WARNING: Built AssetBundle size is {bundleMB:F2} MB (exceeds VRChat Quest 10.00 MB limit!).");
-                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds VRChat Quest 10.00 MB limit!");
+                        double limitMB = maxBundleBytes / (1024.0 * 1024.0);
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ WARNING: Built AssetBundle size is {bundleMB:F2} MB (exceeds {profile.Platform} limit of {limitMB:F2} MB!).");
+                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds {profile.Platform} limit ({limitMB:F2} MB)!");
                     }
                     else
                     {
@@ -274,7 +275,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 if (!materialMap.TryGetValue(srcMat, out Material questMat))
                 {
-                    questMat = DuplicateMaterial(srcMat, config.PlacementLocation == AssetPlacementLocation.SameFolderAsOriginal, avatarRoot.name);
+                    questMat = DuplicateMaterial(srcMat, config.PlacementLocation == AssetPlacementLocation.SameFolderAsOriginal, avatarRoot.name, profile.PlatformSuffix);
                     if (questMat != null)
                     {
                         materialMap[srcMat] = questMat;
@@ -293,7 +294,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
-        private static Material DuplicateMaterial(Material srcMat, bool saveInSameFolder, string avatarName)
+        private static Material DuplicateMaterial(Material srcMat, bool saveInSameFolder, string avatarName, string platformSuffix = " (Optimized)")
         {
             if (srcMat == null) return null;
 
@@ -301,7 +302,8 @@ namespace Bluscream.VRCAvatarOptimizer
             bool isBuiltIn = string.IsNullOrEmpty(srcPath) || srcPath.Contains("unity_builtin_extra") || srcPath.StartsWith("Resources/");
 
             string filename = !string.IsNullOrEmpty(srcMat.name) ? srcMat.name : "Material";
-            if (filename.EndsWith(" (Quest)") || filename.EndsWith(" (Optimized)"))
+            // Skip materials that already carry any known optimized suffix
+            if (filename.EndsWith(" (Quest)") || filename.EndsWith(" (iOS)") || filename.EndsWith(" (Optimized)") || filename.EndsWith(platformSuffix))
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Material '{srcMat.name}' already has optimized suffix — skipping duplicate.");
                 return srcMat;
@@ -315,7 +317,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
-            string destPath = Path.Combine(dir, filename + " (Quest).mat").Replace('\\', '/');
+            string destPath = Path.Combine(dir, filename + platformSuffix + ".mat").Replace('\\', '/');
             if (File.Exists(destPath))
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Material already exists, reusing: {destPath}");

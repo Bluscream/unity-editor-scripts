@@ -10,10 +10,12 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile_iOS : PlatformProfile_Android
     {
         public override TargetPlatform Platform => TargetPlatform.iOS;
+        public override string PlatformSuffix => " (iOS)";
+        public override long MaxAssetBundleSizeBytes => 10 * 1024 * 1024L; // VRChat iOS 10 MB hard cap (same as Quest)
 
         protected PlatformProfile_iOS() : base()
         {
-            // iOS inherits all Android/Quest prohibitions.
+            // iOS inherits all Android/Quest prohibitions and limits (MaxContacts=16, blacklist, etc.)
             // VRChat falls back to Android build if no iOS-specific upload is present.
         }
 
