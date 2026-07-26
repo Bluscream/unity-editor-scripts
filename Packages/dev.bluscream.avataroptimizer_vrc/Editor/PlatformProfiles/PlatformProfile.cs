@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Reflection;
 using UnityEngine;
+using static Bluscream.EnumExtensions;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
@@ -153,24 +153,6 @@ namespace Bluscream.VRCAvatarOptimizer
                     default: return new PlatformProfile_Android_VeryPoor();
                 }
             }
-        }
-    }
-
-    /// <summary>
-    /// Extension methods for reading [Description] attributes from enum values.
-    /// </summary>
-    public static class EnumExtensions
-    {
-        /// <summary>
-        /// Returns the [Description] attribute string for an enum value,
-        /// or falls back to .ToString() if none is set.
-        /// </summary>
-        public static string GetDescription<T>(this T value) where T : Enum
-        {
-            FieldInfo field = typeof(T).GetField(value.ToString());
-            if (field == null) return value.ToString();
-            DescriptionAttribute attr = field.GetCustomAttribute<DescriptionAttribute>();
-            return attr != null ? attr.Description : value.ToString();
         }
     }
 }

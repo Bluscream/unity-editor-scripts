@@ -718,4 +718,69 @@ namespace Bluscream
             }
         }
     }
+
+    /// <summary>
+    /// Extension methods for reading [System.ComponentModel.Description] attributes from enum values.
+    /// </summary>
+    public static class EnumExtensions
+    {
+        /// <summary>
+        /// Returns the [Description] attribute string for an enum value,
+        /// or falls back to .ToString() if none is set.
+        /// </summary>
+        public static string GetDescription<T>(this T value) where T : Enum
+        {
+            System.Reflection.FieldInfo field = typeof(T).GetField(value.ToString());
+            if (field == null) return value.ToString();
+            System.ComponentModel.DescriptionAttribute attr =
+                field.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
+            return attr != null ? attr.Description : value.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Extension methods for Transform and GameObject hierarchy traversal.
+    /// </summary>
+    public static class TransformExtensions
+    {
+        /// <summary>
+        /// Returns how many ancestors this transform has (root = 0).
+        /// </summary>
+        public static int GetHierarchyDepth(this Transform t)
+        {
+            int depth = 0;
+            while (t != null) { depth++; t = t.parent; }
+            return depth;
+        }
+
+        /// <summary>
+        /// Recursively counts all descendant transforms (including self).
+        /// </summary>
+        public static int CountDescendants(this Transform t)
+        {
+            if (t == null) return 0;
+            int count = 1;
+            for (int i = 0; i < t.childCount; i++)
+                count += t.GetChild(i).CountDescendants();
+            return count;
+        }
+
+        /// <summary>
+        /// Collects all GameObjects in the hierarchy rooted at <paramref name="parent"/> (including itself).
+        /// </summary>
+        public static List<GameObject> CollectAllGameObjects(this Transform parent)
+        {
+            var result = new List<GameObject>();
+            CollectRecursive(parent, result);
+            return result;
+        }
+
+        private static void CollectRecursive(Transform t, List<GameObject> list)
+        {
+            if (t == null) return;
+            list.Add(t.gameObject);
+            foreach (Transform child in t)
+                CollectRecursive(child, list);
+        }
+    }
 }

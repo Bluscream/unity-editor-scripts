@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using static Bluscream.TransformExtensions;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
@@ -62,7 +63,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 Debug.Log($"[AvatarPhysBonePruner] [Pass 2] PhysBones {pbList.Count} > limit {targetComponents}. Pruning {toRemove} component(s).");
                 progressCallback?.Invoke($"PhysBones count ({pbList.Count}) exceeds profile limit ({targetComponents}). Pruning {toRemove} components...");
 
-                pbList = pbList.OrderBy(pb => GetHierarchyDepth(pb.transform)).ToList();
+                pbList = pbList.OrderBy(pb => pb.transform.GetHierarchyDepth()).ToList();
 
                 for (int i = pbList.Count - 1; i >= targetComponents; i--)
                 {
@@ -164,7 +165,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     root = customRoot;
                 }
-                return CountTransformTree(root);
+                return root.CountDescendants();
             }
             catch
             {
@@ -172,26 +173,5 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
-        private static int CountTransformTree(Transform t)
-        {
-            if (t == null) return 0;
-            int count = 1;
-            for (int i = 0; i < t.childCount; i++)
-            {
-                count += CountTransformTree(t.GetChild(i));
-            }
-            return count;
-        }
-
-        private static int GetHierarchyDepth(Transform t)
-        {
-            int depth = 0;
-            while (t != null)
-            {
-                depth++;
-                t = t.parent;
-            }
-            return depth;
-        }
     }
 }

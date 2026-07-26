@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using static Bluscream.Utils;
+using static Bluscream.TransformExtensions;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
@@ -34,8 +35,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             profile = profile ?? PlatformProfile.GetProfile(TargetPlatform.Android, AvatarPerformanceRank.Medium);
 
-            List<GameObject> allGameObjects = new List<GameObject>();
-            CollectAllGameObjects(avatarRoot.transform, allGameObjects);
+            List<GameObject> allGameObjects = avatarRoot.transform.CollectAllGameObjects();
             Debug.Log($"[AvatarComponentRemover] Starting component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects) using profile '{profile.Platform}_{profile.Rank}'.");
 
             int total = allGameObjects.Count;
@@ -194,14 +194,5 @@ namespace Bluscream.VRCAvatarOptimizer
             return false;
         }
 
-        private static void CollectAllGameObjects(Transform parent, List<GameObject> collection)
-        {
-            if (parent == null) return;
-            collection.Add(parent.gameObject);
-            foreach (Transform child in parent)
-            {
-                CollectAllGameObjects(child, collection);
-            }
-        }
     }
 }
