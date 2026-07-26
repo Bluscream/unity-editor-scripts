@@ -113,6 +113,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
             EditorGUI.BeginChangeCheck();
 
+            // Enforce label width to leave at least 50% width for control inputs without overlapping labels
+            float prevLabelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = Math.Max(220f, EditorGUIUtility.currentViewWidth * 0.55f);
+
             config.Platform = (TargetPlatform)EditorGUILayout.EnumPopup("Target Platform", config.Platform);
             config.TargetRank = (AvatarPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
 
@@ -162,6 +166,8 @@ namespace Bluscream.VRCAvatarOptimizer
             config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
             config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components", config.RemoveIncompatibleComponents);
+
+            EditorGUIUtility.labelWidth = prevLabelWidth;
 
             if (EditorGUI.EndChangeCheck())
             {
