@@ -44,8 +44,7 @@ namespace VRCQuestPatcher
             config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
             config.MaxTextureResolution = EditorPrefs.GetInt("VRCQuestPatcher_MaxTextureResolution", 2048);
-            config.EnableCrunchCompression = EditorPrefs.GetBool("VRCQuestPatcher_EnableCrunchCompression", true);
-            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCQuestPatcher_CrunchCompressionQuality", 25);
+            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCQuestPatcher_CrunchCompressionQuality", 75);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCQuestPatcher_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCQuestPatcher_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCQuestPatcher_RemoveIncompatibleComponents", true);
@@ -62,7 +61,6 @@ namespace VRCQuestPatcher
             EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetInt("VRCQuestPatcher_MaxTextureResolution", config.MaxTextureResolution);
-            EditorPrefs.SetBool("VRCQuestPatcher_EnableCrunchCompression", config.EnableCrunchCompression);
             EditorPrefs.SetInt("VRCQuestPatcher_CrunchCompressionQuality", config.CrunchCompressionQuality);
             EditorPrefs.SetBool("VRCQuestPatcher_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCQuestPatcher_DecimateMeshes", config.DecimateMeshes);
@@ -148,12 +146,13 @@ namespace VRCQuestPatcher
                 string[] resLabels = new string[] { "4096 px", "2048 px (Recommended)", "1024 px", "512 px", "256 px", "128 px" };
                 config.MaxTextureResolution = EditorGUILayout.IntPopup("Max Texture Resolution", config.MaxTextureResolution, resLabels, resValues);
 
-                config.EnableCrunchCompression = EditorGUILayout.ToggleLeft("Enable Crunch Compression", config.EnableCrunchCompression);
-                if (config.EnableCrunchCompression)
-                {
-                    config.CrunchCompressionQuality = EditorGUILayout.IntSlider("Crunch Quality", config.CrunchCompressionQuality, 0, 100);
-                    EditorGUILayout.HelpBox("Lower Crunch Quality = smaller AssetBundle size on disk, higher visual compression artifacts.", MessageType.None);
-                }
+                config.CrunchCompressionQuality = EditorGUILayout.IntSlider("Crunch Compression Ratio", config.CrunchCompressionQuality, 0, 100);
+                EditorGUILayout.HelpBox(
+                    config.CrunchCompressionQuality == 0 
+                        ? "Crunching Disabled (Raw ASTC): Higher disk bundle size, maximum visual quality."
+                        : $"Crunch Ratio: {config.CrunchCompressionQuality}% — Higher ratio = smaller AssetBundle size on disk.",
+                    MessageType.None
+                );
                 EditorGUI.indentLevel--;
             }
 

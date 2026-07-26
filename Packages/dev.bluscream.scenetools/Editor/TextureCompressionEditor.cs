@@ -295,14 +295,14 @@ namespace Bluscream.TextureCompressor
 
         /// <summary>
         /// Public API to optimize all avatar textures to fit within a target texture memory budget (in bytes)
+        /// crunchCompressionRatio: 0 = No Crunching (Raw ASTC), 100 = Max Crunching (lowest file size)
         /// </summary>
         public static int OptimizeForTextureMemoryBudget(
             GameObject avatarRoot, 
             long vramBudgetBytes,
             System.Action<string> progressCallback = null,
             int maxResolutionCap = 2048,
-            bool enableCrunch = true,
-            int crunchQuality = 25)
+            int crunchCompressionRatio = 75)
         {
             if (avatarRoot == null) return 0;
 
@@ -313,6 +313,10 @@ namespace Bluscream.TextureCompressor
             const long QUEST_VRAM_BUDGET_BYTES  = 40L * 1024 * 1024;  // 40 MB unpacked
             const long QUEST_BUNDLE_BUDGET_BYTES = 10L * 1024 * 1024; // 10 MB packed bundle
 
+            // Convert user Crunch Ratio (0-100%, higher = more crunch) into Unity Crunch Quality (100-0%, lower = more crunch)
+            bool isCrunchEnabled = crunchCompressionRatio > 0;
+            int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
+
             // Use the caller's budget but never exceed the VRChat hard cap
             long effectiveVramBudget = Math.Min(vramBudgetBytes, QUEST_VRAM_BUDGET_BYTES);
             // Leave 1 MB headroom for mesh and animation data
@@ -320,17 +324,16 @@ namespace Bluscream.TextureCompressor
             // Target up to 9.99 MB for packed AssetBundle (leaving minimal 10 KB safety headroom before 10.00 MB limit)
             long effectiveBundleBudget = (long)(9.99 * 1024 * 1024);
 
-            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {(enableCrunch ? crunchQuality.ToString() + "%" : "Disabled")}");
+            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
             // Define ASTC Compression Profiles: (Format, CrunchQuality, DisplayName, EstimatedCrunchRatio)
-            // CrunchRatio: fraction of raw ASTC (VRAM) size that ends up in the asset bundle on disk.
             var compressionSteps = new (TextureImporterFormat format, int quality, string name, double crunchRatio)[]
             {
                 (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00),
                 (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.90),
                 (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.80),
                 (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.70),
-                (TextureImporterFormat.ASTC_12x12,  Math.Max(0, Math.Min(100, crunchQuality)), $"ASTC 12x12 q={crunchQuality}", enableCrunch ? 0.85 : 1.00),
+                (TextureImporterFormat.ASTC_12x12,  unityCrunchQuality, $"ASTC 12x12 (Crunch {crunchCompressionRatio}%)", isCrunchEnabled ? 0.85 : 1.00),
             };
 
             int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
@@ -339,7 +342,7 @@ namespace Bluscream.TextureCompressor
 
             int bestResolutionCap = resolutionLimits[resolutionLimits.Length - 1];
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_12x12;
-            int bestQuality = enableCrunch ? crunchQuality : 100;
+            int bestQuality = unityCrunchQuality;
 
             bool budgetAchieved = false;
             foreach (int maxRes in resolutionLimits)

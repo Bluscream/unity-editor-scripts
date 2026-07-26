@@ -26,9 +26,8 @@ namespace VRCQuestPatcher
             public bool RemoveIncompatibleComponents = true;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
-            public int MaxTextureResolution = 2048; // 2048, 1024, 512, 256, 128
-            public bool EnableCrunchCompression = true;
-            public int CrunchCompressionQuality = 25; // 0 (Max Crunch) to 100 (No Crunch / High Quality)
+            public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
+            public int CrunchCompressionQuality = 75; // 0 = No Crunching (ASTC raw), 100 = Max Crunch (lowest file size)
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
@@ -173,7 +172,6 @@ namespace VRCQuestPatcher
                         profile.MaxTextureMemoryBytes, 
                         (msg) => progressCallback?.Invoke(msg, 0.70f),
                         config.MaxTextureResolution,
-                        config.EnableCrunchCompression,
                         config.CrunchCompressionQuality
                     );
                     summary.texturesOptimized = texCount;
