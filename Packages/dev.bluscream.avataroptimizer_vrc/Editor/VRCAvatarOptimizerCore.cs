@@ -229,13 +229,16 @@ namespace Bluscream.VRCAvatarOptimizer
                     .ToArray();
                 if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
 
+                // Apply top of ladder (highest quality ASTC 4x4) before initial build test
+                var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
+                TextureCompressionEditor.ApplyTextureSettings(importers, resCaps[0], formatLadder[0].format, formatLadder[0].quality, (msg) => progressCallback?.Invoke(msg, 0.98f));
+
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
                 if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                 {
                     bool fits = false;
-                    var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
 
                     foreach (int res in resCaps)
                     {
