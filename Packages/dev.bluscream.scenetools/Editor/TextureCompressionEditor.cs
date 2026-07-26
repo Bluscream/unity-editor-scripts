@@ -299,7 +299,10 @@ namespace Bluscream.TextureCompressor
         public static int OptimizeForTextureMemoryBudget(
             GameObject avatarRoot, 
             long vramBudgetBytes,
-            System.Action<string> progressCallback = null)
+            System.Action<string> progressCallback = null,
+            int maxResolutionCap = 2048,
+            bool enableCrunch = true,
+            int crunchQuality = 25)
         {
             if (avatarRoot == null) return 0;
 
@@ -317,27 +320,26 @@ namespace Bluscream.TextureCompressor
             // Target up to 9.99 MB for packed AssetBundle (leaving minimal 10 KB safety headroom before 10.00 MB limit)
             long effectiveBundleBudget = (long)(9.99 * 1024 * 1024);
 
-            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures)");
+            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {(enableCrunch ? crunchQuality.ToString() + "%" : "Disabled")}");
 
             // Define ASTC Compression Profiles: (Format, CrunchQuality, DisplayName, EstimatedCrunchRatio)
             // CrunchRatio: fraction of raw ASTC (VRAM) size that ends up in the asset bundle on disk.
-            // IMPORTANT: These are empirically calibrated for avatar textures (photos, gradients, skin/hair).
-            // Avatar textures are hard to crunch — measured ratio at ASTC_12x12 q=25 was 0.51 (14.73 MB / 29.08 MB).
-            // We use conservative (high) ratios so we never underestimate bundle size.
             var compressionSteps = new (TextureImporterFormat format, int quality, string name, double crunchRatio)[]
             {
-                (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00), // crunch barely helps at q=100
+                (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00),
                 (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.90),
                 (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.80),
                 (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.70),
-                (TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 q=25", 0.55), // measured ~0.51 on Mayu; use 0.55 for headroom
+                (TextureImporterFormat.ASTC_12x12,  Math.Max(0, Math.Min(100, crunchQuality)), $"ASTC 12x12 q={crunchQuality}", enableCrunch ? 0.85 : 1.00),
             };
 
-            int[] resolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
+            int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
+            var resolutionLimits = allResolutionLimits.Where(r => r <= maxResolutionCap).ToArray();
+            if (resolutionLimits.Length == 0) resolutionLimits = new int[] { maxResolutionCap };
 
-            int bestResolutionCap = 128;
+            int bestResolutionCap = resolutionLimits[resolutionLimits.Length - 1];
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_12x12;
-            int bestQuality = 25;
+            int bestQuality = enableCrunch ? crunchQuality : 100;
 
             bool budgetAchieved = false;
             foreach (int maxRes in resolutionLimits)
@@ -404,7 +406,7 @@ namespace Bluscream.TextureCompressor
                     androidSettings.maxTextureSize = maxResolutionCap;
                     androidSettings.format = format;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
-                    androidSettings.crunchedCompression = true;
+                    androidSettings.crunchedCompression = compressionQuality > 0 && compressionQuality < 100;
                     androidSettings.compressionQuality = compressionQuality;
 
                     importer.SetPlatformTextureSettings(androidSettings);

@@ -26,6 +26,9 @@ namespace VRCQuestPatcher
             public bool RemoveIncompatibleComponents = true;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
+            public int MaxTextureResolution = 2048; // 2048, 1024, 512, 256, 128
+            public bool EnableCrunchCompression = true;
+            public int CrunchCompressionQuality = 25; // 0 (Max Crunch) to 100 (No Crunch / High Quality)
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
@@ -168,7 +171,10 @@ namespace VRCQuestPatcher
                     int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
                         targetAvatar, 
                         profile.MaxTextureMemoryBytes, 
-                        (msg) => progressCallback?.Invoke(msg, 0.70f)
+                        (msg) => progressCallback?.Invoke(msg, 0.70f),
+                        config.MaxTextureResolution,
+                        config.EnableCrunchCompression,
+                        config.CrunchCompressionQuality
                     );
                     summary.texturesOptimized = texCount;
                     Debug.Log($"[VRCQuestPatcherCore] [Step 5] Texture optimization complete: {texCount} texture(s) reimported.");

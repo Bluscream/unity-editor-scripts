@@ -43,6 +43,9 @@ namespace VRCQuestPatcher
             config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", true);
             config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
+            config.MaxTextureResolution = EditorPrefs.GetInt("VRCQuestPatcher_MaxTextureResolution", 2048);
+            config.EnableCrunchCompression = EditorPrefs.GetBool("VRCQuestPatcher_EnableCrunchCompression", true);
+            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCQuestPatcher_CrunchCompressionQuality", 25);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCQuestPatcher_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCQuestPatcher_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCQuestPatcher_RemoveIncompatibleComponents", true);
@@ -58,6 +61,9 @@ namespace VRCQuestPatcher
             EditorPrefs.SetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
             EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
+            EditorPrefs.SetInt("VRCQuestPatcher_MaxTextureResolution", config.MaxTextureResolution);
+            EditorPrefs.SetBool("VRCQuestPatcher_EnableCrunchCompression", config.EnableCrunchCompression);
+            EditorPrefs.SetInt("VRCQuestPatcher_CrunchCompressionQuality", config.CrunchCompressionQuality);
             EditorPrefs.SetBool("VRCQuestPatcher_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCQuestPatcher_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCQuestPatcher_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
@@ -135,6 +141,22 @@ namespace VRCQuestPatcher
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
             config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
             config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
+            if (config.OptimizeTextures)
+            {
+                EditorGUI.indentLevel++;
+                int[] resValues = new int[] { 4096, 2048, 1024, 512, 256, 128 };
+                string[] resLabels = new string[] { "4096 px", "2048 px (Recommended)", "1024 px", "512 px", "256 px", "128 px" };
+                config.MaxTextureResolution = EditorGUILayout.IntPopup("Max Texture Resolution", config.MaxTextureResolution, resLabels, resValues);
+
+                config.EnableCrunchCompression = EditorGUILayout.ToggleLeft("Enable Crunch Compression", config.EnableCrunchCompression);
+                if (config.EnableCrunchCompression)
+                {
+                    config.CrunchCompressionQuality = EditorGUILayout.IntSlider("Crunch Quality", config.CrunchCompressionQuality, 0, 100);
+                    EditorGUILayout.HelpBox("Lower Crunch Quality = smaller AssetBundle size on disk, higher visual compression artifacts.", MessageType.None);
+                }
+                EditorGUI.indentLevel--;
+            }
+
             config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
             config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components", config.RemoveIncompatibleComponents);
