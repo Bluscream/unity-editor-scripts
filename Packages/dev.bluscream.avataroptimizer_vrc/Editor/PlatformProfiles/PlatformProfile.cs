@@ -96,7 +96,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// Performs custom, platform-specific component compatibility check.
         /// Returns true if component should be removed.
         /// </summary>
-        public virtual bool ShouldRemoveComponentCustom(Component comp)
+        public virtual bool ShouldRemoveComponentCustom(UnityEngine.Component comp)
         {
             return false;
         }

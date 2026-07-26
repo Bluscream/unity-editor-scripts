@@ -1,3 +1,4 @@
+using Bluscream.VRC;
 using System;
 using System.Collections.Generic;
 using UnityEditor;

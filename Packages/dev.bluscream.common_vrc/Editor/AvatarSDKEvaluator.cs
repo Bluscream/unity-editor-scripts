@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Bluscream.VRCAvatarOptimizer
+namespace Bluscream.VRC
 {
     /// <summary>
     /// Evaluates avatar stats and compares them against VRChat performance limits
