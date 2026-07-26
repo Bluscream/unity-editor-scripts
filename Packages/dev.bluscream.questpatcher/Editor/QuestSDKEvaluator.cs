@@ -201,77 +201,89 @@ namespace VRCQuestPatcher
             if (avatarRoot == null) return;
             if (stats == null) stats = EvaluateAvatar(avatarRoot);
 
-            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Avatar SDK Evaluation Report for '{avatarRoot.name}' (Platform: Android / Quest):</b></color>");
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] VRChat SDK Alert Report for Avatar '{avatarRoot.name}':</b></color>");
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
 
-            // 1. Download & Uncompressed Size Limits
-            Debug.Log($"[VRC-QuestPatcher] ℹ️ Quest Build Limits: Max Download Size: 10.00 MB | Max Uncompressed Size: 40.00 MB");
+            int sdkAlertCount = 0;
 
-            // 2. Triangles
-            if (stats.TriangleCount > 20000)
+            // Extract exact VRChat SDK GUI alert cards via reflection if SDK is present
+            try
             {
-                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 Triangles: {stats.TriangleCount:N0} (Quest Max: 20,000, Recommended: 7,500). Avatar will be blocked by default on Quest!");
-            }
-            else
-            {
-                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Triangles: {stats.TriangleCount:N0} / 20,000 max.");
-            }
+                Type avatarBuilderType = Type.GetType("VRCSdkControlPanelAvatarBuilder, VRCSDK3A-Editor")
+                    ?? Type.GetType("VRCSdkControlPanelAvatarBuilder");
 
-            // 3. Texture Memory
-            double texMemMB = stats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
-            if (texMemMB > 40.0)
-            {
-                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 Texture Memory: {texMemMB:F2} MB (Quest Max: 40.00 MB, Recommended: 10.00 MB).");
-            }
-            else
-            {
-                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Texture Memory: {texMemMB:F2} MB / 40.00 MB max.");
-            }
-
-            // 4. Material Slots
-            if (stats.MaterialSlotCount > 4)
-            {
-                Debug.LogWarning($"[VRC-QuestPatcher Alert] 🟡 Material Slots: {stats.MaterialSlotCount} (Quest Max for VeryPoor: 4, Recommended: 1).");
-            }
-            else
-            {
-                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Material Slots: {stats.MaterialSlotCount} / 4 max.");
-            }
-
-            // 5. PhysBone Components
-            if (stats.PhysBoneComponentCount > 8)
-            {
-                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 PhysBone Components: {stats.PhysBoneComponentCount} (Quest Hard Limit: 8). ALL PhysBones will be stripped at runtime by VRChat!");
-            }
-            else
-            {
-                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 PhysBone Components: {stats.PhysBoneComponentCount} / 8 max.");
-            }
-
-            // 6. PhysBone Collision Checks
-            if (stats.PhysBoneCollisionCheckCount > 64)
-            {
-                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 PhysBone Collision Check Count: {stats.PhysBoneCollisionCheckCount} (Quest Hard Limit: 64). ALL PhysBone Colliders will be stripped at runtime by VRChat!");
-            }
-            else
-            {
-                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 PhysBone Collision Checks: {stats.PhysBoneCollisionCheckCount} / 64 max.");
-            }
-
-            // 7. Incompatible Component Check
-            Component[] components = avatarRoot.GetComponentsInChildren<Component>(true);
-            int badCompCount = 0;
-            foreach (Component c in components)
-            {
-                if (c == null) continue;
-                string typeName = c.GetType().Name;
-                if (typeName == "Camera" || typeName == "Light" || typeName == "AudioSource" || typeName == "PostProcessVolume" || typeName == "VRC_Station")
+                if (avatarBuilderType != null)
                 {
-                    badCompCount++;
-                    Debug.LogWarning($"[VRC-QuestPatcher Alert] ⚠️ Incompatible component found: '{typeName}' on '{c.gameObject.name}'.");
+                    FieldInfo instanceField = avatarBuilderType.GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                    object builderInstance = instanceField?.GetValue(null);
+
+                    if (builderInstance != null)
+                    {
+                        FieldInfo panelField = avatarBuilderType.GetField("_builder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                        object sdkPanel = panelField?.GetValue(builderInstance);
+
+                        if (sdkPanel != null)
+                        {
+                            Type panelType = sdkPanel.GetType();
+                            object descriptorObj = avatarRoot.GetComponent("VRC_AvatarDescriptor") ?? (object)avatarRoot;
+
+                            PrintDictIssues(sdkPanel, panelType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
+                            PrintDictIssues(sdkPanel, panelType, "GUIWarnings", "🟡 [SDK GUI WARNING]", descriptorObj, ref sdkAlertCount);
+                            PrintDictIssues(sdkPanel, panelType, "GUIInfos", "ℹ️ [SDK GUI INFO]", descriptorObj, ref sdkAlertCount);
+                            PrintDictIssues(sdkPanel, panelType, "GUIStats", "📊 [SDK GUI STAT]", descriptorObj, ref sdkAlertCount);
+                        }
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[VRC-QuestPatcher] Could not dump live SDK GUI issue dictionary: {e.Message}");
+            }
 
-            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Final Rank Estimate: {stats.RatingName} (Incompatible Components: {badCompCount})</b></color>");
+            // Also print calculated metrics summary
+            Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Performance Metrics Summary for '{avatarRoot.name}':</b></color>");
+            Debug.Log($"[VRC-QuestPatcher Metrics] Triangles: {stats.TriangleCount:N0} (Quest Max: 20,000)");
+            Debug.Log($"[VRC-QuestPatcher Metrics] Texture Memory: {stats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB (Quest Max: 40.00 MB)");
+            Debug.Log($"[VRC-QuestPatcher Metrics] Material Slots: {stats.MaterialSlotCount} (Quest Max: 4)");
+            Debug.Log($"[VRC-QuestPatcher Metrics] PhysBone Components: {stats.PhysBoneComponentCount} (Quest Max: 8)");
+            Debug.Log($"[VRC-QuestPatcher Metrics] PhysBone Colliders: {stats.PhysBoneColliderCount} (Quest Max: 16)");
+            Debug.Log($"[VRC-QuestPatcher Metrics] PhysBone Collision Checks: {stats.PhysBoneCollisionCheckCount} (Quest Max: 64)");
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Estimated Rating: {stats.RatingName} | Extracted GUI Alerts: {sdkAlertCount}</b></color>");
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+        }
+
+        private static void PrintDictIssues(object sdkPanel, Type panelType, string dictName, string prefix, object targetSubject, ref int alertCount)
+        {
+            FieldInfo dictField = panelType.GetField(dictName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (dictField == null) return;
+
+            if (dictField.GetValue(sdkPanel) is System.Collections.IDictionary dict)
+            {
+                foreach (System.Collections.DictionaryEntry kvp in dict)
+                {
+                    if (kvp.Value is System.Collections.IEnumerable issueList)
+                    {
+                        foreach (object issue in issueList)
+                        {
+                            if (issue == null) continue;
+                            FieldInfo textProp = issue.GetType().GetField("issueText", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                            string text = textProp?.GetValue(issue) as string;
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                alertCount++;
+                                if (prefix.Contains("ERROR"))
+                                    Debug.LogError($"{prefix} {text}");
+                                else if (prefix.Contains("WARNING"))
+                                    Debug.LogWarning($"{prefix} {text}");
+                                else
+                                    Debug.Log($"{prefix} {text}");
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
