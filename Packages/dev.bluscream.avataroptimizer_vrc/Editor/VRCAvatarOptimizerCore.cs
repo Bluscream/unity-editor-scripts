@@ -154,11 +154,20 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
                 }
 
-                // Step 5: Texture Optimization & Memory Budget Handled by Real Build Quality Ladder (Step 8.5)
+                // Step 5: Fast Texture Optimization & Memory Budget Estimate
                 if (config.OptimizeTextures)
                 {
-                    progressCallback?.Invoke("Texture optimization will be dynamically evaluated during Step 8.5...", 0.70f);
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Deferring texture optimization to Step 8.5 Real AssetBundle Quality Ladder.");
+                    progressCallback?.Invoke("Optimizing texture memory budget...", 0.70f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Optimizing textures — VRAM budget: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB");
+                    int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
+                        targetAvatar, 
+                        profile.MaxTextureMemoryBytes, 
+                        (msg) => progressCallback?.Invoke(msg, 0.70f),
+                        config.MaxTextureResolution,
+                        config.CrunchCompressionQuality
+                    );
+                    summary.texturesOptimized = texCount;
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Initial texture optimization complete: {texCount} texture(s) reimported.");
                 }
 
                 // Step 6: PhysBone Budget Pruner
@@ -220,19 +229,13 @@ namespace Bluscream.VRCAvatarOptimizer
                     .ToArray();
                 if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
 
-                // Apply top of ladder (highest quality ASTC 4x4) before initial build test
-                var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
-                string topStepName = $"{resCaps[0]}px {formatLadder[0].name}";
-                progressCallback?.Invoke($"Building dry-run AssetBundle [1/15]: Testing {topStepName}...", 0.96f);
-                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Testing initial build with highest quality: {topStepName}...");
-                TextureCompressionEditor.ApplyTextureSettings(importers, resCaps[0], formatLadder[0].format, formatLadder[0].quality, (msg) => progressCallback?.Invoke(msg, 0.96f));
-
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
                 if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                 {
                     bool fits = false;
+                    var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
                     int totalSteps = resCaps.Length * formatLadder.Length;
                     int currentStepIdx = 0;
 
