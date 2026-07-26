@@ -266,10 +266,10 @@ namespace VRCQuestPatcher
 
                                 object descriptorObj = avatarRoot.GetComponent("VRC_AvatarDescriptor") ?? (object)avatarRoot;
 
-                                PrintDictIssues(sdkPanel, panelType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
-                                PrintDictIssues(sdkPanel, panelType, "GUIWarnings", "🟡 [SDK GUI WARNING]", descriptorObj, ref sdkAlertCount);
-                                PrintDictIssues(sdkPanel, panelType, "GUIInfos", "ℹ️ [SDK GUI INFO]", descriptorObj, ref sdkAlertCount);
-                                PrintDictIssues(sdkPanel, panelType, "GUIStats", "📊 [SDK GUI STAT]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(builderInstance, avatarBuilderType, "GUIErrors", "🔴 [SDK GUI ERROR]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(builderInstance, avatarBuilderType, "GUIWarnings", "🟡 [SDK GUI WARNING]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(builderInstance, avatarBuilderType, "GUIInfos", "ℹ️ [SDK GUI INFO]", descriptorObj, ref sdkAlertCount);
+                                PrintDictIssues(builderInstance, avatarBuilderType, "GUIStats", "📊 [SDK GUI STAT]", descriptorObj, ref sdkAlertCount);
                             }
                             finally
                             {
