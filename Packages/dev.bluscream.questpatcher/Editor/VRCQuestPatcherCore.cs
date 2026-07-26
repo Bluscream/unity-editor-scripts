@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using ComponentRemover = global::Bluscream.ComponentRemover.ComponentRemover;
+using BluscreamComponentRemover = global::Bluscream.ComponentRemover.ComponentRemover;
 using TextureCompressionEditor = global::Bluscream.TextureCompressor.TextureCompressionEditor;
 
 namespace VRCQuestPatcher
@@ -64,7 +64,7 @@ namespace VRCQuestPatcher
                 if (config.RemoveIncompatibleComponents)
                 {
                     progressCallback?.Invoke("Removing incompatible components...", 0.15f);
-                    var removedComps = ComponentRemover.RemoveQuestIncompatibleComponents(
+                    var removedComps = BluscreamComponentRemover.RemoveQuestIncompatibleComponents(
                         targetAvatar, 
                         (msg) => progressCallback?.Invoke(msg, 0.15f)
                     );
