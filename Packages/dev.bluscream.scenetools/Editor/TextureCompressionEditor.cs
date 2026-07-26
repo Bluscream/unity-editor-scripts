@@ -315,30 +315,35 @@ namespace Bluscream.TextureCompressor
                 (TextureImporterFormat.ASTC_12x12, 25, "ASTC 12x12 (25% Quality)")
             };
 
-            // Resolution Scale Steps from highest to lowest (4096, 2048, 1024, 512, 256, 128)
-            int[] resolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
+            // Resolution scale steps from highest to lowest, capped at defaultMaxSize
+            int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
+            int[] resolutionLimits = System.Array.FindAll(allResolutionLimits, r => r <= defaultMaxSize);
+            if (resolutionLimits.Length == 0) resolutionLimits = new int[] { defaultMaxSize };
 
-            // Target 39.0 MB (leaving 1.0 MB safety headroom for mesh vertex data and animation clips)
+            // NOTE: targetMaxBytes is the VRAM budget. VRChat also enforces a 10 MB compressed bundle size.
+            // We cannot accurately predict compressed bundle size without building, so we use VRAM as a proxy
+            // and rely on the resolution cap (defaultMaxSize) to keep bundle size in check.
             long effectiveTargetBudget = Math.Max(1024 * 1024L, targetMaxBytes - (1024 * 1024L));
 
-            int bestResolutionCap = 2048;
+            int bestResolutionCap = resolutionLimits[0];
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_4x4;
             int bestQuality = 100;
 
-            // Find highest visual quality and resolution combination under budget
+            // Find highest visual quality and resolution combination under VRAM budget
             bool budgetAchieved = false;
             foreach (int maxRes in resolutionLimits)
             {
                 foreach (var step in compressionSteps)
                 {
                     long estimatedMemory = EstimateTotalTextureMemory(importers, maxRes, step.format);
+                    Debug.Log($"[TextureCompressor] Testing {maxRes}px + {step.name}: ~{estimatedMemory / (1024.0 * 1024.0):F2} MB VRAM (budget: {effectiveTargetBudget / (1024.0 * 1024.0):F2} MB)");
                     if (estimatedMemory <= effectiveTargetBudget)
                     {
                         bestResolutionCap = maxRes;
                         bestFormat = step.format;
                         bestQuality = step.quality;
                         budgetAchieved = true;
-                        Debug.Log($"[TextureCompressor] Selected Highest Fidelity Profile: {maxRes}px cap, {step.name}. Estimated Memory: {estimatedMemory / (1024.0 * 1024.0):F2} MB (Target Budget: {effectiveTargetBudget / (1024.0 * 1024.0):F2} MB)");
+                        Debug.Log($"[TextureCompressor] Selected Profile: {maxRes}px cap, {step.name}. Estimated VRAM: {estimatedMemory / (1024.0 * 1024.0):F2} MB (Budget: {effectiveTargetBudget / (1024.0 * 1024.0):F2} MB)");
                         break;
                     }
                 }
@@ -351,6 +356,7 @@ namespace Bluscream.TextureCompressor
                 bestResolutionCap = 128;
                 bestFormat = TextureImporterFormat.ASTC_12x12;
                 bestQuality = 25;
+                Debug.LogWarning($"[TextureCompressor] VRAM budget could not be achieved — falling back to {bestResolutionCap}px ASTC_12x12 Crunch 25%.");
             }
 
             // Apply selected optimal settings to all importers
