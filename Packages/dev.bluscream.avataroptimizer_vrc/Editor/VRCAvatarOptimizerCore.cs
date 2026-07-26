@@ -189,6 +189,9 @@ namespace Bluscream.VRCAvatarOptimizer
                         (msg) => progressCallback?.Invoke(msg, 0.92f)
                     );
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 7] Decimation complete. Final triangle count: {finalTris:N0} (target was {triLimitStr}).");
+                    summary.AddSuccess($"Mesh decimation complete. Final triangle count: {finalTris:N0} (Target: {triLimitStr}).");
+                }
+
                 // Step 8: Platform-Specific Profile Conversions & Rule Validation
                 progressCallback?.Invoke("Executing platform-specific profile conversions & validation...", 0.95f);
                 profile.ExecutePlatformConversions(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.95f));
