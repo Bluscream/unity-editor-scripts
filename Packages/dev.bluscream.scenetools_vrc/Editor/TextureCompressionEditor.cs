@@ -339,7 +339,7 @@ namespace Bluscream.TextureCompressor
             var resolutionLimits = allResolutionLimits.Where(r => r <= maxResolutionCap).ToArray();
             if (resolutionLimits.Length == 0) resolutionLimits = new int[] { maxResolutionCap };
 
-            int bestResolutionCap = resolutionLimits[resolutionLimits.Length - 1];
+            int bestResolutionCap = resolutionLimits[0];
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_12x12;
             int bestQuality = unityCrunchQuality;
 
