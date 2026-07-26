@@ -805,7 +805,7 @@ namespace Bluscream.ComponentRemover
                 {
                     if (go != null)
                     {
-                        lastBackupPath = BackupSystem.CreateBackup(config, BackupScope.GameObjectRecursive, go, null);
+                        lastBackupPath = global::Bluscream.BackupSystem.BackupSystem.CreateBackup(config, BackupScope.GameObjectRecursive, go, null);
                     }
                 }
                 return lastBackupPath;

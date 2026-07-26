@@ -396,7 +396,7 @@ namespace Bluscream.TextureCompressor
                     backupName = backupName
                 };
 
-                return BackupSystem.CreateBackup(config, BackupScope.AllAssets, null, null);
+                return global::Bluscream.BackupSystem.BackupSystem.CreateBackup(config, BackupScope.AllAssets, null, null);
             }
             catch (Exception e)
             {
