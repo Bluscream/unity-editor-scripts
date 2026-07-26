@@ -130,7 +130,7 @@ namespace VRCQuestPatcher
             config.PlacementLocation = (AssetPlacementLocation)EditorGUILayout.EnumPopup("Asset Placement Location", config.PlacementLocation);
             EditorGUILayout.HelpBox(
                 config.PlacementLocation == AssetPlacementLocation.SeparateFolder
-                    ? "Saves generated Quest materials and animation clips into 'Assets/QuestPatched/<AvatarName>/'."
+                    ? "Saves generated Quest materials and animation clips into 'Assets/_QUESTPATCHER/<AvatarName>/'."
                     : "Saves generated Quest materials and animation clips in the same folder as the original assets with ' (Quest)' suffix.",
                 MessageType.None
             );

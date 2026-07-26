@@ -326,7 +326,7 @@ namespace VRCQuestPatcher
                 return srcMat;
             }
 
-            string dir = "Assets/QuestPatched/" + avatarName;
+            string dir = "Assets/_QUESTPATCHER/" + avatarName;
             if (saveInSameFolder && !isBuiltIn)
             {
                 string srcDir = Path.GetDirectoryName(srcPath);
