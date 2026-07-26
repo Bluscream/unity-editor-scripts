@@ -114,9 +114,10 @@ namespace VRCQuestPatcher
                         catch (Exception e)
                         {
                             Debug.LogWarning($"Failed to remove component {comp.GetType().Name} from {go.name}: {e.Message}");
-                        }
                     }
                 }
+            }
+
             // Third pass: Prune excess VRCContactSender and VRCContactReceiver components to Quest hard limit (max 16)
             List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
                 .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
