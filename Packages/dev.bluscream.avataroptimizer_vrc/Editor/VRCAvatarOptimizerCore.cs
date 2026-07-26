@@ -223,10 +223,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 foreach (var fmt in astcFormats)
                 {
                     formatLadderList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)"));
-                    formatLadderList.Add((fmt.format, 75, $"{fmt.name} (Crunch 25%)"));
-                    formatLadderList.Add((fmt.format, 50, $"{fmt.name} (Crunch 50%)"));
-                    formatLadderList.Add((fmt.format, 25, $"{fmt.name} (Crunch 75%)"));
-                    formatLadderList.Add((fmt.format, 0,  $"{fmt.name} (Crunch 100%)"));
+                    for (int q = 90; q >= 0; q -= 10)
+                    {
+                        int crunchPercent = 100 - q;
+                        formatLadderList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)"));
+                    }
                 }
                 var formatLadder = formatLadderList.ToArray();
 
