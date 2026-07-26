@@ -332,7 +332,7 @@ namespace Bluscream.TextureCompressor
             }
 
             int optimizedCount = 0;
-            int maxSize = (targetMaxBytes <= 40 * 1024 * 1024L) ? Math.Min(defaultMaxSize, 512) : defaultMaxSize;
+            int maxSize = (targetMaxBytes <= 40 * 1024 * 1024L) ? Math.Min(defaultMaxSize, 256) : defaultMaxSize;
             int total = importers.Count;
             int index = 0;
 
@@ -352,7 +352,7 @@ namespace Bluscream.TextureCompressor
                     androidSettings.overridden = true;
                     androidSettings.name = "Android";
                     androidSettings.maxTextureSize = Math.Min(androidSettings.maxTextureSize > 0 ? androidSettings.maxTextureSize : importer.maxTextureSize, maxSize);
-                    androidSettings.format = TextureImporterFormat.ASTC_6x6;
+                    androidSettings.format = TextureImporterFormat.ASTC_8x8;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
                     androidSettings.crunchedCompression = true;
                     androidSettings.compressionQuality = 50;
