@@ -71,6 +71,7 @@ namespace VRCQuestPatcher
             }
 
             // 3. Trim collider references on remaining PhysBones until total collision checks <= 64
+            pbList.RemoveAll(c => c == null);
             int totalCollisionChecks = CalculateTotalCollisionChecks(pbList);
             int maxChecks = Math.Min(profile.MaxPhysBoneCollisionChecks, 64);
 
@@ -79,7 +80,6 @@ namespace VRCQuestPatcher
                 progressCallback?.Invoke($"Total PhysBone Collision Checks ({totalCollisionChecks}) exceeds Quest limit ({maxChecks}). Trimming colliders...");
 
                 // Sort PhysBones by highest collision check count first
-                pbList.RemoveAll(c => c == null);
                 pbList.Sort((a, b) => GetCollisionCheckCount(b).CompareTo(GetCollisionCheckCount(a)));
 
                 foreach (Component pb in pbList)
