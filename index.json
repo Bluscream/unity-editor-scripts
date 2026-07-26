@@ -1,0 +1,196 @@
+{
+  "name": "Bluscream's Unity Editor Scripts",
+  "id": "dev.bluscream.vpm",
+  "author": "Bluscream",
+  "url": "https://bluscream.github.io/unity-editor-scripts/index.json",
+  "packages": {
+    "dev.bluscream.avataroptimizer_vrc": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.avataroptimizer_vrc",
+          "version": "1.0.1",
+          "displayName": "Avatar Optimizer (VRChat)",
+          "description": "Automated tool to convert and optimize VRChat avatars across platforms (PC & Android/Quest) according to SDK performance limits and profiles.",
+          "unity": "2019.4",
+          "dependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1",
+            "dev.bluscream.scenetools_vrc": "1.0.1",
+            "dev.bluscream.mobiledecimater_vrc": "1.0.1"
+          },
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1",
+            "dev.bluscream.scenetools_vrc": "1.0.1",
+            "dev.bluscream.mobiledecimater_vrc": "1.0.1"
+          },
+          "author": {
+            "name": "VRC-QuestPatcher"
+          },
+          "keywords": [
+            "vrchat",
+            "quest",
+            "android",
+            "avatar",
+            "optimization"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.avataroptimizer_vrc-1.0.1/dev.bluscream.avataroptimizer_vrc-1.0.1.zip",
+          "zipSHA256": "2b970d0f2f4f7fac3ff80b71d5a30a1276b5e153803f0ad9293763a3bf576999"
+        }
+      }
+    },
+    "dev.bluscream.common": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.common",
+          "version": "1.0.1",
+          "displayName": "Bluscream Common & Backup System",
+          "description": "Common utilities, shared code, and flexible backup/restore system for Unity assets, GameObjects, materials, and textures.",
+          "unity": "2019.4",
+          "dependencies": {},
+          "vpmDependencies": {},
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "utilities",
+            "common",
+            "shared",
+            "backup",
+            "restore"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.common-1.0.1/dev.bluscream.common-1.0.1.zip",
+          "zipSHA256": "a82dc09f39cb20eaa6046a85617e94ed8039eb38c74e4b95ef8395a92b5a97ca"
+        }
+      }
+    },
+    "dev.bluscream.common_vrc": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.common_vrc",
+          "version": "1.0.1",
+          "displayName": "Bluscream Common (VRChat)",
+          "description": "Common VRChat utilities and shared code for Bluscream VRChat Unity packages.",
+          "unity": "2019.4",
+          "dependencies": {
+            "dev.bluscream.common": "1.0.1"
+          },
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.1"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "utilities",
+            "common",
+            "shared",
+            "backup",
+            "restore"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.common_vrc-1.0.1/dev.bluscream.common_vrc-1.0.1.zip",
+          "zipSHA256": "6408628034993ca0c7dc5fc43588ae7f01f07380b29de1ce1ab0537e1e2e9d2d"
+        }
+      }
+    },
+    "dev.bluscream.menumanager_vrcf": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.menumanager_vrcf",
+          "version": "1.0.1",
+          "displayName": "VRCFury Menu Manager",
+          "description": "A tool to mass re-organize and visually edit VRChat avatar menus using VRCFury.",
+          "unity": "2019.4",
+          "dependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1",
+            "com.vrchat.avatars": "3.0.0",
+            "com.vrcfury.vrcfury": "1.0.0"
+          },
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1",
+            "com.vrchat.avatars": "3.0.0",
+            "com.vrcfury.vrcfury": "1.0.0"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "vrcfury",
+            "vrchat",
+            "menu",
+            "manager"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.menumanager_vrcf-1.0.1/dev.bluscream.menumanager_vrcf-1.0.1.zip",
+          "zipSHA256": "e3a764c38b42fd1fe920f6aa1b0107c995c6b6217610e465d8b3251cefc3c89f"
+        }
+      }
+    },
+    "dev.bluscream.mobiledecimater_vrc": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.mobiledecimater_vrc",
+          "version": "1.0.1",
+          "displayName": "Mobile Mesh Decimater",
+          "description": "Automatically decimates avatar and scene meshes on build when targeting mobile platforms (Android, iOS) with integrated high-performance mesh decimation engine.",
+          "unity": "2019.4",
+          "dependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1"
+          },
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "mesh",
+            "decimation",
+            "android",
+            "optimization",
+            "build"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.mobiledecimater_vrc-1.0.1/dev.bluscream.mobiledecimater_vrc-1.0.1.zip",
+          "zipSHA256": "ba553cf77ec45f04ed29774890926a09bbce47e4b137ecc67dc7b5ef88beae03"
+        }
+      }
+    },
+    "dev.bluscream.scenetools_vrc": {
+      "versions": {
+        "1.0.1": {
+          "name": "dev.bluscream.scenetools_vrc",
+          "version": "1.0.1",
+          "displayName": "Bluscream Scene & Asset Tools",
+          "description": "Comprehensive suite of Unity editor tools including Component Remover, Unused Asset Cleanup, GameObject Replacer, Texture Compressor, and Shader Usage Inspector.",
+          "unity": "2019.4",
+          "dependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1"
+          },
+          "vpmDependencies": {
+            "dev.bluscream.common": "1.0.1",
+            "dev.bluscream.common_vrc": "1.0.1"
+          },
+          "author": {
+            "name": "Bluscream"
+          },
+          "keywords": [
+            "scenetools",
+            "component",
+            "remover",
+            "cleanup",
+            "replacer",
+            "texture",
+            "compression",
+            "shader"
+          ],
+          "url": "https://github.com/Bluscream/unity-editor-scripts/releases/download/dev.bluscream.scenetools_vrc-1.0.1/dev.bluscream.scenetools_vrc-1.0.1.zip",
+          "zipSHA256": "45c39d4e297f803dc72004f98f672f10b8d6f3ed242b8a720af4314fbb1f0c41"
+        }
+      }
+    }
+  }
+}
