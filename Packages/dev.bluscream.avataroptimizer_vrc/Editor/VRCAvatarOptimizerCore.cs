@@ -154,20 +154,11 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
                 }
 
-                // Step 5: Texture Optimization & Memory Budget (with Iterative Real Bundle Check)
+                // Step 5: Texture Optimization & Memory Budget Handled by Real Build Quality Ladder (Step 8.5)
                 if (config.OptimizeTextures)
                 {
-                    progressCallback?.Invoke("Optimizing texture memory budget...", 0.70f);
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Optimizing textures — VRAM budget: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB");
-                    int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
-                        targetAvatar, 
-                        profile.MaxTextureMemoryBytes, 
-                        (msg) => progressCallback?.Invoke(msg, 0.70f),
-                        config.MaxTextureResolution,
-                        config.CrunchCompressionQuality
-                    );
-                    summary.texturesOptimized = texCount;
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Initial texture optimization complete: {texCount} texture(s) reimported.");
+                    progressCallback?.Invoke("Texture optimization will be dynamically evaluated during Step 8.5...", 0.70f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Deferring texture optimization to Step 8.5 Real AssetBundle Quality Ladder.");
                 }
 
                 // Step 6: PhysBone Budget Pruner
