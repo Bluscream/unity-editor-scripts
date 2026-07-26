@@ -1,23 +1,25 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reflection;
 using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
     public enum TargetPlatform
     {
-        PC,
-        Android,
-        iOS
+        [Description("PC")] PC,
+        [Description("Android")] Android,
+        [Description("iOS")] iOS
     }
 
     public enum AvatarPerformanceRank
     {
-        Excellent,
-        Good,
-        Medium,
-        Poor,
-        VeryPoor
+        [Description("Excellent")] Excellent,
+        [Description("Good")]      Good,
+        [Description("Medium")]    Medium,
+        [Description("Poor")]      Poor,
+        [Description("Very Poor")] VeryPoor
     }
 
     public enum AssetPlacementLocation
@@ -77,9 +79,7 @@ namespace Bluscream.VRCAvatarOptimizer
         public virtual long MaxAssetBundleSizeBytes => long.MaxValue;
 
         // Platform suffix for duplicated avatars/materials, e.g. " (Android) [Very Poor]"
-        public virtual string PlatformSuffix => $" ({Platform}) [{FormatRank(Rank)}]";
-        protected static string FormatRank(AvatarPerformanceRank rank)
-            => rank == AvatarPerformanceRank.VeryPoor ? "Very Poor" : rank.ToString();
+        public virtual string PlatformSuffix => $" ({Platform.GetDescription()}) [{Rank.GetDescription()}]";
 
         // Component Whitelists & Blacklists — lazy-cached, override CreateBlacklist/CreateWhitelist per platform
         private HashSet<string> _blacklist;
@@ -153,6 +153,24 @@ namespace Bluscream.VRCAvatarOptimizer
                     default: return new PlatformProfile_Android_VeryPoor();
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Extension methods for reading [Description] attributes from enum values.
+    /// </summary>
+    public static class EnumExtensions
+    {
+        /// <summary>
+        /// Returns the [Description] attribute string for an enum value,
+        /// or falls back to .ToString() if none is set.
+        /// </summary>
+        public static string GetDescription<T>(this T value) where T : Enum
+        {
+            FieldInfo field = typeof(T).GetField(value.ToString());
+            if (field == null) return value.ToString();
+            DescriptionAttribute attr = field.GetCustomAttribute<DescriptionAttribute>();
+            return attr != null ? attr.Description : value.ToString();
         }
     }
 }
