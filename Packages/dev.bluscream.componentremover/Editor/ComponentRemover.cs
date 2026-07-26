@@ -723,6 +723,51 @@ namespace Bluscream.ComponentRemover
 
             PrefabInstances(source, prefabs);
         }
+
+        /// <summary>
+        /// Public API to remove all Quest-incompatible components from a GameObject hierarchy
+        /// </summary>
+        public static List<Component> RemoveQuestIncompatibleComponents(GameObject root, System.Action<string> progressCallback = null)
+        {
+            List<Component> removed = new List<Component>();
+            if (root == null) return removed;
+
+            Component[] components = root.GetComponentsInChildren<Component>(true);
+            int total = components.Length;
+            int removedCount = 0;
+
+            for (int i = 0; i < total; i++)
+            {
+                Component comp = components[i];
+                if (comp == null) continue;
+
+                string typeName = comp.GetType().FullName;
+                string lowerType = typeName.ToLowerInvariant();
+
+                bool isIncompatible = lowerType.Contains("dynamicbone") ||
+                                       comp is Cloth ||
+                                       comp is Camera ||
+                                       comp is Light ||
+                                       comp is AudioSource ||
+                                       comp is Rigidbody ||
+                                       comp is Collider ||
+                                       comp is Joint ||
+                                       comp is ParticleSystem ||
+                                       (lowerType.Contains("constraint") && !lowerType.Contains("vrc")) ||
+                                       lowerType.Contains("finalik");
+
+                if (isIncompatible)
+                {
+                    progressCallback?.Invoke($"Removing {comp.GetType().Name} from {comp.gameObject.name}...");
+                    Undo.DestroyObjectImmediate(comp);
+                    removed.Add(comp);
+                    removedCount++;
+                }
+            }
+
+            Debug.Log($"[ComponentRemover] Removed {removedCount} Quest-incompatible components from {root.name}.");
+            return removed;
+        }
     }
 
     /// <summary>
@@ -862,51 +907,6 @@ namespace Bluscream.ComponentRemover
             }
             
             return null;
-        }
-
-        /// <summary>
-        /// Public API to remove all Quest-incompatible components from a GameObject hierarchy
-        /// </summary>
-        public static List<Component> RemoveQuestIncompatibleComponents(GameObject root, System.Action<string> progressCallback = null)
-        {
-            List<Component> removed = new List<Component>();
-            if (root == null) return removed;
-
-            Component[] components = root.GetComponentsInChildren<Component>(true);
-            int total = components.Length;
-            int removedCount = 0;
-
-            for (int i = 0; i < total; i++)
-            {
-                Component comp = components[i];
-                if (comp == null) continue;
-
-                string typeName = comp.GetType().FullName;
-                string lowerType = typeName.ToLowerInvariant();
-
-                bool isIncompatible = lowerType.Contains("dynamicbone") ||
-                                       comp is Cloth ||
-                                       comp is Camera ||
-                                       comp is Light ||
-                                       comp is AudioSource ||
-                                       comp is Rigidbody ||
-                                       comp is Collider ||
-                                       comp is Joint ||
-                                       comp is ParticleSystem ||
-                                       (lowerType.Contains("constraint") && !lowerType.Contains("vrc")) ||
-                                       lowerType.Contains("finalik");
-
-                if (isIncompatible)
-                {
-                    progressCallback?.Invoke($"Removing {comp.GetType().Name} from {comp.gameObject.name}...");
-                    Undo.DestroyObjectImmediate(comp);
-                    removed.Add(comp);
-                    removedCount++;
-                }
-            }
-
-            Debug.Log($"[ComponentRemover] Removed {removedCount} Quest-incompatible components from {root.name}.");
-            return removed;
         }
     }
 }
