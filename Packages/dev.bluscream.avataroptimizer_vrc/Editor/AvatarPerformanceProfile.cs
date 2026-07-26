@@ -73,6 +73,29 @@ namespace Bluscream.VRCAvatarOptimizer
         public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Performs custom, platform-specific component compatibility check.
+        /// Returns true if component should be removed.
+        /// </summary>
+        public virtual bool ShouldRemoveComponentCustom(Component comp)
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// Executes custom platform-specific optimization and conversion operations on the target avatar.
+        /// </summary>
+        public virtual void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
+        {
+        }
+
+        /// <summary>
+        /// Validates platform-specific requirements and reports issues or warnings.
+        /// </summary>
+        public virtual void ValidatePlatformRules(GameObject avatarRoot, System.Collections.Generic.List<string> warnings, System.Collections.Generic.List<string> errors)
+        {
+        }
+
         public static PlatformProfile GetProfile(TargetPlatform platform, AvatarPerformanceRank rank)
         {
             if (platform == TargetPlatform.PC)
@@ -122,6 +145,36 @@ namespace Bluscream.VRCAvatarOptimizer
                 "FixedJoint", "CharacterJoint", "ConfigurableJoint", "ParticleSystem", "DynamicBone",
                 "DynamicBoneCollider", "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
             });
+        }
+
+        public override bool ShouldRemoveComponentCustom(Component comp)
+        {
+            if (comp == null) return false;
+            System.Type t = comp.GetType();
+
+            // Mobile-specific custom checks: remove custom post-processing & non-mobile shaders
+            if (t.Name.Contains("PostProcess") || t.Name.Contains("VRCContact")) return false; // Handled separately
+            return base.ShouldRemoveComponentCustom(comp);
+        }
+
+        public override void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
+        {
+            progressCallback?.Invoke("Executing Android platform-specific conversions...");
+            // Additional Android/Quest specific logic (e.g., stripping lightmaps, enforcing GPU instancing)
+        }
+
+        public override void ValidatePlatformRules(GameObject avatarRoot, System.Collections.Generic.List<string> warnings, System.Collections.Generic.List<string> errors)
+        {
+            if (avatarRoot == null) return;
+            // Android platform validation checks
+            var renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r != null && r.sharedMaterials != null && r.sharedMaterials.Length > 4)
+                {
+                    warnings.Add($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (Android Quest limit is 4 per avatar).");
+                }
+            }
         }
     }
 

@@ -177,6 +177,10 @@ namespace Bluscream.VRCAvatarOptimizer
             if (profile.BlacklistedComponentNames.Contains(typeName) || profile.BlacklistedComponentNames.Contains(typeFullName))
                 return true;
 
+            // 3. Custom profile method check
+            if (profile.ShouldRemoveComponentCustom(comp))
+                return true;
+
             string typeNameLower = typeFullName.ToLowerInvariant();
 
             // Dynamic Bones
