@@ -68,6 +68,10 @@ namespace VRCQuestPatcher
         public int MaxLights = int.MaxValue;
         public int MaxAudioSources = int.MaxValue;
 
+        // Component Whitelists & Blacklists
+        public System.Collections.Generic.HashSet<string> WhitelistedComponentNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        public System.Collections.Generic.HashSet<string> BlacklistedComponentNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+
         public static PlatformProfile GetProfile(TargetPlatform platform, QuestPerformanceRank rank)
         {
             if (platform == TargetPlatform.PC)
@@ -249,6 +253,12 @@ namespace VRCQuestPatcher
             MaxParticleSystems = 0;
             MaxLights = 0;
             MaxAudioSources = 0;
+
+            BlacklistedComponentNames.UnionWith(new[] {
+                "Cloth", "Camera", "Light", "AudioSource", "Rigidbody", "Joint", "SpringJoint", "HingeJoint",
+                "FixedJoint", "CharacterJoint", "ConfigurableJoint", "ParticleSystem", "DynamicBone",
+                "DynamicBoneCollider", "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
+            });
         }
     }
 
