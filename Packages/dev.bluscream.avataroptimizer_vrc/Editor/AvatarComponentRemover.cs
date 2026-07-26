@@ -163,8 +163,8 @@ namespace Bluscream.VRCAvatarOptimizer
             if (comp is Light && profile.MaxLights <= 0)
                 return true;
 
-            // AudioSource (avatars only)
-            if (comp is AudioSource && profile.MaxAudioSources <= 0)
+            // AudioSource / VRCSpatialAudioSource (avatars only)
+            if ((comp is AudioSource || typeName.Contains("AudioSource")) && profile.MaxAudioSources <= 0)
                 return true;
 
             // Rigidbody
