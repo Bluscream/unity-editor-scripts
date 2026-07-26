@@ -7,14 +7,14 @@ using UnityEngine;
 namespace VRCQuestPatcher
 {
     /// <summary>
-    /// Modern Editor Window for VRC-QuestPatcher
+    /// Modern Editor Window for Avatar Optimizer (VRChat)
     /// </summary>
-    public class VRCQuestPatcherWindow : EditorWindow
+    public class VRCAvatarOptimizerWindow : EditorWindow
     {
         private GameObject avatarRoot;
-        private VRCQuestPatcherCore.ConversionConfig config = new VRCQuestPatcherCore.ConversionConfig();
+        private VRCAvatarOptimizerCore.ConversionConfig config = new VRCAvatarOptimizerCore.ConversionConfig();
         private ConversionSummary summary;
-        private QuestSDKEvaluator.AvatarStats currentStats;
+        private AvatarSDKEvaluator.AvatarStats currentStats;
         private bool isConverting = false;
         private string progressMessage = "";
         private float progressValue = 0f;
@@ -23,8 +23,8 @@ namespace VRCQuestPatcher
         [MenuItem("Bluscream/VRChat/Avatar Optimizer")]
         public static void ShowWindow()
         {
-            VRCQuestPatcherWindow window = GetWindow<VRCQuestPatcherWindow>("Avatar Optimizer");
-            window.minSize = new Vector2(520, 650);
+            VRCAvatarOptimizerWindow window = GetWindow<VRCAvatarOptimizerWindow>("Avatar Optimizer");
+            window.minSize = new Vector2(540, 680);
             window.Show();
         }
 
@@ -35,36 +35,38 @@ namespace VRCQuestPatcher
 
         private void LoadPreferences()
         {
-            config.TargetRank = (QuestPerformanceRank)EditorPrefs.GetInt("VRCQuestPatcher_TargetRank", (int)QuestPerformanceRank.Medium);
-            config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCQuestPatcher_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
-            config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCQuestPatcher_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
-            config.DuplicateAvatar = EditorPrefs.GetBool("VRCQuestPatcher_DuplicateAvatar", true);
-            config.AddPlatformSuffixes = EditorPrefs.GetBool("VRCQuestPatcher_AddPlatformSuffixes", true);
-            config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", true);
-            config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
-            config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
-            config.MaxTextureResolution = EditorPrefs.GetInt("VRCQuestPatcher_MaxTextureResolution", 2048);
-            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCQuestPatcher_CrunchCompressionQuality", 75);
-            config.PrunePhysBones = EditorPrefs.GetBool("VRCQuestPatcher_PrunePhysBones", true);
-            config.DecimateMeshes = EditorPrefs.GetBool("VRCQuestPatcher_DecimateMeshes", true);
-            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCQuestPatcher_RemoveIncompatibleComponents", true);
+            config.Platform = (TargetPlatform)EditorPrefs.GetInt("VRCAvatarOptimizer_Platform", (int)TargetPlatform.Android);
+            config.TargetRank = (QuestPerformanceRank)EditorPrefs.GetInt("VRCAvatarOptimizer_TargetRank", (int)QuestPerformanceRank.Medium);
+            config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCAvatarOptimizer_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
+            config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCAvatarOptimizer_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
+            config.DuplicateAvatar = EditorPrefs.GetBool("VRCAvatarOptimizer_DuplicateAvatar", true);
+            config.AddPlatformSuffixes = EditorPrefs.GetBool("VRCAvatarOptimizer_AddPlatformSuffixes", true);
+            config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCAvatarOptimizer_RemapAnimationsAndVRCFury", true);
+            config.ReplaceShaders = EditorPrefs.GetBool("VRCAvatarOptimizer_ReplaceShaders", true);
+            config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
+            config.MaxTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxTextureResolution", 2048);
+            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchCompressionQuality", 75);
+            config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
+            config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
+            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
         }
 
         private void SavePreferences()
         {
-            EditorPrefs.SetInt("VRCQuestPatcher_TargetRank", (int)config.TargetRank);
-            EditorPrefs.SetInt("VRCQuestPatcher_PlacementLocation", (int)config.PlacementLocation);
-            EditorPrefs.SetInt("VRCQuestPatcher_PruningStrategy", (int)config.PruningStrategy);
-            EditorPrefs.SetBool("VRCQuestPatcher_DuplicateAvatar", config.DuplicateAvatar);
-            EditorPrefs.SetBool("VRCQuestPatcher_AddPlatformSuffixes", config.AddPlatformSuffixes);
-            EditorPrefs.SetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
-            EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
-            EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
-            EditorPrefs.SetInt("VRCQuestPatcher_MaxTextureResolution", config.MaxTextureResolution);
-            EditorPrefs.SetInt("VRCQuestPatcher_CrunchCompressionQuality", config.CrunchCompressionQuality);
-            EditorPrefs.SetBool("VRCQuestPatcher_PrunePhysBones", config.PrunePhysBones);
-            EditorPrefs.SetBool("VRCQuestPatcher_DecimateMeshes", config.DecimateMeshes);
-            EditorPrefs.SetBool("VRCQuestPatcher_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_Platform", (int)config.Platform);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_TargetRank", (int)config.TargetRank);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_PlacementLocation", (int)config.PlacementLocation);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_PruningStrategy", (int)config.PruningStrategy);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_DuplicateAvatar", config.DuplicateAvatar);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_AddPlatformSuffixes", config.AddPlatformSuffixes);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_ReplaceShaders", config.ReplaceShaders);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_MaxTextureResolution", config.MaxTextureResolution);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchCompressionQuality", config.CrunchCompressionQuality);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_PrunePhysBones", config.PrunePhysBones);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
         }
 
         private void OnGUI()
@@ -72,8 +74,8 @@ namespace VRCQuestPatcher
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
 
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("VRC-QuestPatcher", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Convert PC VRChat avatars into fully compliant Quest/Android avatars with one click. Automatically duplicates materials, remaps VRCFury toggles & material swaps, optimizes texture memory budgets, decimates meshes, and prunes PhysBones to hit target performance ranks.", MessageType.Info);
+            EditorGUILayout.LabelField("Avatar Optimizer (VRChat)", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Optimize VRChat avatars for target platforms (PC & Android) according to SDK performance rank limits. Automatically duplicates materials, remaps VRCFury toggles & material swaps, optimizes texture memory budgets, decimates meshes, and prunes PhysBones to hit target performance ranks.", MessageType.Info);
             EditorGUILayout.Space(10);
 
             // Avatar Root Selection
@@ -111,12 +113,13 @@ namespace VRCQuestPatcher
 
             EditorGUI.BeginChangeCheck();
 
+            config.Platform = (TargetPlatform)EditorGUILayout.EnumPopup("Target Platform", config.Platform);
             config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
 
-            QuestPerformanceProfile currentProfile = QuestPerformanceProfile.GetProfile(config.TargetRank);
+            PlatformProfile currentProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
             string triStr = currentProfile.MaxTriangles == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxTriangles:N0}";
             string matStr = currentProfile.MaxMaterialSlots == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxMaterialSlots}";
-            EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: {triStr} Tris, {matStr} Material Slots, {currentProfile.MaxPhysBoneComponents} PhysBones.", MessageType.None);
+            EditorGUILayout.HelpBox($"Profile Limits ({currentProfile.Platform} - {currentProfile.Rank}): {triStr} Tris, {matStr} Mat Slots, {currentProfile.MaxPhysBoneComponents} PhysBones, Bounds: {currentProfile.MaxBoundsSize.x}x{currentProfile.MaxBoundsSize.y}x{currentProfile.MaxBoundsSize.z}m.", MessageType.None);
 
             EditorGUILayout.Space(5);
             config.DuplicateAvatar = EditorGUILayout.ToggleLeft("Duplicate Avatar GameObject", config.DuplicateAvatar);
@@ -130,8 +133,8 @@ namespace VRCQuestPatcher
             config.PlacementLocation = (AssetPlacementLocation)EditorGUILayout.EnumPopup("Asset Placement Location", config.PlacementLocation);
             EditorGUILayout.HelpBox(
                 config.PlacementLocation == AssetPlacementLocation.SeparateFolder
-                    ? "Saves generated Quest materials and animation clips into 'Assets/_QUESTPATCHER/<AvatarName>/'."
-                    : "Saves generated Quest materials and animation clips in the same folder as the original assets with ' (Quest)' suffix.",
+                    ? "Saves generated materials and animation clips into 'Assets/_QUESTPATCHER/<AvatarName>/'."
+                    : "Saves generated materials and animation clips in the same folder as the original assets.",
                 MessageType.None
             );
 
@@ -186,7 +189,7 @@ namespace VRCQuestPatcher
             // Action Button
             EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null);
             
-            if (GUILayout.Button("Patch Avatar for Quest", GUILayout.Height(38)))
+            if (GUILayout.Button($"Optimize Avatar for {config.Platform}", GUILayout.Height(38)))
             {
                 StartConversion();
             }
@@ -194,7 +197,7 @@ namespace VRCQuestPatcher
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.Space(10);
 
-            // Current Avatar Rating Estimate (positioned below Patch button to avoid shifting UI layout)
+            // Current Avatar Rating Estimate
             if (avatarRoot != null && currentStats != null)
             {
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
@@ -253,7 +256,7 @@ namespace VRCQuestPatcher
         {
             if (avatarRoot != null)
             {
-                currentStats = QuestSDKEvaluator.EvaluateAvatar(avatarRoot);
+                currentStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
             }
         }
 
@@ -273,7 +276,7 @@ namespace VRCQuestPatcher
 
             try
             {
-                summary = VRCQuestPatcherCore.ConvertAvatar(
+                summary = VRCAvatarOptimizerCore.ConvertAvatar(
                     avatarRoot,
                     config,
                     (message, progress) =>
@@ -302,14 +305,14 @@ namespace VRCQuestPatcher
                         }
 
                         bool cancelRequested = EditorUtility.DisplayCancelableProgressBar(
-                            "VRC-QuestPatcher",
+                            "Avatar Optimizer",
                             $"{progressMessage}\n{timeDetailsMessage}",
                             progressValue
                         );
 
                         if (cancelRequested)
                         {
-                            throw new OperationCanceledException("Quest conversion canceled by user.");
+                            throw new OperationCanceledException("Avatar conversion canceled by user.");
                         }
 
                         Repaint();
@@ -320,8 +323,8 @@ namespace VRCQuestPatcher
                 TimeSpan totalTime = conversionStopwatch.Elapsed;
 
                 EditorUtility.DisplayDialog(
-                    "Quest Patch Complete",
-                    $"Quest conversion completed successfully in {totalTime.Minutes:D2}:{totalTime.Seconds:D2}!\n\n" +
+                    "Avatar Optimization Complete",
+                    $"Avatar optimization completed successfully in {totalTime.Minutes:D2}:{totalTime.Seconds:D2}!\n\n" +
                     $"Materials Replaced: {summary.materialsReplaced}\n" +
                     $"Components Removed: {summary.componentsRemoved}\n" +
                     $"Textures Optimized: {summary.texturesOptimized}\n" +
@@ -332,12 +335,12 @@ namespace VRCQuestPatcher
             }
             catch (OperationCanceledException canceledEx)
             {
-                Debug.LogWarning($"[VRCQuestPatcherWindow] {canceledEx.Message}");
+                Debug.LogWarning($"[VRCAvatarOptimizerWindow] {canceledEx.Message}");
             }
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Conversion failed: {e.Message}", "OK");
-                Debug.LogError($"[VRCQuestPatcherWindow] Conversion error: {e}");
+                Debug.LogError($"[VRCAvatarOptimizerWindow] Conversion error: {e}");
             }
             finally
             {

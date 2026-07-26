@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using static Bluscream.Utils;
@@ -9,9 +8,9 @@ using static Bluscream.Utils;
 namespace VRCQuestPatcher
 {
     /// <summary>
-    /// Removes Quest-incompatible components from avatars
+    /// Removes platform-incompatible components from avatars based on PlatformProfile rules
     /// </summary>
-    public static class QuestComponentRemover
+    public static class AvatarComponentRemover
     {
         public class RemovedComponent
         {
@@ -21,22 +20,23 @@ namespace VRCQuestPatcher
         }
 
         /// <summary>
-        /// Removes all Quest-incompatible components from the avatar
+        /// Removes all platform-incompatible components from the avatar according to profile rules
         /// </summary>
-        public static List<RemovedComponent> RemoveIncompatibleComponents(GameObject avatarRoot, System.Action<string> progressCallback = null)
+        public static List<RemovedComponent> RemoveIncompatibleComponents(GameObject avatarRoot, PlatformProfile profile, Action<string> progressCallback = null)
         {
             List<RemovedComponent> removed = new List<RemovedComponent>();
             
             if (avatarRoot == null)
             {
-                Debug.LogError("Avatar root is null");
+                Debug.LogError("[AvatarComponentRemover] Avatar root is null");
                 return removed;
             }
 
-            // Get all GameObjects recursively
+            profile = profile ?? PlatformProfile.GetProfile(TargetPlatform.Android, QuestPerformanceRank.Medium);
+
             List<GameObject> allGameObjects = new List<GameObject>();
             CollectAllGameObjects(avatarRoot.transform, allGameObjects);
-            Debug.Log($"[QuestComponentRemover] Starting incompatible component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects).");
+            Debug.Log($"[AvatarComponentRemover] Starting component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects) using profile '{profile.Platform}_{profile.Rank}'.");
 
             int total = allGameObjects.Count;
             for (int i = 0; i < allGameObjects.Count; i++)
@@ -48,13 +48,12 @@ namespace VRCQuestPatcher
 
                 Component[] components = go.GetComponents<Component>();
                 
-                // First pass: Remove dependent components (like VRCSpatialAudioSource before AudioSource)
+                // First pass: Remove dependent VRChat components (e.g. VRCSpatialAudioSource before AudioSource)
                 List<Component> toRemove = new List<Component>();
                 foreach (Component comp in components)
                 {
                     if (comp == null) continue;
                     
-                    // Check if this is a VRChat component that depends on incompatible components
                     string typeName = comp.GetType().FullName;
                     if (typeName != null && typeName.Contains("VRCSpatialAudioSource"))
                     {
@@ -62,18 +61,17 @@ namespace VRCQuestPatcher
                     }
                 }
                 
-                // Remove dependent components first
                 foreach (Component comp in toRemove)
                 {
                     try
                     {
-                        Undo.RegisterCompleteObjectUndo(go, "Remove Quest-incompatible component");
+                        Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
                         if (Application.isPlaying)
                             UnityEngine.Object.Destroy(comp);
                         else
                             UnityEngine.Object.DestroyImmediate(comp, true);
                         
-                        Debug.Log($"[QuestComponentRemover] [Pass 1] Removed dependent component '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
+                        Debug.Log($"[AvatarComponentRemover] [Pass 1] Removed dependent component '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
                         removed.Add(new RemovedComponent
                         {
                             gameObject = go,
@@ -83,17 +81,17 @@ namespace VRCQuestPatcher
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"[QuestComponentRemover] Failed to remove dependent component {comp.GetType().Name} from {go.name}: {e.Message}");
+                        Debug.LogWarning($"[AvatarComponentRemover] Failed to remove dependent component {comp.GetType().Name} from {go.name}: {e.Message}");
                     }
                 }
                 
-                // Second pass: Remove incompatible components
-                components = go.GetComponents<Component>(); // Refresh after removals
+                // Second pass: Remove blacklisted / incompatible components
+                components = go.GetComponents<Component>();
                 foreach (Component comp in components)
                 {
                     if (comp == null) continue;
 
-                    if (ShouldRemoveComponent(comp))
+                    if (ShouldRemoveComponent(comp, profile))
                     {
                         RemovedComponent removedComp = new RemovedComponent
                         {
@@ -104,40 +102,39 @@ namespace VRCQuestPatcher
 
                         try
                         {
-                            Undo.RegisterCompleteObjectUndo(go, "Remove Quest-incompatible component");
+                            Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
                             
-                            // Use DestroyImmediate for editor, Destroy for runtime
                             if (Application.isPlaying)
                                 UnityEngine.Object.Destroy(comp);
                             else
                                 UnityEngine.Object.DestroyImmediate(comp, true);
                             
-                            Debug.Log($"[QuestComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
+                            Debug.Log($"[AvatarComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
                             removed.Add(removedComp);
                         }
                         catch (Exception e)
                         {
-                            Debug.LogWarning($"[QuestComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
+                            Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
                         }
                     }
                 }
             }
 
-            // Third pass: Prune excess VRCContactSender and VRCContactReceiver components to Quest hard limit (max 16)
+            // Third pass: Prune excess VRCContactSender and VRCContactReceiver components to profile limit (default 16 for Quest)
             List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
                 .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
                 .ToList();
 
             if (contactComps.Count > 16)
             {
-                Debug.Log($"[QuestComponentRemover] [Pass 3] VRCContact components: {contactComps.Count} > 16 limit. Pruning {contactComps.Count - 16}.");
+                Debug.Log($"[AvatarComponentRemover] [Pass 3] VRCContact components: {contactComps.Count} > 16 limit. Pruning {contactComps.Count - 16}.");
                 progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> 16)...");
                 for (int i = 16; i < contactComps.Count; i++)
                 {
                     Component c = contactComps[i];
                     if (c != null)
                     {
-                        Debug.Log($"[QuestComponentRemover] [Pass 3] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
+                        Debug.Log($"[AvatarComponentRemover] [Pass 3] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
                         removed.Add(new RemovedComponent
                         {
                             gameObject = c.gameObject,
@@ -148,67 +145,73 @@ namespace VRCQuestPatcher
                     }
                 }
             }
-            else
-            {
-                Debug.Log($"[QuestComponentRemover] [Pass 3] VRCContact count OK: {contactComps.Count} / 16 limit.");
-            }
 
-            Debug.Log($"[QuestComponentRemover] Done. Total removed: {removed.Count} component(s).");
+            Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
         }
 
         /// <summary>
-        /// Determines if a component should be removed for Quest compatibility
+        /// Legacy overload for backward compatibility
         /// </summary>
-        private static bool ShouldRemoveComponent(Component comp)
+        public static List<RemovedComponent> RemoveIncompatibleComponents(GameObject avatarRoot, Action<string> progressCallback = null)
+        {
+            return RemoveIncompatibleComponents(avatarRoot, PlatformProfile.GetProfile(TargetPlatform.Android, QuestPerformanceRank.Medium), progressCallback);
+        }
+
+        /// <summary>
+        /// Determines if a component should be removed based on the given PlatformProfile
+        /// </summary>
+        public static bool ShouldRemoveComponent(Component comp, PlatformProfile profile)
         {
             if (comp == null) return false;
 
             Type compType = comp.GetType();
-            string typeName = compType.FullName;
-            string typeNameLower = typeName.ToLowerInvariant();
+            string typeName = compType.Name;
+            string typeFullName = compType.FullName ?? typeName;
+
+            // 1. Whitelist check: If component is explicitly whitelisted, keep it
+            if (profile.WhitelistedComponentNames.Contains(typeName) || profile.WhitelistedComponentNames.Contains(typeFullName))
+                return false;
+
+            // 2. Blacklist check: If component is in profile blacklist, remove it
+            if (profile.BlacklistedComponentNames.Contains(typeName) || profile.BlacklistedComponentNames.Contains(typeFullName))
+                return true;
+
+            string typeNameLower = typeFullName.ToLowerInvariant();
 
             // Dynamic Bones
-            if (typeNameLower.Contains("dynamicbone") || compType.Name.Contains("DynamicBone"))
+            if (typeNameLower.Contains("dynamicbone") || typeName.Contains("DynamicBone"))
                 return true;
 
             // Cloth
             if (comp is Cloth)
                 return true;
 
-            // Camera (only on avatars, not worlds)
+            // Camera (avatars only)
             if (comp is Camera)
                 return true;
 
-            // Light (only on avatars, not worlds)
-            if (comp is Light)
+            // Light (avatars only)
+            if (comp is Light && profile.MaxLights <= 0)
                 return true;
 
-            // AudioSource (only on avatars, not worlds)
-            if (comp is AudioSource)
+            // AudioSource (avatars only)
+            if (comp is AudioSource && profile.MaxAudioSources <= 0)
                 return true;
 
-            // Physics components (only on avatars)
+            // Rigidbody
             if (comp is Rigidbody)
                 return true;
-
-            if (comp is Collider)
-            {
-                // Allow colliders that are part of VRChat systems (like PhysBones)
-                // But remove standalone colliders
-                return true; // Will be refined based on VRChat SDK detection
-            }
 
             // Joints
             if (comp is Joint || compType.IsSubclassOf(typeof(Joint)))
                 return true;
 
-            // Particle Systems (with limits, but we'll remove for safety)
-            // Note: VRChat allows limited particles, but for simplicity we remove all
-            if (comp is ParticleSystem)
+            // Particle Systems
+            if (comp is ParticleSystem && profile.MaxParticleSystems <= 0)
                 return true;
 
-            // Unity Constraints
+            // Constraints (non-VRChat)
             if (typeNameLower.Contains("constraint") && !typeNameLower.Contains("vrchat"))
                 return true;
 
@@ -223,24 +226,14 @@ namespace VRCQuestPatcher
             return false;
         }
 
-        /// <summary>
-        /// Collects all GameObjects recursively
-        /// </summary>
         private static void CollectAllGameObjects(Transform parent, List<GameObject> collection)
         {
             if (parent == null) return;
-
             collection.Add(parent.gameObject);
-
-            for (int i = 0; i < parent.childCount; i++)
+            foreach (Transform child in parent)
             {
-                Transform child = parent.GetChild(i);
-                if (child != null)
-                {
-                    CollectAllGameObjects(child, collection);
-                }
+                CollectAllGameObjects(child, collection);
             }
         }
-
     }
 }
