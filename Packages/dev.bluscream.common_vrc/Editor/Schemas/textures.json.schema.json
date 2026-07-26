@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Textures Backup Schema",
+  "description": "Schema for textures.json file containing texture import settings backup data",
+  "type": "object",
+  "required": ["textures"],
+  "properties": {
+    "textures": {
+      "type": "array",
+      "description": "Array of texture backups",
+      "items": {
+        "$ref": "#/definitions/TextureBackup"
+      }
+    }
+  },
+  "definitions": {
+    "TextureBackup": {
+      "type": "object",
+      "required": ["texturePath", "maxTextureSize", "compression"],
+      "properties": {
+        "texturePath": {
+          "type": "string",
+          "description": "Asset path to the texture (e.g., 'Assets/Textures/MyTexture.png')",
+          "pattern": "^Assets/.*\\.(png|jpg|jpeg|tga|tiff|psd|exr|gif|bmp|iff|pict|dds)$"
+        },
+        "maxTextureSize": {
+          "type": "integer",
+          "description": "Maximum texture size (e.g., 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192)",
+          "enum": [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+        },
+        "format": {
+          "type": "integer",
+          "description": "Texture importer format as integer (TextureImporterFormat enum value)",
+          "minimum": 0
+        },
+        "compression": {
+          "type": "integer",
+          "description": "Texture compression type as integer (TextureImporterCompression enum value: 0=None, 1=Normal, 2=High, 3=Low, 4=Uncompressed)",
+          "enum": [0, 1, 2, 3, 4]
+        },
+        "useCrunchCompression": {
+          "type": "boolean",
+          "description": "Whether crunch compression is enabled"
+        },
+        "compressorQuality": {
+          "type": "integer",
+          "description": "Compression quality (0-100)",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  }
+}

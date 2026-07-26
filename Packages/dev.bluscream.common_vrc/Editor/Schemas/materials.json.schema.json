@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Materials Backup Schema",
+  "description": "Schema for materials.json file containing material and shader backup data",
+  "type": "object",
+  "required": ["materials"],
+  "properties": {
+    "materials": {
+      "type": "array",
+      "description": "Array of material backups",
+      "items": {
+        "$ref": "#/definitions/MaterialBackup"
+      }
+    }
+  },
+  "definitions": {
+    "MaterialBackup": {
+      "type": "object",
+      "required": ["materialPath", "shaderName"],
+      "properties": {
+        "materialPath": {
+          "type": "string",
+          "description": "Asset path to the material (e.g., 'Assets/Materials/MyMaterial.mat')",
+          "pattern": "^Assets/.*\\.mat$"
+        },
+        "shaderName": {
+          "type": "string",
+          "description": "Full name of the shader used by the material"
+        },
+        "materialProperties": {
+          "type": "array",
+          "description": "Array of material property entries",
+          "items": {
+            "$ref": "#/definitions/MaterialPropertyEntry"
+          }
+        }
+      }
+    },
+    "MaterialPropertyEntry": {
+      "type": "object",
+      "required": ["propertyName", "propertyType", "propertyValue"],
+      "properties": {
+        "propertyName": {
+          "type": "string",
+          "description": "Name of the shader property (e.g., '_MainTex', '_Color', '_Metallic')"
+        },
+        "propertyType": {
+          "type": "string",
+          "description": "Type of the property",
+          "enum": ["float", "color", "vector", "texture"]
+        },
+        "propertyValue": {
+          "type": "string",
+          "description": "Serialized property value. Format depends on type: float='0.5', color='1,0,0,1', vector='1,2,3,4', texture='Assets/Textures/MyTexture.png'"
+        }
+      }
+    }
+  }
+}
