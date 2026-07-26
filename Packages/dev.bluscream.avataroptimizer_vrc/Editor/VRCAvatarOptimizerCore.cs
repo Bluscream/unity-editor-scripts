@@ -29,6 +29,8 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
             public int CrunchCompressionQuality = 75; // 0 = No Crunching (ASTC raw), 100 = Max Crunch (lowest file size)
+            public float UncompressedAvatarHeadroomMB = 6.0f; // Headroom in MB reserved for mesh & animation payload from 40.0 MB limit
+            public float CompressedAvatarHeadroomMB = 5.0f;   // Headroom in MB reserved for compressed avatar AssetBundle from 10.0 MB limit
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
@@ -164,7 +166,9 @@ namespace Bluscream.VRCAvatarOptimizer
                         profile.MaxTextureMemoryBytes, 
                         (msg) => progressCallback?.Invoke(msg, 0.70f),
                         config.MaxTextureResolution,
-                        config.CrunchCompressionQuality
+                        config.CrunchCompressionQuality,
+                        config.UncompressedAvatarHeadroomMB,
+                        config.CompressedAvatarHeadroomMB
                     );
                     summary.texturesOptimized = texCount;
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Initial texture optimization complete: {texCount} texture(s) reimported.");

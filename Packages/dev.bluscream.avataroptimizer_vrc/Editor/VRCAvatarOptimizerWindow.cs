@@ -47,6 +47,8 @@ namespace Bluscream.VRCAvatarOptimizer
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.MaxTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxTextureResolution", 2048);
             config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchCompressionQuality", 75);
+            config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 6.0f);
+            config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 5.0f);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
@@ -65,6 +67,8 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetInt("VRCAvatarOptimizer_MaxTextureResolution", config.MaxTextureResolution);
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchCompressionQuality", config.CrunchCompressionQuality);
+            EditorPrefs.SetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", config.UncompressedAvatarHeadroomMB);
+            EditorPrefs.SetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", config.CompressedAvatarHeadroomMB);
             EditorPrefs.SetBool("VRCAvatarOptimizer_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
@@ -159,6 +163,18 @@ namespace Bluscream.VRCAvatarOptimizer
                     config.CrunchCompressionQuality == 0 
                         ? "Crunching Disabled (Raw ASTC): Higher disk bundle size, maximum visual quality."
                         : $"Crunch Ratio: {config.CrunchCompressionQuality}% — Higher ratio = smaller AssetBundle size on disk.",
+                    MessageType.None
+                );
+
+                config.UncompressedAvatarHeadroomMB = EditorGUILayout.Slider("Uncompressed Headroom (MB)", config.UncompressedAvatarHeadroomMB, 0.0f, 15.0f);
+                EditorGUILayout.HelpBox(
+                    $"Uncompressed Headroom: {config.UncompressedAvatarHeadroomMB:F1} MB — Reserves space for mesh/animation payload out of the 40.00 MB limit (Texture VRAM target: {Math.Max(1.0f, 40.0f - config.UncompressedAvatarHeadroomMB):F1} MB).",
+                    MessageType.None
+                );
+
+                config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Compressed Bundle Target (MB)", config.CompressedAvatarHeadroomMB, 1.0f, 10.0f);
+                EditorGUILayout.HelpBox(
+                    $"Compressed Bundle Target: {config.CompressedAvatarHeadroomMB:F1} MB — Target AssetBundle disk size for texture optimization (Must be ≤ 10.00 MB).",
                     MessageType.None
                 );
                 EditorGUI.indentLevel--;
