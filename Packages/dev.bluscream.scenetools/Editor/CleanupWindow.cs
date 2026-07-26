@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using Bluscream;
 using static Bluscream.Utils;
+using Bluscream.BackupSystem;
 
 namespace Bluscream.Cleanup
 {
@@ -207,8 +208,8 @@ namespace Bluscream.Cleanup
 
                 // Create Backup
                 string assetsCsvPath = Path.Combine(backupFolder, "assets.csv");
-                Bluscream.BackupSystem.AssetBackup.BackupAssetsToCsv(
-                    Bluscream.BackupSystem.BackupScope.AllAssets,
+                AssetBackupHandler.BackupAssetsToCsv(
+                    BackupScope.AllAssets,
                     null,
                     assetsCsvPath,
                     (msg, prog) => EditorUtility.DisplayProgressBar("Creating Backup", msg, prog)

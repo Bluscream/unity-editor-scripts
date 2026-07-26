@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Bluscream.Utils;
+using Bluscream.BackupSystem;
 
 namespace Bluscream.ComponentRemover
 {
@@ -804,7 +805,7 @@ namespace Bluscream.ComponentRemover
                 {
                     if (go != null)
                     {
-                        lastBackupPath = Bluscream.BackupSystem.CreateBackup(config, Bluscream.BackupScope.GameObjectRecursive, go, null);
+                        lastBackupPath = BackupSystem.CreateBackup(config, BackupScope.GameObjectRecursive, go, null);
                     }
                 }
                 return lastBackupPath;

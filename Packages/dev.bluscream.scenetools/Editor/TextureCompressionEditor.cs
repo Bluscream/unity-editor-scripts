@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Bluscream.BackupSystem;
 
 namespace Bluscream.TextureCompressor
 {
@@ -383,7 +384,7 @@ namespace Bluscream.TextureCompressor
         {
             try
             {
-                Bluscream.BackupSystem.BackupConfig config = new Bluscream.BackupSystem.BackupConfig
+                BackupConfig config = new BackupConfig
                 {
                     backupMaterials = false,
                     backupComponents = false,
@@ -395,7 +396,7 @@ namespace Bluscream.TextureCompressor
                     backupName = backupName
                 };
 
-                return Bluscream.BackupSystem.CreateBackup(config, Bluscream.BackupScope.AllAssets, null, null);
+                return BackupSystem.CreateBackup(config, BackupScope.AllAssets, null, null);
             }
             catch (Exception e)
             {
