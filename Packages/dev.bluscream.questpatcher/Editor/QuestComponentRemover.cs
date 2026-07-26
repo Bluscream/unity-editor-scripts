@@ -114,6 +114,7 @@ namespace VRCQuestPatcher
                         catch (Exception e)
                         {
                             Debug.LogWarning($"Failed to remove component {comp.GetType().Name} from {go.name}: {e.Message}");
+                        }
                     }
                 }
             }
