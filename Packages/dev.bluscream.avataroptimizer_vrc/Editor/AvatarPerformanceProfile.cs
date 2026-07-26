@@ -7,7 +7,8 @@ namespace Bluscream.VRCAvatarOptimizer
     public enum TargetPlatform
     {
         PC,
-        Android
+        Android,
+        iOS
     }
 
     public enum AvatarPerformanceRank
@@ -110,6 +111,18 @@ namespace Bluscream.VRCAvatarOptimizer
                     default: return new PC_VeryPoor_Profile();
                 }
             }
+            else if (platform == TargetPlatform.iOS)
+            {
+                switch (rank)
+                {
+                    case AvatarPerformanceRank.Excellent: return new iOS_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new iOS_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new iOS_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new iOS_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
+                    default: return new iOS_VeryPoor_Profile();
+                }
+            }
             else
             {
                 switch (rank)
@@ -175,6 +188,16 @@ namespace Bluscream.VRCAvatarOptimizer
                     summary.AddWarning($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (Android Quest limit is 4 per avatar).", r);
                 }
             }
+        }
+    }
+
+    public abstract class iOS_PlatformProfile_Base : Android_PlatformProfile_Base
+    {
+        public override TargetPlatform Platform => TargetPlatform.iOS;
+
+        public override void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
+        {
+            progressCallback?.Invoke("Executing iOS mobile platform-specific conversions...");
         }
     }
 
@@ -415,6 +438,128 @@ namespace Bluscream.VRCAvatarOptimizer
             MaxPhysBoneTransforms = 64;                 // Quest PhysBone transform cap
             MaxPhysBoneColliders = 16;                  // Quest PhysBone collider cap
             MaxPhysBoneCollisionChecks = 64;            // Quest PhysBone collision check cap
+            MaxMeshParticlePolyCount = 0;
+            MaxParticleSystems = 0;
+            MaxLights = 0;
+            MaxAudioSources = 0;
+        }
+    }
+
+    // =========================================================================
+    // IOS PLATFORM PROFILES (Official VRChat iOS Mobile Limits - identical to Mobile/Android)
+    // =========================================================================
+    public class iOS_Excellent_Profile : iOS_PlatformProfile_Base
+    {
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Excellent;
+        public iOS_Excellent_Profile()
+        {
+            MaxTriangles = 7500;
+            MaxSkinnedMeshes = 1;
+            MaxMeshRenderers = 1;
+            MaxMaterialSlots = 1;
+            MaxBones = 75;
+            MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(2.5f, 2.5f, 2.5f);
+            MaxTextureMemoryBytes = 10 * 1024 * 1024L;
+            MaxPhysBoneComponents = 0;
+            MaxPhysBoneTransforms = 0;
+            MaxPhysBoneColliders = 0;
+            MaxPhysBoneCollisionChecks = 0;
+            MaxMeshParticlePolyCount = 0;
+            MaxParticleSystems = 0;
+            MaxLights = 0;
+            MaxAudioSources = 0;
+        }
+    }
+
+    public class iOS_Good_Profile : iOS_PlatformProfile_Base
+    {
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Good;
+        public iOS_Good_Profile()
+        {
+            MaxTriangles = 15000;
+            MaxSkinnedMeshes = 2;
+            MaxMeshRenderers = 2;
+            MaxMaterialSlots = 2;
+            MaxBones = 90;
+            MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(4f, 4f, 4f);
+            MaxTextureMemoryBytes = 10 * 1024 * 1024L;
+            MaxPhysBoneComponents = 8;
+            MaxPhysBoneTransforms = 16;
+            MaxPhysBoneColliders = 8;
+            MaxPhysBoneCollisionChecks = 16;
+            MaxMeshParticlePolyCount = 0;
+            MaxParticleSystems = 0;
+            MaxLights = 0;
+            MaxAudioSources = 0;
+        }
+    }
+
+    public class iOS_Medium_Profile : iOS_PlatformProfile_Base
+    {
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Medium;
+        public iOS_Medium_Profile()
+        {
+            MaxTriangles = 20000;
+            MaxSkinnedMeshes = 2;
+            MaxMeshRenderers = 2;
+            MaxMaterialSlots = 4;
+            MaxBones = 150;
+            MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
+            MaxTextureMemoryBytes = 20 * 1024 * 1024L;
+            MaxPhysBoneComponents = 8;
+            MaxPhysBoneTransforms = 32;
+            MaxPhysBoneColliders = 16;
+            MaxPhysBoneCollisionChecks = 32;
+            MaxMeshParticlePolyCount = 0;
+            MaxParticleSystems = 0;
+            MaxLights = 0;
+            MaxAudioSources = 0;
+        }
+    }
+
+    public class iOS_Poor_Profile : iOS_PlatformProfile_Base
+    {
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Poor;
+        public iOS_Poor_Profile()
+        {
+            MaxTriangles = 20000;
+            MaxSkinnedMeshes = 2;
+            MaxMeshRenderers = 2;
+            MaxMaterialSlots = 4;
+            MaxBones = 150;
+            MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
+            MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+            MaxPhysBoneComponents = 8;
+            MaxPhysBoneTransforms = 64;
+            MaxPhysBoneColliders = 16;
+            MaxPhysBoneCollisionChecks = 64;
+            MaxMeshParticlePolyCount = 0;
+            MaxParticleSystems = 0;
+            MaxLights = 0;
+            MaxAudioSources = 0;
+        }
+    }
+
+    public class iOS_VeryPoor_Profile : iOS_PlatformProfile_Base
+    {
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
+        public iOS_VeryPoor_Profile()
+        {
+            MaxTriangles = int.MaxValue;
+            MaxSkinnedMeshes = int.MaxValue;
+            MaxMeshRenderers = int.MaxValue;
+            MaxMaterialSlots = int.MaxValue;
+            MaxBones = int.MaxValue;
+            MaxAnimators = int.MaxValue;
+            MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+            MaxPhysBoneComponents = 8;
+            MaxPhysBoneTransforms = 64;
+            MaxPhysBoneColliders = 16;
+            MaxPhysBoneCollisionChecks = 64;
             MaxMeshParticlePolyCount = 0;
             MaxParticleSystems = 0;
             MaxLights = 0;
