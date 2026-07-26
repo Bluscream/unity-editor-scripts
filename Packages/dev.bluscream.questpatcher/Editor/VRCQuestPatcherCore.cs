@@ -154,7 +154,15 @@ namespace VRCQuestPatcher
 
                 QuestSDKEvaluator.AvatarStats stats = QuestSDKEvaluator.EvaluateAvatar(targetAvatar);
                 summary.FinalStats = stats;
+
+                Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+                Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] BEFORE Conversion Report for '{avatarRoot.name}':</b></color>");
+                QuestSDKEvaluator.PrintSDKAlertsToConsole(avatarRoot, summary.InitialStats);
+
+                Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+                Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] AFTER Conversion Report for '{targetAvatar.name}':</b></color>");
                 QuestSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats);
+
                 summary.PrintConsoleSummary(targetAvatar.name);
 
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
