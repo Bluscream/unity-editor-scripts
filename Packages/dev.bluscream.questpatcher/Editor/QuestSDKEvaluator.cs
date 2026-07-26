@@ -312,9 +312,12 @@ namespace VRCQuestPatcher
                                     Debug.Log($"{prefix} {text}");
                             }
                         }
+                        }
                     }
                 }
             }
+        }
+
         /// <summary>
         /// Attempts to build the avatar AssetBundle via VRChat SDK reflection to inspect exact compressed bundle size on disk.
         /// </summary>
