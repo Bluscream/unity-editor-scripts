@@ -606,7 +606,8 @@ namespace Bluscream.TextureCompressor
             long total = 0;
             foreach (var imp in importers)
             {
-                int nativeSize = maxResCap;
+                int srcWidth = maxResCap;
+                int srcHeight = maxResCap;
                 try
                 {
                     MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
@@ -616,14 +617,22 @@ namespace Bluscream.TextureCompressor
                         getSourceSizeMethod.Invoke(imp, args);
                         int w = (int)args[0];
                         int h = (int)args[1];
-                        if (w > 0 && h > 0) nativeSize = Math.Max(w, h);
+                        if (w > 0 && h > 0)
+                        {
+                            srcWidth = w;
+                            srcHeight = h;
+                        }
                     }
                 }
                 catch { }
 
-                int maxTarget = Math.Min(nativeSize, maxResCap);
+                // Scale dimensions while maintaining aspect ratio, capped at maxResCap
+                double scale = Math.Min(1.0, (double)maxResCap / Math.Max(srcWidth, srcHeight));
+                int targetWidth = Math.Max(1, (int)(srcWidth * scale));
+                int targetHeight = Math.Max(1, (int)(srcHeight * scale));
+
                 double mipMapMultiplier = imp.mipmapEnabled ? 1.33333 : 1.0;
-                total += (long)(maxTarget * maxTarget * bytesPerPixel * mipMapMultiplier);
+                total += (long)(targetWidth * targetHeight * bytesPerPixel * mipMapMultiplier);
             }
             return total;
         }
