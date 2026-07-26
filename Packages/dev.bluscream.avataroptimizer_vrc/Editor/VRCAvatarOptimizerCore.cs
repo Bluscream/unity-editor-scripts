@@ -415,8 +415,24 @@ namespace Bluscream.VRCAvatarOptimizer
             string destPath = Path.Combine(dir, filename + platformSuffix + ".mat").Replace('\\', '/');
             if (File.Exists(destPath))
             {
-                Debug.Log($"[VRCAvatarOptimizerCore] Material already exists, reusing: {destPath}");
-                return AssetDatabase.LoadAssetAtPath<Material>(destPath);
+                Material existingMat = AssetDatabase.LoadAssetAtPath<Material>(destPath);
+                if (existingMat != null)
+                {
+                    // If the existing cached material on disk is a Material Variant, Unity will block questMat.shader = replacement.
+                    // Replace the variant asset with a standard Material asset.
+                    bool isVariant = existingMat.isVariant;
+                    if (isVariant)
+                    {
+                        Debug.Log($"[VRCAvatarOptimizerCore] Existing material at '{destPath}' is a Material Variant — re-creating as a standard Material asset.");
+                        AssetDatabase.DeleteAsset(destPath);
+                        Material freshMat = new Material(srcMat);
+                        freshMat.name = Path.GetFileNameWithoutExtension(destPath);
+                        AssetDatabase.CreateAsset(freshMat, destPath);
+                        return AssetDatabase.LoadAssetAtPath<Material>(destPath);
+                    }
+                    Debug.Log($"[VRCAvatarOptimizerCore] Material already exists, reusing: {destPath}");
+                    return existingMat;
+                }
             }
 
             if (isBuiltIn)
