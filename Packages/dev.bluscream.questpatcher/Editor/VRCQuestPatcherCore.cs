@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using BluscreamComponentRemover = global::Bluscream.ComponentRemover.ComponentRemover;
@@ -46,7 +47,7 @@ namespace VRCQuestPatcher
             }
 
             Debug.Log($"[VRCQuestPatcherCore] ===== Starting Quest Conversion for '{avatarRoot.name}' =====");
-            Debug.Log($"[VRCQuestPatcherCore] Config: Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures} (maxSize={config.MaxTextureSize}), PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}");
+            Debug.Log($"[VRCQuestPatcherCore] Config: Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}");
 
             summary.InitialStats = QuestSDKEvaluator.EvaluateAvatar(avatarRoot);
             Debug.Log($"[VRCQuestPatcherCore] Initial stats — Tris: {summary.InitialStats.TriangleCount:N0}, TexMem: {summary.InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F1} MB, MatSlots: {summary.InitialStats.MaterialSlotCount}, PhysBones: {summary.InitialStats.PhysBoneComponentCount}, Colliders: {summary.InitialStats.PhysBoneColliderCount}, CollisionChecks: {summary.InitialStats.PhysBoneCollisionCheckCount}");
