@@ -39,7 +39,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
-        public long AssetBundleSizeBytes = -1;
+        public long CompressedAvatarSizeBytes = -1;
 
         public AvatarSDKEvaluator.AvatarStats InitialStats;
         public AvatarSDKEvaluator.AvatarStats FinalStats;
@@ -63,9 +63,9 @@ namespace Bluscream.VRCAvatarOptimizer
                 RenderMetricRow("Performance Rating", InitialStats.RatingName, FinalStats.RatingName);
                 RenderMetricRow("Triangles", $"{InitialStats.TriangleCount:N0}", $"{FinalStats.TriangleCount:N0}");
                 RenderMetricRow("Texture Memory (VRAM)", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
-                if (AssetBundleSizeBytes > 0)
+                if (CompressedAvatarSizeBytes > 0)
                 {
-                    RenderMetricRow("AssetBundle Size (Disk)", "N/A", $"{AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+                    RenderMetricRow("Compressed Avatar Size (Disk)", "N/A", $"{CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
                 }
                 RenderMetricRow("Material Slots", $"{InitialStats.MaterialSlotCount}", $"{FinalStats.MaterialSlotCount}");
                 RenderMetricRow("PhysBone Components", $"{InitialStats.PhysBoneComponentCount}", $"{FinalStats.PhysBoneComponentCount}");
@@ -133,9 +133,9 @@ namespace Bluscream.VRCAvatarOptimizer
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / 40.00 MB");
-            if (AssetBundleSizeBytes > 0)
+            if (CompressedAvatarSizeBytes > 0)
             {
-                Debug.Log($"[VRC-AvatarOptimizer Summary] • AssetBundle Size (Disk):   {AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+                Debug.Log($"[VRC-AvatarOptimizer Summary] • Compressed Avatar Size (Disk): {CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
             }
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");

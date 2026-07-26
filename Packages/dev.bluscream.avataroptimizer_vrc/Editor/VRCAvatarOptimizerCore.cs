@@ -276,20 +276,20 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                 }
 
-                summary.AssetBundleSizeBytes = bundleSizeBytes;
+                summary.CompressedAvatarSizeBytes = bundleSizeBytes;
                 if (bundleSizeBytes > 0)
                 {
                     double bundleMB = bundleSizeBytes / (1024.0 * 1024.0);
                     if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                     {
                         double limitMB = maxBundleBytes / (1024.0 * 1024.0);
-                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ WARNING: Built AssetBundle size is {bundleMB:F2} MB (exceeds {profile.Platform} limit of {limitMB:F2} MB!).");
-                        summary.AddError($"AssetBundle size ({bundleMB:F2} MB) exceeds {profile.Platform} limit ({limitMB:F2} MB)!");
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ WARNING: Built compressed avatar size is {bundleMB:F2} MB (exceeds {profile.Platform} limit of {limitMB:F2} MB!).");
+                        summary.AddError($"Compressed avatar size ({bundleMB:F2} MB) exceeds {profile.Platform} limit ({limitMB:F2} MB)!");
                     }
                     else
                     {
-                        Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] ✓ Verified AssetBundle size: {bundleMB:F2} MB. Bundle file: {bundlePath}");
-                        summary.AddSuccess($"Verified AssetBundle size: {bundleMB:F2} MB.");
+                        Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] ✓ Verified compressed avatar size: {bundleMB:F2} MB. Bundle file: {bundlePath}");
+                        summary.AddSuccess($"Verified compressed avatar size: {bundleMB:F2} MB.");
                     }
                 }
 
@@ -306,7 +306,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 summary.PrintConsoleSummary(targetAvatar.name, profile);
 
-                string bundleStr = summary.AssetBundleSizeBytes > 0 ? $" ({summary.AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB AssetBundle)" : "";
+                string bundleStr = summary.CompressedAvatarSizeBytes > 0 ? $" ({summary.CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB Compressed Avatar)" : "";
                 Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
             }

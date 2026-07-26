@@ -299,7 +299,7 @@ namespace Bluscream.TextureCompressor
         /// </summary>
         public static int OptimizeForTextureMemoryBudget(
             GameObject avatarRoot, 
-            long vramBudgetBytes,
+            long uncompressedAvatarBudgetBytes,
             System.Action<string> progressCallback = null,
             int maxResolutionCap = 2048,
             int crunchCompressionRatio = 75)
@@ -309,15 +309,15 @@ namespace Bluscream.TextureCompressor
             HashSet<TextureImporter> importers = GetUniqueTextureImporters(avatarRoot);
             if (importers.Count == 0) return 0;
 
-            // VRChat hard limits for Quest/Android: 40 MB total uncompressed size limit
-            // Leave 4 MB headroom for mesh, skeleton, and animation payload so total avatar uncompressed size is strictly <= 40.00 MB
-            long effectiveVramBudget = Math.Min(vramBudgetBytes, 36L * 1024 * 1024);
-            // Target up to 5.0 MB for packed AssetBundle
-            long effectiveBundleBudget = (long)(5.0 * 1024 * 1024);
+            // VRChat hard limits for Quest/Android: 40 MB total uncompressed avatar size limit
+            // Leave 4 MB headroom for mesh, skeleton, and animation payload so total uncompressed avatar size is strictly <= 40.00 MB
+            long effectiveUncompressedAvatarBudget = Math.Min(uncompressedAvatarBudgetBytes, 36L * 1024 * 1024);
+            // Target up to 5.0 MB for compressed avatar AssetBundle
+            long effectiveCompressedAvatarBudget = (long)(5.0 * 1024 * 1024);
 
             int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
 
-            Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
+            Debug.Log($"[TextureCompressor] Budgets — UncompressedAvatar: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB, CompressedAvatar: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
             // Define ASTC Compression Profiles: All ASTC block formats (4x4 to 12x12) with 5% Crunch quality steps
             var stepsList = new List<(TextureImporterFormat format, int quality, string name, double crunchRatio)>();
@@ -356,24 +356,24 @@ namespace Bluscream.TextureCompressor
             {
                 foreach (var step in compressionSteps)
                 {
-                    long vramEstimate   = EstimateTotalTextureMemory(importers, maxRes, step.format);
-                    long bundleEstimate = (long)(vramEstimate * step.crunchRatio);
+                    long uncompressedAvatarEstimate = EstimateTotalTextureMemory(importers, maxRes, step.format);
+                    long compressedAvatarEstimate   = (long)(uncompressedAvatarEstimate * step.crunchRatio);
 
-                    bool vramOk   = vramEstimate   <= effectiveVramBudget;
-                    bool bundleOk = bundleEstimate <= effectiveBundleBudget;
+                    bool uncompressedAvatarOk = uncompressedAvatarEstimate <= effectiveUncompressedAvatarBudget;
+                    bool compressedAvatarOk   = compressedAvatarEstimate   <= effectiveCompressedAvatarBudget;
 
                     Debug.Log($"[TextureCompressor] {maxRes}px {step.name}: " +
-                              $"VRAM ~{vramEstimate / (1024.0 * 1024.0):F2} MB [{(vramOk ? "OK" : "OVER")}], " +
-                              $"Bundle ~{bundleEstimate / (1024.0 * 1024.0):F2} MB [{(bundleOk ? "OK" : "OVER")}]");
+                              $"UncompressedAvatar ~{uncompressedAvatarEstimate / (1024.0 * 1024.0):F2} MB [{(uncompressedAvatarOk ? "OK" : "OVER")}], " +
+                              $"CompressedAvatar ~{compressedAvatarEstimate / (1024.0 * 1024.0):F2} MB [{(compressedAvatarOk ? "OK" : "OVER")}]");
 
-                    if (vramOk && bundleOk)
+                    if (uncompressedAvatarOk && compressedAvatarOk)
                     {
                         bestResolutionCap = maxRes;
                         bestFormat        = step.format;
                         bestQuality       = step.quality;
                         budgetAchieved    = true;
                         Debug.Log($"[TextureCompressor] ✓ Selected: {maxRes}px {step.name} — " +
-                                  $"VRAM ~{vramEstimate / (1024.0 * 1024.0):F2} MB, Bundle ~{bundleEstimate / (1024.0 * 1024.0):F2} MB");
+                                  $"UncompressedAvatar ~{uncompressedAvatarEstimate / (1024.0 * 1024.0):F2} MB, CompressedAvatar ~{compressedAvatarEstimate / (1024.0 * 1024.0):F2} MB");
                         break;
                     }
                 }
