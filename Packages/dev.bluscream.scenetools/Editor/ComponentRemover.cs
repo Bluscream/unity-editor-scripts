@@ -787,7 +787,7 @@ namespace Bluscream.ComponentRemover
 
             try
             {
-                Bluscream.BackupConfig config = new Bluscream.BackupConfig
+                Bluscream.BackupSystem.BackupConfig config = new Bluscream.BackupSystem.BackupConfig
                 {
                     backupMaterials = true,
                     backupComponents = true,

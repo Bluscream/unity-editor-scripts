@@ -205,51 +205,20 @@ namespace Bluscream.Cleanup
                     Directory.CreateDirectory(backupFolder);
                 }
 
-                // Use reflection to call AssetBackupHandler
-                System.Type assetBackupType = null;
-                foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                // Create Backup
+                string assetsCsvPath = Path.Combine(backupFolder, "assets.csv");
+                Bluscream.BackupSystem.AssetBackup.BackupAssetsToCsv(
+                    Bluscream.BackupSystem.BackupScope.AllAssets,
+                    null,
+                    assetsCsvPath,
+                    (msg, prog) => EditorUtility.DisplayProgressBar("Creating Backup", msg, prog)
+                );
+                EditorUtility.ClearProgressBar();
+
+                if (File.Exists(assetsCsvPath))
                 {
-                    assetBackupType = assembly.GetType("Bluscream.BackupSystem.AssetBackupHandler");
-                    if (assetBackupType != null) break;
-                }
-
-                if (assetBackupType != null)
-                {
-                    // Get BackupScope enum
-                    System.Type backupScopeType = null;
-                    foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        backupScopeType = assembly.GetType("Bluscream.BackupSystem.BackupScope");
-                        if (backupScopeType != null) break;
-                    }
-
-                    if (backupScopeType != null)
-                    {
-                        object scope = Enum.Parse(backupScopeType, "AllAssets");
-                        string assetsCsvPath = Path.Combine(backupFolder, "assets.csv");
-
-                        // Call BackupAssetsToCsv
-                        System.Reflection.MethodInfo backupMethod = assetBackupType.GetMethod("BackupAssetsToCsv",
-                            new System.Type[] { backupScopeType, typeof(GameObject), typeof(string), typeof(Action<string, float>) });
-
-                        if (backupMethod != null)
-                        {
-                            backupMethod.Invoke(null, new object[] { scope, null, assetsCsvPath,
-                                new Action<string, float>((msg, prog) =>
-                                {
-                                    EditorUtility.DisplayProgressBar("Creating Backup", msg, prog);
-                                })
-                            });
-
-                            EditorUtility.ClearProgressBar();
-
-                            if (File.Exists(assetsCsvPath))
-                            {
-                                EditorUtility.DisplayDialog("Backup Created", $"Backup created at:\n{backupFolder}\n\nThis backup includes assets.csv with all asset information.", "OK");
-                                return true;
-                            }
-                        }
-                    }
+                    EditorUtility.DisplayDialog("Backup Created", $"Backup created at:\n{backupFolder}\n\nThis backup includes assets.csv with all asset information.", "OK");
+                    return true;
                 }
 
                 EditorUtility.ClearProgressBar();

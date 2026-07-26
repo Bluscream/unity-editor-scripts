@@ -383,7 +383,7 @@ namespace Bluscream.TextureCompressor
         {
             try
             {
-                Bluscream.BackupConfig config = new Bluscream.BackupConfig
+                Bluscream.BackupSystem.BackupConfig config = new Bluscream.BackupSystem.BackupConfig
                 {
                     backupMaterials = false,
                     backupComponents = false,
