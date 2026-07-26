@@ -1,0 +1,140 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Bluscream.VRCAvatarOptimizer
+{
+    public enum TargetPlatform
+    {
+        PC,
+        Android,
+        iOS
+    }
+
+    public enum AvatarPerformanceRank
+    {
+        Excellent,
+        Good,
+        Medium,
+        Poor,
+        VeryPoor
+    }
+
+    public enum AssetPlacementLocation
+    {
+        SeparateFolder,
+        SameFolderAsOriginal
+    }
+
+    public enum PhysBonePruningStrategy
+    {
+        Disabled,
+        DeepestFirst,
+        ShallowestFirst,
+        InteractiveChecklist
+    }
+
+    /// <summary>
+    /// Base abstract class for platform performance profiles defining resource and component limits
+    /// according to official VRChat SDK Performance Rank specifications.
+    /// </summary>
+    [Serializable]
+    public abstract class PlatformProfile
+    {
+        public abstract TargetPlatform Platform { get; }
+        public abstract AvatarPerformanceRank Rank { get; }
+
+        // Geometry & Mesh Limits
+        public int MaxTriangles = int.MaxValue;
+        public int MaxSkinnedMeshes = int.MaxValue;
+        public int MaxMeshRenderers = int.MaxValue;
+        public int MaxMaterialSlots = int.MaxValue;
+        public int MaxBones = int.MaxValue;
+        public int MaxAnimators = int.MaxValue;
+        public Vector3 MaxBoundsSize = new Vector3(5f, 6f, 5f);
+
+        // Texture & Memory Limits
+        public long MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+
+        // PhysBone Limits
+        public int MaxPhysBoneComponents = 8;
+        public int MaxPhysBoneTransforms = 64;
+        public int MaxPhysBoneColliders = 16;
+        public int MaxPhysBoneCollisionChecks = 64;
+
+        // Particle System Limits
+        public int MaxMeshParticlePolyCount = int.MaxValue;
+        public int MaxParticleSystems = int.MaxValue;
+
+        // Lights & Audio
+        public int MaxLights = int.MaxValue;
+        public int MaxAudioSources = int.MaxValue;
+
+        // Component Whitelists & Blacklists
+        public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Performs custom, platform-specific component compatibility check.
+        /// Returns true if component should be removed.
+        /// </summary>
+        public virtual bool ShouldRemoveComponentCustom(Component comp)
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// Executes custom platform-specific optimization and conversion operations on the target avatar.
+        /// </summary>
+        public virtual void ExecutePlatformConversions(GameObject avatarRoot, Action<string> progressCallback = null)
+        {
+        }
+
+        /// <summary>
+        /// Validates platform-specific requirements and reports issues or warnings.
+        /// </summary>
+        public virtual void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
+        {
+        }
+
+        public static PlatformProfile GetProfile(TargetPlatform platform, AvatarPerformanceRank rank)
+        {
+            if (platform == TargetPlatform.PC)
+            {
+                switch (rank)
+                {
+                    case AvatarPerformanceRank.Excellent: return new PC_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new PC_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new PC_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new PC_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
+                    default: return new PC_VeryPoor_Profile();
+                }
+            }
+            else if (platform == TargetPlatform.iOS)
+            {
+                switch (rank)
+                {
+                    case AvatarPerformanceRank.Excellent: return new iOS_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new iOS_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new iOS_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new iOS_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
+                    default: return new iOS_VeryPoor_Profile();
+                }
+            }
+            else
+            {
+                switch (rank)
+                {
+                    case AvatarPerformanceRank.Excellent: return new Android_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new Android_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new Android_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new Android_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
+                    default: return new Android_VeryPoor_Profile();
+                }
+            }
+        }
+    }
+}
