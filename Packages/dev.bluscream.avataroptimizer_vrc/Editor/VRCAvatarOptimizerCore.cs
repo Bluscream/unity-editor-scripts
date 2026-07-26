@@ -241,7 +241,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
-                if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
+                AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+                long maxUncompressedBytes = profile.MaxTextureMemoryBytes;
+                bool bundleExceeds = (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
+                bool uncompressedExceeds = (maxUncompressedBytes != long.MaxValue && currentStats.TotalTextureMemoryBytes > maxUncompressedBytes);
+
+                if (bundleExceeds || uncompressedExceeds)
                 {
                     bool fits = false;
                     var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
@@ -253,26 +258,32 @@ namespace Bluscream.VRCAvatarOptimizer
                         foreach (var step in formatLadder)
                         {
                             currentStepIdx++;
-                            double currentMB = bundleSizeBytes / (1024.0 * 1024.0);
+                            double currentBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
+                            double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
                             float stepProgress = 0.96f + ((float)currentStepIdx / totalSteps) * 0.03f;
                             
-                            string statusMsg = $"[Step 8.5 #{currentStepIdx}] ({currentMB:F2} MB > 10.00 MB) Downscaling to {res}px {step.name}...";
+                            string statusMsg = $"[Step 8.5 #{currentStepIdx}] Downscaling to {res}px {step.name}...";
                             progressCallback?.Invoke(statusMsg, stepProgress);
-                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Real AssetBundle size ({currentMB:F2} MB) exceeds 10.00 MB limit. Downscaling attempt #{currentStepIdx}: Applying {res}px {step.name}...");
+                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds limits (Compressed: {currentBundleMB:F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB). Downscaling attempt #{currentStepIdx}: Applying {res}px {step.name}...");
                             
                             TextureCompressionEditor.ApplyTextureSettings(importers, res, step.format, step.quality, (msg) => progressCallback?.Invoke($"Reimporting textures for {res}px {step.name}...", stepProgress));
                             
-                            progressCallback?.Invoke($"Building dry-run AssetBundle ({currentMB:F2} MB)...", stepProgress);
+                            progressCallback?.Invoke($"Building dry-run AssetBundle...", stepProgress);
                             bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                            currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
 
-                            if (bundleSizeBytes > 0 && bundleSizeBytes <= maxBundleBytes)
+                            bool passBundle = (maxBundleBytes == long.MaxValue || (bundleSizeBytes > 0 && bundleSizeBytes <= maxBundleBytes));
+                            bool passUncompressed = (maxUncompressedBytes == long.MaxValue || currentStats.TotalTextureMemoryBytes <= maxUncompressedBytes);
+
+                            if (passBundle && passUncompressed)
                             {
                                 fits = true;
-                                double newMB = bundleSizeBytes / (1024.0 * 1024.0);
-                                string successMsg = $"✓ Optimal quality achieved ({newMB:F2} MB ≤ 10.00 MB): {res}px {step.name}!";
+                                double newBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
+                                double newUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
+                                string successMsg = $"✓ Optimal quality achieved (Compressed: {newBundleMB:F2} MB ≤ 10 MB, Uncompressed: {newUncompressedMB:F2} MB ≤ 40 MB): {res}px {step.name}!";
                                 progressCallback?.Invoke(successMsg, 0.99f);
                                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] {successMsg}");
-                                summary.AddSuccess($"Verified AssetBundle size ({newMB:F2} MB) within 10.00 MB limit using {res}px {step.name}.");
+                                summary.AddSuccess($"Verified avatar sizes (Compressed: {newBundleMB:F2} MB, Uncompressed: {newUncompressedMB:F2} MB) within limits using {res}px {step.name}.");
                                 break;
                             }
                         }
