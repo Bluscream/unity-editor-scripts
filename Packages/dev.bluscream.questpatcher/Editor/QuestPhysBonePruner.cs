@@ -21,30 +21,34 @@ namespace VRCQuestPatcher
             foreach (Component c in components)
             {
                 if (c == null) continue;
-                string typeName = c.GetType().FullName;
-                if (typeName.EndsWith("VRCPhysBone")) pbList.Add(c);
+                string typeName = c.GetType().Name;
+                if (typeName == "VRCPhysBone" || typeName == "VRCPhysBoneBase") pbList.Add(c);
                 else if (typeName.Contains("VRCPhysBoneCollider")) pbColliders.Add(c);
             }
 
             int removedCount = 0;
 
-            // 1. Remove excess Colliders first if over budget
-            if (pbColliders.Count > profile.MaxPhysBoneColliders)
+            // 1. Remove excess Colliders first if over budget (Quest max 16)
+            int targetColliders = Math.Min(profile.MaxPhysBoneColliders, 16);
+            if (pbColliders.Count > targetColliders)
             {
-                int toRemove = pbColliders.Count - profile.MaxPhysBoneColliders;
-                for (int i = pbColliders.Count - 1; i >= profile.MaxPhysBoneColliders; i--)
+                for (int i = pbColliders.Count - 1; i >= targetColliders; i--)
                 {
-                    progressCallback?.Invoke($"Pruning PhysBone Collider {pbColliders[i].gameObject.name}...");
-                    Undo.DestroyObjectImmediate(pbColliders[i]);
-                    removedCount++;
+                    if (pbColliders[i] != null)
+                    {
+                        progressCallback?.Invoke($"Pruning PhysBone Collider {pbColliders[i].gameObject.name}...");
+                        Undo.DestroyObjectImmediate(pbColliders[i]);
+                        removedCount++;
+                    }
                 }
             }
 
-            // 2. Remove excess PhysBone components if over budget
-            if (pbList.Count > profile.MaxPhysBoneComponents)
+            // 2. Remove excess PhysBone components if over budget (Quest max 8)
+            int targetComponents = Math.Min(profile.MaxPhysBoneComponents, 8);
+            if (pbList.Count > targetComponents)
             {
-                int toRemove = pbList.Count - profile.MaxPhysBoneComponents;
-                progressCallback?.Invoke($"PhysBones count ({pbList.Count}) exceeds rank limit ({profile.MaxPhysBoneComponents}). Pruning {toRemove} components...");
+                int toRemove = pbList.Count - targetComponents;
+                progressCallback?.Invoke($"PhysBones count ({pbList.Count}) exceeds Quest limit ({targetComponents}). Pruning {toRemove} components...");
 
                 if (profile.PruningStrategy == PhysBonePruningStrategy.ShallowestFirst)
                 {
@@ -63,6 +67,28 @@ namespace VRCQuestPatcher
                         Undo.DestroyObjectImmediate(pbList[i]);
                         removedCount++;
                     }
+                }
+            }
+
+            // 3. Trim collider references on remaining PhysBones to guarantee collision checks <= 64
+            foreach (Component pb in pbList)
+            {
+                if (pb == null) continue;
+                try
+                {
+                    var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
+                    if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list && list.Count > 2)
+                    {
+                        Undo.RecordObject(pb, "Trim PhysBone Colliders");
+                        while (list.Count > 2)
+                        {
+                            list.RemoveAt(list.Count - 1);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[QuestPhysBonePruner] Could not trim collider list on {pb.name}: {e.Message}");
                 }
             }
 
