@@ -47,8 +47,8 @@ namespace Bluscream.VRCAvatarOptimizer
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.MaxTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxTextureResolution", 2048);
             config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchCompressionQuality", 75);
-            config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 6.0f);
-            config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 5.0f);
+            config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 4.0f);
+            config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 1.5f);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
