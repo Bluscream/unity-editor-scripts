@@ -70,30 +70,105 @@ namespace VRCQuestPatcher
                 }
             }
 
-            // 3. Trim collider references on remaining PhysBones to guarantee collision checks <= 64
-            foreach (Component pb in pbList)
+            // 3. Trim collider references on remaining PhysBones until total collision checks <= 64
+            int totalCollisionChecks = CalculateTotalCollisionChecks(pbList);
+            int maxChecks = Math.Min(profile.MaxPhysBoneCollisionChecks, 64);
+
+            if (totalCollisionChecks > maxChecks)
             {
-                if (pb == null) continue;
-                try
+                progressCallback?.Invoke($"Total PhysBone Collision Checks ({totalCollisionChecks}) exceeds Quest limit ({maxChecks}). Trimming colliders...");
+
+                // Sort PhysBones by highest collision check count first
+                pbList.RemoveAll(c => c == null);
+                pbList.Sort((a, b) => GetCollisionCheckCount(b).CompareTo(GetCollisionCheckCount(a)));
+
+                foreach (Component pb in pbList)
                 {
-                    var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
-                    if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list && list.Count > 2)
+                    if (totalCollisionChecks <= maxChecks) break;
+
+                    try
                     {
-                        Undo.RecordObject(pb, "Trim PhysBone Colliders");
-                        while (list.Count > 2)
+                        var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
+                        if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list && list.Count > 0)
                         {
-                            list.RemoveAt(list.Count - 1);
+                            Undo.RecordObject(pb, "Trim PhysBone Colliders");
+                            int before = GetCollisionCheckCount(pb);
+                            list.Clear();
+                            int after = GetCollisionCheckCount(pb);
+                            totalCollisionChecks -= (before - after);
+                            removedCount++;
+                            progressCallback?.Invoke($"Cleared colliders from PhysBone component on {pb.gameObject.name} to reduce collision checks.");
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[QuestPhysBonePruner] Could not trim collider list on {pb.name}: {e.Message}");
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[QuestPhysBonePruner] Could not clear colliders on {pb.name}: {e.Message}");
+                    }
                 }
             }
 
             Debug.Log($"[QuestPhysBonePruner] Pruned {removedCount} PhysBone components/colliders to meet target rank '{profile.Rank}'.");
             return removedCount;
+        }
+
+        private static int CalculateTotalCollisionChecks(List<Component> pbList)
+        {
+            int total = 0;
+            foreach (Component pb in pbList)
+            {
+                if (pb != null) total += GetCollisionCheckCount(pb);
+            }
+            return total;
+        }
+
+        private static int GetCollisionCheckCount(Component pb)
+        {
+            if (pb == null) return 0;
+            try
+            {
+                int transforms = GetPhysBoneTransformCount(pb);
+                var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
+                int colliders = 0;
+                if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list)
+                {
+                    colliders = list.Count;
+                }
+                return transforms * colliders;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static int GetPhysBoneTransformCount(Component pb)
+        {
+            if (pb == null) return 1;
+            try
+            {
+                Transform root = pb.transform;
+                var rootProp = pb.GetType().GetProperty("rootTransform") ?? pb.GetType().GetProperty("RootTransform");
+                if (rootProp != null && rootProp.GetValue(pb) is Transform customRoot && customRoot != null)
+                {
+                    root = customRoot;
+                }
+                return CountTransformTree(root);
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
+        private static int CountTransformTree(Transform t)
+        {
+            if (t == null) return 0;
+            int count = 1;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                count += CountTransformTree(t.GetChild(i));
+            }
+            return count;
         }
 
         private static int GetHierarchyDepth(Transform t)
