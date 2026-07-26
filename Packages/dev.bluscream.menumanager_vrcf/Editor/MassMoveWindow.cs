@@ -19,7 +19,7 @@ namespace Bluscream.MenuManager
         private SerializedProperty fromPathProperty;
         private SerializedProperty toPathProperty;
 
-        [MenuItem("Bluscream/Menu Manager/Mass Move Menu Items")]
+        [MenuItem("Bluscream/VRChat/Mass Move Menu Items")]
         public static void ShowWindow()
         {
             var window = GetWindow<MassMoveWindow>("Mass Move Menu Items");

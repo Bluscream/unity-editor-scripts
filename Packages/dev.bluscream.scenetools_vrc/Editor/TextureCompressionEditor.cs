@@ -187,8 +187,8 @@ namespace Bluscream.TextureCompressor
             },
         };
 
-        [MenuItem("Bluscream/Texture Compressor/Texture Compression Editor")]
-        [MenuItem("GameObject/VRCQuestPatcher/Open Texture Compression Window", false, 43)]
+        [MenuItem("Bluscream/VRChat/Texture Compression Editor")]
+        [MenuItem("GameObject/VRCAvatarOptimizer/Open Texture Compression Window", false, 43)]
         public static void ShowWindow()
         {
             TextureCompressionEditor window = GetWindow<TextureCompressionEditor>();
@@ -433,8 +433,8 @@ namespace Bluscream.TextureCompressor
             Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
         }
 
-        [MenuItem("Bluscream/Texture Compressor/Reset Default PC Texture Settings for Selection")]
-        [MenuItem("GameObject/VRCQuestPatcher/Reset PC Texture Settings", false, 40)]
+        [MenuItem("Bluscream/VRChat/Reset Default PC Texture Settings for Selection")]
+        [MenuItem("GameObject/VRCAvatarOptimizer/Reset PC Texture Settings", false, 40)]
         public static void ResetDefaultPCTexturesForSelection()
         {
             GameObject selected = Selection.activeGameObject;
@@ -478,8 +478,8 @@ namespace Bluscream.TextureCompressor
             Debug.Log($"[TextureCompressor] Reset default PC texture settings (Max Size 4096, Uncompressed, No Crunch) for {count} textures.");
         }
 
-        [MenuItem("Bluscream/Texture Compressor/Clear Android Platform Overrides for Selection")]
-        [MenuItem("GameObject/VRCQuestPatcher/Clear Android Overrides", false, 41)]
+        [MenuItem("Bluscream/VRChat/Clear Android Platform Overrides for Selection")]
+        [MenuItem("GameObject/VRCAvatarOptimizer/Clear Android Overrides", false, 41)]
         public static void ClearAndroidOverridesForSelection()
         {
             GameObject selected = Selection.activeGameObject;
@@ -516,8 +516,8 @@ namespace Bluscream.TextureCompressor
             Debug.Log($"[TextureCompressor] Cleared Android platform overrides for {count} textures.");
         }
 
-        [MenuItem("Bluscream/Texture Compressor/Optimize PC Textures (2K Max, 75% Crunch) for Selection")]
-        [MenuItem("GameObject/VRCQuestPatcher/Optimize PC Textures (2K Max, 75% Crunch)", false, 42)]
+        [MenuItem("Bluscream/VRChat/Optimize PC Textures (2K Max, 75% Crunch) for Selection")]
+        [MenuItem("GameObject/VRCAvatarOptimizer/Optimize PC Textures (2K Max, 75% Crunch)", false, 42)]
         public static void OptimizePCTexturesForSelection()
         {
             GameObject selected = Selection.activeGameObject;

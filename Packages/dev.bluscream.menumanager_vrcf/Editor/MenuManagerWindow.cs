@@ -19,7 +19,7 @@ namespace Bluscream.MenuManager
         private Dictionary<string, string> pendingMoves = new Dictionary<string, string>();
         private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
 
-        [MenuItem("Bluscream/Menu Manager/Open Menu Manager")]
+        [MenuItem("Bluscream/VRChat/Menu Manager")]
         public static void ShowWindow()
         {
             var window = GetWindow<MenuManagerWindow>("Menu Manager");
