@@ -170,10 +170,14 @@ namespace VRCQuestPatcher
             // Progress
             if (isConverting)
             {
-                EditorGUILayout.LabelField("Progress", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Progress & Conversion Status", EditorStyles.boldLabel);
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(progressMessage);
-                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(0, 20, GUILayout.ExpandWidth(true)), progressValue, $"{progressValue * 100:F1}%");
+                EditorGUILayout.LabelField(progressMessage, EditorStyles.boldLabel);
+                if (!string.IsNullOrEmpty(timeDetailsMessage))
+                {
+                    EditorGUILayout.LabelField(timeDetailsMessage, EditorStyles.miniLabel);
+                }
+                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(0, 22, GUILayout.ExpandWidth(true)), progressValue, $"{progressValue * 100:F1}%");
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(10);
             }
@@ -237,6 +241,9 @@ namespace VRCQuestPatcher
             }
         }
 
+        private System.Diagnostics.Stopwatch conversionStopwatch = new System.Diagnostics.Stopwatch();
+        private string timeDetailsMessage = "";
+
         private void StartConversion()
         {
             if (avatarRoot == null) return;
@@ -245,6 +252,8 @@ namespace VRCQuestPatcher
             summary = new ConversionSummary();
             progressMessage = "Starting conversion...";
             progressValue = 0f;
+            timeDetailsMessage = "Estimating time remaining...";
+            conversionStopwatch.Restart();
 
             try
             {
@@ -254,14 +263,49 @@ namespace VRCQuestPatcher
                     (message, progress) =>
                     {
                         progressMessage = message;
-                        progressValue = progress;
+                        progressValue = Math.Max(0f, Math.Min(1f, progress));
+
+                        TimeSpan elapsed = conversionStopwatch.Elapsed;
+                        string elapsedStr = $"{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+                        
+                        if (progress > 0.03f && progress < 0.99f)
+                        {
+                            double totalEstimatedSeconds = elapsed.TotalSeconds / progress;
+                            double remainingSeconds = Math.Max(0, totalEstimatedSeconds - elapsed.TotalSeconds);
+                            TimeSpan remaining = TimeSpan.FromSeconds(remainingSeconds);
+                            string remainingStr = $"{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+                            timeDetailsMessage = $"Elapsed: {elapsedStr} | Estimated Remaining: ~{remainingStr}";
+                        }
+                        else if (progress >= 0.99f)
+                        {
+                            timeDetailsMessage = $"Completed in {elapsedStr}";
+                        }
+                        else
+                        {
+                            timeDetailsMessage = $"Elapsed: {elapsedStr} | Estimating remaining time...";
+                        }
+
+                        bool cancelRequested = EditorUtility.DisplayCancelableProgressBar(
+                            "VRC-QuestPatcher",
+                            $"{progressMessage}\n{timeDetailsMessage}",
+                            progressValue
+                        );
+
+                        if (cancelRequested)
+                        {
+                            throw new OperationCanceledException("Quest conversion canceled by user.");
+                        }
+
                         Repaint();
                     }
                 );
 
+                conversionStopwatch.Stop();
+                TimeSpan totalTime = conversionStopwatch.Elapsed;
+
                 EditorUtility.DisplayDialog(
                     "Quest Patch Complete",
-                    $"Quest conversion completed successfully!\n\n" +
+                    $"Quest conversion completed successfully in {totalTime.Minutes:D2}:{totalTime.Seconds:D2}!\n\n" +
                     $"Materials Replaced: {summary.materialsReplaced}\n" +
                     $"Components Removed: {summary.componentsRemoved}\n" +
                     $"Textures Optimized: {summary.texturesOptimized}\n" +
@@ -270,6 +314,10 @@ namespace VRCQuestPatcher
                     "OK"
                 );
             }
+            catch (OperationCanceledException canceledEx)
+            {
+                Debug.LogWarning($"[VRCQuestPatcherWindow] {canceledEx.Message}");
+            }
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Conversion failed: {e.Message}", "OK");
@@ -277,9 +325,12 @@ namespace VRCQuestPatcher
             }
             finally
             {
+                EditorUtility.ClearProgressBar();
+                conversionStopwatch.Stop();
                 isConverting = false;
                 progressMessage = "";
                 progressValue = 0f;
+                timeDetailsMessage = "";
                 Repaint();
             }
         }
