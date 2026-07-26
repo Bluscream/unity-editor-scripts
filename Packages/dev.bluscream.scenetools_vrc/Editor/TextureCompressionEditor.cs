@@ -320,8 +320,8 @@ namespace Bluscream.TextureCompressor
             long effectiveVramBudget = Math.Min(vramBudgetBytes, QUEST_VRAM_BUDGET_BYTES);
             // Leave 1 MB headroom for mesh and animation data
             effectiveVramBudget = Math.Max(1024 * 1024L, effectiveVramBudget - (1024 * 1024L));
-            // Target up to 9.0 MB for packed AssetBundle to leave headroom for mesh geometry, materials, and animator clips
-            long effectiveBundleBudget = (long)(9.0 * 1024 * 1024);
+            // Target up to 5.0 MB for packed AssetBundle so final build (with mesh, blendshapes, materials & animations) fits comfortably under 10.0 MB
+            long effectiveBundleBudget = (long)(5.0 * 1024 * 1024);
 
             Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
@@ -329,10 +329,10 @@ namespace Bluscream.TextureCompressor
             var compressionSteps = new (TextureImporterFormat format, int quality, string name, double crunchRatio)[]
             {
                 (TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4  q=100", 1.00),
-                (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.90),
-                (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.80),
-                (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.70),
-                (TextureImporterFormat.ASTC_12x12,  unityCrunchQuality, $"ASTC 12x12 (Crunch {crunchCompressionRatio}%)", isCrunchEnabled ? 0.65 : 1.00),
+                (TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5  q=85",  0.85),
+                (TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6  q=75",  0.70),
+                (TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8  q=50",  0.50),
+                (TextureImporterFormat.ASTC_12x12,  unityCrunchQuality, $"ASTC 12x12 (Crunch {crunchCompressionRatio}%)", isCrunchEnabled ? 0.40 : 0.60),
             };
 
             int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
