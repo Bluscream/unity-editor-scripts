@@ -203,7 +203,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 // Step 8.5: Dry-Run AssetBundle Build & Verification
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
-                long bundleSizeBytes = AvatarSDKEvaluator.GetBuiltBundleSize(out string bundlePath);
+                long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 summary.AssetBundleSizeBytes = bundleSizeBytes;
                 if (bundleSizeBytes > 0)
                 {

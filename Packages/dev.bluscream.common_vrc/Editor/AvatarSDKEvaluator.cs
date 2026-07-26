@@ -353,7 +353,38 @@ namespace Bluscream.VRC
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
-        public static long GetBuiltBundleSize(out string bundlePath)
+        public static long BuildAvatarAssetBundle(GameObject avatarRoot, out string bundlePath)
+        {
+            bundlePath = null;
+            if (avatarRoot == null) return -1;
+
+            try
+            {
+                Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor");
+                if (builderType != null)
+                {
+                    MethodInfo buildMethod = builderType.GetMethod("Build", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (buildMethod != null)
+                    {
+                        Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build for '{avatarRoot.name}'...");
+                        object taskObj = buildMethod.Invoke(null, new object[] { avatarRoot, true, null });
+                        if (taskObj is Task task)
+                        {
+                            task.Wait();
+                        }
+                        return GetBuiltBundleSize(out bundlePath, true);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Dry-run AssetBundle build via VRChat SDK failed: {e.Message}");
+            }
+
+            return GetBuiltBundleSize(out bundlePath, false);
+        }
+
+        public static long GetBuiltBundleSize(out string bundlePath, bool allowAnyAge = false)
         {
             bundlePath = null;
             try
@@ -375,7 +406,7 @@ namespace Bluscream.VRC
                             }
                         }
 
-                        if (newestBundle != null && (DateTime.Now - newestBundle.LastWriteTime).TotalMinutes <= 5)
+                        if (newestBundle != null && (allowAnyAge || (DateTime.Now - newestBundle.LastWriteTime).TotalMinutes <= 5))
                         {
                             bundlePath = newestBundle.FullName;
                             Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
