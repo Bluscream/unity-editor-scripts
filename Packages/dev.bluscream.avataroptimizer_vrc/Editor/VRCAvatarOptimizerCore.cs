@@ -200,31 +200,55 @@ namespace Bluscream.VRCAvatarOptimizer
                 profile.ExecutePlatformConversions(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.95f));
                 profile.ValidatePlatformRules(targetAvatar, summary);
 
-                // Step 8.5: Iterative Real AssetBundle Verification & Texture Auto-Scaling Loop
+                // Step 8.5: Multi-Stage Iterative AssetBundle Verification & Smart Quality Ladder
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
-                // Loop: If real build exceeds limit, downscale resolution step-by-step until it fits
-                int currentResCap = config.MaxTextureResolution;
-                int attempts = 0;
-                while (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes && currentResCap > 128 && attempts < 5)
+                if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                 {
-                    attempts++;
-                    currentResCap /= 2;
-                    double exceededMB = bundleSizeBytes / (1024.0 * 1024.0);
-                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Real AssetBundle size ({exceededMB:F2} MB) exceeds {profile.Platform} limit (10.00 MB). Automatically reducing texture resolution cap to {currentResCap}px...");
-                    
-                    TextureCompressionEditor.ApplyTextureSettings(
-                        TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar),
-                        currentResCap,
-                        UnityEditor.TextureImporterFormat.ASTC_8x8,
-                        50,
-                        (msg) => progressCallback?.Invoke(msg, 0.98f)
-                    );
-                    
-                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                    // Quality Ladder Options: (Format, Quality, DisplayName)
+                    var formatLadder = new (UnityEditor.TextureImporterFormat format, int quality, string name)[]
+                    {
+                        (UnityEditor.TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4"),
+                        (UnityEditor.TextureImporterFormat.ASTC_5x5,    85, "ASTC 5x5"),
+                        (UnityEditor.TextureImporterFormat.ASTC_6x6,    75, "ASTC 6x6"),
+                        (UnityEditor.TextureImporterFormat.ASTC_8x8,    50, "ASTC 8x8"),
+                        (UnityEditor.TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 (Crunch 75%)"),
+                        (UnityEditor.TextureImporterFormat.ASTC_12x12,   0, "ASTC 12x12 (Crunch 100%)"),
+                    };
+
+                    int[] resCaps = new int[] { 4096, 2048, 1024, 512, 256, 128 }
+                        .Where(r => r <= config.MaxTextureResolution)
+                        .ToArray();
+                    if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
+
+                    bool fits = false;
+                    var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
+
+                    // Stage 1 & 2: Loop resolutions from highest down to lowest, and ASTC formats from highest to lowest
+                    foreach (int res in resCaps)
+                    {
+                        foreach (var step in formatLadder)
+                        {
+                            double currentMB = bundleSizeBytes / (1024.0 * 1024.0);
+                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Real AssetBundle size ({currentMB:F2} MB) exceeds 10.00 MB. Applying: {res}px {step.name}...");
+                            
+                            TextureCompressionEditor.ApplyTextureSettings(importers, res, step.format, step.quality, (msg) => progressCallback?.Invoke(msg, 0.98f));
+                            bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+
+                            if (bundleSizeBytes > 0 && bundleSizeBytes <= maxBundleBytes)
+                            {
+                                fits = true;
+                                double newMB = bundleSizeBytes / (1024.0 * 1024.0);
+                                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] ✓ Optimal compression achieved! Selected: {res}px {step.name} — Real AssetBundle size: {newMB:F2} MB.");
+                                summary.AddSuccess($"Verified AssetBundle size ({newMB:F2} MB) within 10.00 MB limit using {res}px {step.name}.");
+                                break;
+                            }
+                        }
+                        if (fits) break;
+                    }
                 }
 
                 summary.AssetBundleSizeBytes = bundleSizeBytes;
