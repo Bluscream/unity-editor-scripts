@@ -4,6 +4,9 @@
   "displayName": "Bluscream Cleanup",
   "description": "Smart asset cleanup tool for removing unused assets from Unity projects.",
   "unity": "2019.4",
+  "dependencies": {
+    "dev.bluscream.common": "1.0.0"
+  },
   "vpmDependencies": {
     "dev.bluscream.common": "1.0.0"
   },
