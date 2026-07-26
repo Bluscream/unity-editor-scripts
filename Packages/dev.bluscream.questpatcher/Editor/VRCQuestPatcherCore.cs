@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using ComponentRemover = Bluscream.ComponentRemover.ComponentRemover;
-using TextureCompressionEditor = Bluscream.TextureCompressor.TextureCompressionEditor;
+using ComponentRemover = global::Bluscream.ComponentRemover.ComponentRemover;
+using TextureCompressionEditor = global::Bluscream.TextureCompressor.TextureCompressionEditor;
 
 namespace VRCQuestPatcher
 {
