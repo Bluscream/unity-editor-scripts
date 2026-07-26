@@ -222,13 +222,13 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 foreach (var fmt in astcFormats)
                 {
-                    // Add Uncrunched ASTC step first
+                    // Uncrunched ASTC step (full visual quality for this block size)
                     formatLadderList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)"));
-                    // Add 5% ETC2 Crunch steps from 95% down to 0%
+                    // 5% ETC2 Crunch steps for disk AssetBundle size reduction
                     for (int q = 95; q >= 0; q -= 5)
                     {
                         int crunchPercent = 100 - q;
-                        formatLadderList.Add((UnityEditor.TextureImporterFormat.ETC2_RGBA8Crunched, q, $"{fmt.name} (ETC2 Crunch {crunchPercent}%)"));
+                        formatLadderList.Add((fmt.format, q, $"{fmt.name} (ETC2 Crunch {crunchPercent}%)"));
                     }
                 }
                 var formatLadder = formatLadderList.ToArray();
