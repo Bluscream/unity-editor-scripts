@@ -421,7 +421,7 @@ namespace Bluscream.TextureCompressor
                     androidSettings.overridden = true;
                     androidSettings.name = "Android";
                     androidSettings.maxTextureSize = maxResolutionCap;
-                    androidSettings.format = isCrunch ? TextureImporterFormat.ETC2_RGBA8_CRUNCHED : format;
+                    androidSettings.format = isCrunch ? TextureImporterFormat.ETC2_RGBA8Crunched : format;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
                     androidSettings.crunchedCompression = isCrunch;
                     androidSettings.compressionQuality = Math.Max(0, compressionQuality);

@@ -224,7 +224,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     for (int q = 95; q >= 0; q -= 5)
                     {
                         int crunchPercent = 100 - q;
-                        formatLadderList.Add((UnityEditor.TextureImporterFormat.ETC2_RGBA8_CRUNCHED, q, $"{fmt.name} (ETC2 Crunch {crunchPercent}%)"));
+                        formatLadderList.Add((UnityEditor.TextureImporterFormat.ETC2_RGBA8Crunched, q, $"{fmt.name} (ETC2 Crunch {crunchPercent}%)"));
                     }
                 }
                 var formatLadder = formatLadderList.ToArray();
