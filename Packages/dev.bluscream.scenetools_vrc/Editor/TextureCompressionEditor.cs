@@ -338,7 +338,7 @@ namespace Bluscream.TextureCompressor
             foreach (var fmt in astcFormats)
             {
                 stepsList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)", fmt.baseRatio));
-                for (int q = 95; q >= 0; q -= 5)
+                for (int q = 90; q >= 0; q -= 10)
                 {
                     int crunchPercent = 100 - q;
                     double crunchRatio = fmt.baseRatio * (q / 100.0);
