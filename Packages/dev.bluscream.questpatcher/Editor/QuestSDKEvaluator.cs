@@ -350,7 +350,10 @@ namespace VRCQuestPatcher
                         }
 
                         DateTime startTime = DateTime.Now;
-                        string tempDir = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+                        string tempCacheDir = UnityEngine.Application.temporaryCachePath;
+                        string sysTempDir = Path.GetTempPath();
+
+                        Debug.Log($"[QuestSDKEvaluator] Searching for generated .vrca bundle in '{tempCacheDir}'...");
 
                         // Poll for up to 15 seconds for VRChat async build pipeline to complete bundle creation
                         FileInfo newestBundle = null;
@@ -358,15 +361,16 @@ namespace VRCQuestPatcher
                         {
                             System.Threading.Thread.Sleep(500);
 
-                            if (Directory.Exists(tempDir))
+                            string[] searchPaths = new string[] { tempCacheDir, sysTempDir };
+                            foreach (string dir in searchPaths)
                             {
-                                string[] candidateFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories);
-                                foreach (string file in candidateFiles)
+                                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
                                 {
-                                    if (file.EndsWith(".vrca") || file.EndsWith(".vrcb") || file.Contains("vrcAvatar") || file.EndsWith(".prefab"))
+                                    string[] candidateFiles = Directory.GetFiles(dir, "*.vrca", SearchOption.AllDirectories);
+                                    foreach (string file in candidateFiles)
                                     {
                                         FileInfo fi = new FileInfo(file);
-                                        if (fi.LastWriteTime >= startTime.AddSeconds(-2))
+                                        if (fi.LastWriteTime >= startTime.AddSeconds(-10))
                                         {
                                             if (newestBundle == null || fi.LastWriteTime > newestBundle.LastWriteTime)
                                             {
@@ -388,6 +392,10 @@ namespace VRCQuestPatcher
                             bundlePath = newestBundle.FullName;
                             Debug.Log($"[QuestSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
                             return newestBundle.Length;
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[QuestSDKEvaluator] Could not locate output .vrca file in temporaryCachePath.");
                         }
                     }
                 }
