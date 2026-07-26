@@ -311,7 +311,6 @@ namespace Bluscream.TextureCompressor
 
             // VRChat hard limits for Quest/Android
             const long QUEST_VRAM_BUDGET_BYTES  = 40L * 1024 * 1024;  // 40 MB unpacked
-            const long QUEST_BUNDLE_BUDGET_BYTES = 10L * 1024 * 1024; // 10 MB packed bundle
 
             // Convert user Crunch Ratio (0-100%, higher = more crunch) into Unity Crunch Quality (100-0%, lower = more crunch)
             bool isCrunchEnabled = crunchCompressionRatio > 0;
