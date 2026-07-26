@@ -185,8 +185,8 @@ namespace Bluscream.TextureCompressor
             },
         };
 
-        // DON'T EDIT THIS
         [MenuItem("Bluscream/Texture Compressor/Texture Compression Editor")]
+        [MenuItem("GameObject/VRCQuestPatcher/Open Texture Compression Window", false, 43)]
         public static void ShowWindow()
         {
             TextureCompressionEditor window = GetWindow<TextureCompressionEditor>();
@@ -475,6 +475,53 @@ namespace Bluscream.TextureCompressor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[TextureCompressor] Cleared Android platform overrides for {count} textures.");
+        }
+
+        [MenuItem("Bluscream/Texture Compressor/Optimize PC Textures (2K Max, 75% Crunch) for Selection")]
+        [MenuItem("GameObject/VRCQuestPatcher/Optimize PC Textures (2K Max, 75% Crunch)", false, 42)]
+        public static void OptimizePCTexturesForSelection()
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected == null)
+            {
+                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                return;
+            }
+
+            HashSet<TextureImporter> importers = GetUniqueTextureImporters(selected);
+            int count = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (TextureImporter imp in importers)
+                {
+                    Undo.RecordObject(imp, "Optimize PC Textures");
+                    int maxRes = 2048;
+                    imp.maxTextureSize = Math.Min(imp.maxTextureSize > 0 ? imp.maxTextureSize : maxRes, maxRes);
+                    imp.textureCompression = TextureImporterCompression.Compressed;
+                    imp.crunchedCompression = true;
+                    imp.compressionQuality = 75;
+
+                    TextureImporterPlatformSettings standaloneSettings = imp.GetPlatformTextureSettings("Standalone");
+                    standaloneSettings.overridden = true;
+                    standaloneSettings.name = "Standalone";
+                    standaloneSettings.maxTextureSize = Math.Min(standaloneSettings.maxTextureSize > 0 ? standaloneSettings.maxTextureSize : maxRes, maxRes);
+                    standaloneSettings.textureCompression = TextureImporterCompression.Compressed;
+                    standaloneSettings.crunchedCompression = true;
+                    standaloneSettings.compressionQuality = 75;
+                    imp.SetPlatformTextureSettings(standaloneSettings);
+
+                    imp.SaveAndReimport();
+                    count++;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[TextureCompressor] Optimized {count} PC textures (2048px max cap, DXT Crunch 75%).");
         }
 
         public static HashSet<TextureImporter> GetUniqueTextureImporters(GameObject avatarRoot)
