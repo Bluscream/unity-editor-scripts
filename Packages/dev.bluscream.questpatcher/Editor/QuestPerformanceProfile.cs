@@ -68,7 +68,7 @@ namespace VRCQuestPatcher
                         MaxSkinnedMeshes = 1,
                         MaxMeshRenderers = 1,
                         MaxMaterialSlots = 1,
-                        MaxTextureMemoryBytes = 1024 * 1024 * 1024L,
+                        MaxTextureMemoryBytes = 10 * 1024 * 1024L, // 10 MB
                         DefaultMaxTextureSize = 512,
                         MaxPhysBoneComponents = 0,
                         MaxPhysBoneTransforms = 0,
@@ -84,8 +84,8 @@ namespace VRCQuestPatcher
                         MaxSkinnedMeshes = 2,
                         MaxMeshRenderers = 2,
                         MaxMaterialSlots = 2,
-                        MaxTextureMemoryBytes = 2048 * 1024 * 1024L,
-                        DefaultMaxTextureSize = 1024,
+                        MaxTextureMemoryBytes = 10 * 1024 * 1024L, // 10 MB
+                        DefaultMaxTextureSize = 512,
                         MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 16,
                         MaxPhysBoneColliders = 8,
@@ -96,13 +96,13 @@ namespace VRCQuestPatcher
                     return new QuestPerformanceProfile
                     {
                         Rank = QuestPerformanceRank.Medium,
-                        MaxTriangles = 32000,
-                        MaxSkinnedMeshes = 4,
-                        MaxMeshRenderers = 4,
+                        MaxTriangles = 20000,
+                        MaxSkinnedMeshes = 2,
+                        MaxMeshRenderers = 2,
                         MaxMaterialSlots = 4,
-                        MaxTextureMemoryBytes = 2048 * 1024 * 1024L,
+                        MaxTextureMemoryBytes = 20 * 1024 * 1024L, // 20 MB
                         DefaultMaxTextureSize = 1024,
-                        MaxPhysBoneComponents = 16,
+                        MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 32,
                         MaxPhysBoneColliders = 16,
                         MaxPhysBoneCollisionChecks = 32
@@ -112,15 +112,15 @@ namespace VRCQuestPatcher
                     return new QuestPerformanceProfile
                     {
                         Rank = QuestPerformanceRank.Poor,
-                        MaxTriangles = 50000,
-                        MaxSkinnedMeshes = 8,
-                        MaxMeshRenderers = 8,
-                        MaxMaterialSlots = 8,
-                        MaxTextureMemoryBytes = 4096 * 1024 * 1024L,
+                        MaxTriangles = 20000,
+                        MaxSkinnedMeshes = 2,
+                        MaxMeshRenderers = 2,
+                        MaxMaterialSlots = 4,
+                        MaxTextureMemoryBytes = 40 * 1024 * 1024L, // 40 MB (VRChat Quest hard limit)
                         DefaultMaxTextureSize = 1024,
-                        MaxPhysBoneComponents = 32,
+                        MaxPhysBoneComponents = 8,
                         MaxPhysBoneTransforms = 64,
-                        MaxPhysBoneColliders = 32,
+                        MaxPhysBoneColliders = 16,
                         MaxPhysBoneCollisionChecks = 64
                     };
 
@@ -129,16 +129,16 @@ namespace VRCQuestPatcher
                     return new QuestPerformanceProfile
                     {
                         Rank = QuestPerformanceRank.VeryPoor,
-                        MaxTriangles = 70000,
-                        MaxSkinnedMeshes = 16,
-                        MaxMeshRenderers = 16,
-                        MaxMaterialSlots = 16,
-                        MaxTextureMemoryBytes = 4096 * 1024 * 1024L,
-                        DefaultMaxTextureSize = 2048,
-                        MaxPhysBoneComponents = 32,
-                        MaxPhysBoneTransforms = 128,
-                        MaxPhysBoneColliders = 32,
-                        MaxPhysBoneCollisionChecks = 128
+                        MaxTriangles = 20000,
+                        MaxSkinnedMeshes = 2,
+                        MaxMeshRenderers = 2,
+                        MaxMaterialSlots = 4,
+                        MaxTextureMemoryBytes = 40 * 1024 * 1024L, // 40 MB (VRChat Quest hard limit)
+                        DefaultMaxTextureSize = 1024,
+                        MaxPhysBoneComponents = 8,
+                        MaxPhysBoneTransforms = 64,
+                        MaxPhysBoneColliders = 16,
+                        MaxPhysBoneCollisionChecks = 64
                     };
             }
         }
