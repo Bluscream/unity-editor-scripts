@@ -64,7 +64,7 @@ namespace VRCQuestPatcher
                 if (config.RemoveIncompatibleComponents)
                 {
                     progressCallback?.Invoke("Removing incompatible components...", 0.15f);
-                    var removedComps = BluscreamComponentRemover.RemoveQuestIncompatibleComponents(
+                    var removedComps = QuestComponentRemover.RemoveIncompatibleComponents(
                         targetAvatar, 
                         (msg) => progressCallback?.Invoke(msg, 0.15f)
                     );
