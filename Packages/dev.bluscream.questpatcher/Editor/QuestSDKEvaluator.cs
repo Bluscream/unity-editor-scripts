@@ -312,7 +312,6 @@ namespace VRCQuestPatcher
                                     Debug.Log($"{prefix} {text}");
                             }
                         }
-                        }
                     }
                 }
             }
