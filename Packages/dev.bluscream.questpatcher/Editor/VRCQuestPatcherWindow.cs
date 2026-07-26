@@ -143,13 +143,7 @@ namespace VRCQuestPatcher
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
             config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
             config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
-            config.PrunePhysBones = EditorGUILayout.ToggleLeft("Prune Excess PhysBones to Target Rank", config.PrunePhysBones);
-            if (config.PrunePhysBones)
-            {
-                EditorGUI.indentLevel++;
-                config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("Pruning Strategy", config.PruningStrategy);
-                EditorGUI.indentLevel--;
-            }
+            config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
             config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components", config.RemoveIncompatibleComponents);
 

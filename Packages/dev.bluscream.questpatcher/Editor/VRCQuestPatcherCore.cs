@@ -126,7 +126,7 @@ namespace VRCQuestPatcher
                 }
 
                 // Step 6: PhysBone Budget Pruner
-                if (config.PrunePhysBones)
+                if (config.PruningStrategy != PhysBonePruningStrategy.Disabled)
                 {
                     progressCallback?.Invoke("Pruning PhysBones to hit target rank limits...", 0.85f);
                     int pruned = QuestPhysBonePruner.PrunePhysBones(targetAvatar, profile, (msg) => progressCallback?.Invoke(msg, 0.85f));

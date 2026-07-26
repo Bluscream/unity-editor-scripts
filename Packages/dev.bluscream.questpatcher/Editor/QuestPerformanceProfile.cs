@@ -29,6 +29,7 @@ namespace VRCQuestPatcher
     /// </summary>
     public enum PhysBonePruningStrategy
     {
+        Disabled,
         DeepestFirst,
         ShallowestFirst,
         InteractiveChecklist
