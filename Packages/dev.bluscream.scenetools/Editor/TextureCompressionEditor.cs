@@ -358,6 +358,9 @@ namespace Bluscream.TextureCompressor
             int total = importers.Count;
             int index = 0;
 
+            // Collect paths for reimport after StopAssetEditing
+            var pathsToReimport = new System.Collections.Generic.List<string>();
+
             AssetDatabase.StartAssetEditing();
             try
             {
@@ -378,7 +381,8 @@ namespace Bluscream.TextureCompressor
                     androidSettings.compressionQuality = bestQuality;
 
                     importer.SetPlatformTextureSettings(androidSettings);
-                    importer.SaveAndReimport();
+                    EditorUtility.SetDirty(importer);
+                    pathsToReimport.Add(importer.assetPath);
                     optimizedCount++;
                 }
             }
@@ -387,10 +391,20 @@ namespace Bluscream.TextureCompressor
                 AssetDatabase.StopAssetEditing();
             }
 
+            // Reimport all textures now that StartAssetEditing block is closed
+            // (SaveAndReimport inside StartAssetEditing is a no-op — settings would never apply to the build)
+            index = 0;
+            foreach (string path in pathsToReimport)
+            {
+                index++;
+                progressCallback?.Invoke($"Reimporting texture ({index}/{pathsToReimport.Count}): {System.IO.Path.GetFileName(path)}");
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[TextureCompressor] Dynamically optimized {optimizedCount} textures for Android/Quest platform.");
+            Debug.Log($"[TextureCompressor] Dynamically optimized {optimizedCount} textures for Android/Quest platform. Profile: {bestResolutionCap}px, {bestFormat}, Crunch {bestQuality}%.");
             return optimizedCount;
         }
 
