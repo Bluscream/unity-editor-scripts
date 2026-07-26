@@ -364,11 +364,12 @@ namespace Bluscream.VRC
 
             try
             {
-                Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor");
+                Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor")
+                    ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder");
                 if (builderType != null)
                 {
-                    MethodInfo buildMethod = builderType.GetMethod("Build", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(GameObject), typeof(bool), typeof(List<>).MakeGenericType(Type.GetType("VRC.SDK3A.Editor.PerPlatformOverrides+Option, com.vrchat.avatars.Editor") ?? typeof(object)) }, null)
-                        ?? builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
+                    MethodInfo buildMethod = builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                        .FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
 
                     if (buildMethod != null)
                     {
