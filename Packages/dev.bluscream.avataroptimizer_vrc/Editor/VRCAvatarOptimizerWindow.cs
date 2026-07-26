@@ -49,6 +49,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchCompressionQuality", 75);
             config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 4.0f);
             config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 1.5f);
+            config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
             config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
@@ -69,6 +70,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchCompressionQuality", config.CrunchCompressionQuality);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", config.UncompressedAvatarHeadroomMB);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", config.CompressedAvatarHeadroomMB);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchStepPercent", config.CrunchStepPercent);
             EditorPrefs.SetBool("VRCAvatarOptimizer_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
@@ -175,6 +177,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Compressed Headroom (MB)", config.CompressedAvatarHeadroomMB, 0.0f, 9.0f);
                 EditorGUILayout.HelpBox(
                     $"Compressed Headroom: {config.CompressedAvatarHeadroomMB:F1} MB — Reserves space for non-texture bundle payload out of the 10.00 MB limit (Compressed texture bundle target: {Math.Max(0.5f, 10.0f - config.CompressedAvatarHeadroomMB):F1} MB).",
+                    MessageType.None
+                );
+
+                config.CrunchStepPercent = EditorGUILayout.IntSlider("Crunch Step % (Quality Ladder)", config.CrunchStepPercent, 1, 50);
+                EditorGUILayout.HelpBox(
+                    $"Crunch Step: {config.CrunchStepPercent}% — Controls granularity of the quality ladder in Step 5 estimator and Step 8.5 build verification. Smaller = finer steps but more builds (slower). E.g. 10% = 10 Crunch levels, 25% = 4 levels.",
                     MessageType.None
                 );
                 EditorGUI.indentLevel--;

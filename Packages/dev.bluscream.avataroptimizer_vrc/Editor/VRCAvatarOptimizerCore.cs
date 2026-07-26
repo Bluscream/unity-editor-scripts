@@ -31,6 +31,7 @@ namespace Bluscream.VRCAvatarOptimizer
             public int CrunchCompressionQuality = 75; // 0 = No Crunching (ASTC raw), 100 = Max Crunch (lowest file size)
             public float UncompressedAvatarHeadroomMB = 4.0f; // Headroom in MB reserved for mesh & animation payload from 40.0 MB limit
             public float CompressedAvatarHeadroomMB = 1.5f;   // Headroom in MB reserved for compressed avatar AssetBundle from 10.0 MB limit
+            public int CrunchStepPercent = 10;                 // Step size for Crunch quality ladder in Step 5 estimator and Step 8.5 real build verification (1-50)
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
@@ -168,7 +169,8 @@ namespace Bluscream.VRCAvatarOptimizer
                         config.MaxTextureResolution,
                         config.CrunchCompressionQuality,
                         config.UncompressedAvatarHeadroomMB,
-                        config.CompressedAvatarHeadroomMB
+                        config.CompressedAvatarHeadroomMB,
+                        config.CrunchStepPercent
                     );
                     summary.texturesOptimized = texCount;
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Initial texture optimization complete: {texCount} texture(s) reimported.");
@@ -223,7 +225,8 @@ namespace Bluscream.VRCAvatarOptimizer
                 foreach (var fmt in astcFormats)
                 {
                     formatLadderList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)"));
-                    for (int q = 90; q >= 0; q -= 10)
+                    int stepSize = Math.Max(1, Math.Min(50, config.CrunchStepPercent));
+                    for (int q = 100 - stepSize; q >= 0; q -= stepSize)
                     {
                         int crunchPercent = 100 - q;
                         formatLadderList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)"));

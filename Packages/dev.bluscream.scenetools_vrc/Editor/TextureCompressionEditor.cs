@@ -304,7 +304,8 @@ namespace Bluscream.TextureCompressor
             int maxResolutionCap = 2048,
             int crunchCompressionRatio = 75,
             float uncompressedHeadroomMB = 6.0f,
-            float compressedHeadroomMB = 5.0f)
+            float compressedHeadroomMB = 5.0f,
+            int crunchStepPercent = 10)
         {
             if (avatarRoot == null) return 0;
 
@@ -338,7 +339,8 @@ namespace Bluscream.TextureCompressor
             foreach (var fmt in astcFormats)
             {
                 stepsList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)", fmt.baseRatio));
-                for (int q = 90; q >= 0; q -= 10)
+                int crunchStep = Math.Max(1, Math.Min(50, crunchStepPercent));
+                for (int q = 100 - crunchStep; q >= 0; q -= crunchStep)
                 {
                     int crunchPercent = 100 - q;
                     double crunchRatio = fmt.baseRatio * (q / 100.0);
