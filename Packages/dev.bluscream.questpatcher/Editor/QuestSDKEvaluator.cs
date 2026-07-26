@@ -341,7 +341,13 @@ namespace VRCQuestPatcher
                     if (exportBlueprintMethod != null)
                     {
                         Debug.Log($"[QuestSDKEvaluator] Invoking VRCAvatarBuilder.ExportAvatarBlueprint for '{avatarRoot.name}'...");
-                        exportBlueprintMethod.Invoke(null, new object[] { avatarRoot });
+                        object result = exportBlueprintMethod.Invoke(null, new object[] { avatarRoot });
+
+                        if (result is System.Threading.Tasks.Task taskResult)
+                        {
+                            Debug.Log("[QuestSDKEvaluator] Awaiting VRCAvatarBuilder Task completion...");
+                            taskResult.GetAwaiter().GetResult();
+                        }
 
                         DateTime startTime = DateTime.Now;
                         string tempDir = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
