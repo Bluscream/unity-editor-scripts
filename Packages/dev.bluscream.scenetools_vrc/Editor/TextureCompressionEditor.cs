@@ -310,8 +310,8 @@ namespace Bluscream.TextureCompressor
             if (importers.Count == 0) return 0;
 
             // VRChat hard limits for Quest/Android: 40 MB total uncompressed avatar size limit
-            // Leave 4 MB headroom for mesh, skeleton, and animation payload so total uncompressed avatar size is strictly <= 40.00 MB
-            long effectiveUncompressedAvatarBudget = Math.Min(uncompressedAvatarBudgetBytes, 36L * 1024 * 1024);
+            // Leave 6 MB headroom for mesh, skeleton, and animation payload so total uncompressed avatar size is strictly <= 40.00 MB
+            long effectiveUncompressedAvatarBudget = Math.Min(uncompressedAvatarBudgetBytes, 34L * 1024 * 1024);
             // Target up to 5.0 MB for compressed avatar AssetBundle
             long effectiveCompressedAvatarBudget = (long)(5.0 * 1024 * 1024);
 
