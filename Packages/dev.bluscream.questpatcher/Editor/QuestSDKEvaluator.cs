@@ -228,10 +228,19 @@ namespace VRCQuestPatcher
                         if (sdkPanel != null)
                         {
                             Type panelType = sdkPanel.GetType();
-                            FieldInfo selBuilderField = panelType.GetField("_selectedBuilder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                            if (selBuilderField != null && selBuilderField.GetValue(sdkPanel) == null)
+                            Type currType = panelType;
+                            while (currType != null && currType != typeof(object))
                             {
-                                selBuilderField.SetValue(sdkPanel, builderInstance);
+                                FieldInfo selBuilderField = currType.GetField("_selectedBuilder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                                if (selBuilderField != null)
+                                {
+                                    if (selBuilderField.GetValue(sdkPanel) == null)
+                                    {
+                                        selBuilderField.SetValue(sdkPanel, builderInstance);
+                                    }
+                                    break;
+                                }
+                                currType = currType.BaseType;
                             }
 
                             // Force VRChat SDK to run validation pass to populate GUI issue dictionaries
