@@ -38,40 +38,41 @@ namespace VRCQuestPatcher
             }
         }
 
+        public QuestSDKEvaluator.AvatarStats InitialStats;
+        public QuestSDKEvaluator.AvatarStats FinalStats;
+
         /// <summary>
         /// Renders the summary UI in the editor window
         /// </summary>
         public void RenderGUI()
         {
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Conversion Summary", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Patch Results Summary", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
 
-            // Statistics
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Statistics", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Materials Replaced: {materialsReplaced}");
-            EditorGUILayout.LabelField($"Materials Skipped (already compatible): {materialsSkipped}");
-            EditorGUILayout.LabelField($"Materials Failed: {materialsFailed}");
-            EditorGUILayout.LabelField($"Components Removed: {componentsRemoved}");
-            EditorGUILayout.LabelField($"Textures Optimized: {texturesOptimized}");
-            EditorGUILayout.LabelField($"GPU Instancing Enabled: {gpuInstancingEnabled}");
-            EditorGUILayout.EndVertical();
+            // Metrics Comparison Table
+            if (InitialStats != null && FinalStats != null)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField("Category", "Original (PC)  →  Patched (Quest)", EditorStyles.boldLabel);
+                EditorGUILayout.Space(3);
+
+                RenderMetricRow("Performance Rating", InitialStats.RatingName, FinalStats.RatingName);
+                RenderMetricRow("Triangles", $"{InitialStats.TriangleCount:N0}", $"{FinalStats.TriangleCount:N0}");
+                RenderMetricRow("Texture Memory", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
+                RenderMetricRow("Material Slots", $"{InitialStats.MaterialSlotCount}", $"{FinalStats.MaterialSlotCount}");
+                RenderMetricRow("PhysBone Components", $"{InitialStats.PhysBoneComponentCount}", $"{FinalStats.PhysBoneComponentCount}");
+                RenderMetricRow("PhysBone Colliders", $"{InitialStats.PhysBoneColliderCount}", $"{FinalStats.PhysBoneColliderCount}");
+                RenderMetricRow("PhysBone Collision Checks", $"{InitialStats.PhysBoneCollisionCheckCount}", $"{FinalStats.PhysBoneCollisionCheckCount}");
+                RenderMetricRow("Skinned Meshes", $"{InitialStats.SkinnedMeshCount}", $"{FinalStats.SkinnedMeshCount}");
+                RenderMetricRow("Mesh Renderers", $"{InitialStats.MeshRendererCount}", $"{FinalStats.MeshRendererCount}");
+
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField($"Pipeline Operations: {materialsReplaced} Mats Replaced, {texturesOptimized} Textures Compressed, {componentsRemoved} Incompatible Components Removed.", EditorStyles.miniLabel);
+                EditorGUILayout.EndVertical();
+            }
 
             EditorGUILayout.Space(10);
-
-            // Successes
-            if (successes.Count > 0)
-            {
-                EditorGUILayout.LabelField($"Successes ({successes.Count})", EditorStyles.boldLabel);
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                foreach (var item in successes)
-                {
-                    RenderSummaryItem(item, Color.green);
-                }
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(5);
-            }
 
             // Warnings
             if (warnings.Count > 0)
@@ -97,6 +98,36 @@ namespace VRCQuestPatcher
                 }
                 EditorGUILayout.EndVertical();
             }
+        }
+
+        private void RenderMetricRow(string label, string oldVal, string newVal)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(label, GUILayout.Width(170));
+            EditorGUILayout.LabelField($"{oldVal}  →  {newVal}", EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        /// <summary>
+        /// Prints comparison report to Console
+        /// </summary>
+        public void PrintConsoleSummary(string avatarName)
+        {
+            if (InitialStats == null || FinalStats == null) return;
+
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher Summary] PC -> Quest Conversion Comparison for '{avatarName}':</b></color>");
+            Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Texture Memory:            {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Colliders:        {InitialStats.PhysBoneColliderCount}  →  {FinalStats.PhysBoneColliderCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Collision Checks: {InitialStats.PhysBoneCollisionCheckCount}  →  {FinalStats.PhysBoneCollisionCheckCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Skinned Meshes:            {InitialStats.SkinnedMeshCount}  →  {FinalStats.SkinnedMeshCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Operations:                {materialsReplaced} Materials Replaced, {texturesOptimized} Textures Compressed, {componentsRemoved} Components Removed.");
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
         private void RenderSummaryItem(SummaryItem item, UnityEngine.Color color)

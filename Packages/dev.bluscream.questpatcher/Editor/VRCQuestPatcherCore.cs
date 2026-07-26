@@ -44,6 +44,7 @@ namespace VRCQuestPatcher
                 return summary;
             }
 
+            summary.InitialStats = QuestSDKEvaluator.EvaluateAvatar(avatarRoot);
             GameObject targetAvatar = avatarRoot;
             QuestPerformanceProfile profile = QuestPerformanceProfile.GetProfile(config.TargetRank);
             profile.Placement = config.PlacementLocation;
@@ -152,8 +153,9 @@ namespace VRCQuestPatcher
                 EditorGUIUtility.PingObject(targetAvatar);
 
                 QuestSDKEvaluator.AvatarStats stats = QuestSDKEvaluator.EvaluateAvatar(targetAvatar);
+                summary.FinalStats = stats;
                 QuestSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats);
-                summary.AddSuccess($"Conversion complete! Avatar: '{targetAvatar.name}', Final Estimated Rank: '{stats.RatingName}' ({stats.TriangleCount} Tris, {stats.MaterialSlotCount} Mat Slots).");
+                summary.PrintConsoleSummary(targetAvatar.name);
 
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
             }
