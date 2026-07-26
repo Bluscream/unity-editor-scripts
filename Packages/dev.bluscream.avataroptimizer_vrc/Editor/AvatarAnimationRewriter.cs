@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Rewrites AnimatorControllers, AnimationClips, Material Swaps, Flipbooks, and VRCFury components

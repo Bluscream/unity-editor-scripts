@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Modern Editor Window for Avatar Optimizer (VRChat)
@@ -133,7 +133,7 @@ namespace VRCQuestPatcher
             config.PlacementLocation = (AssetPlacementLocation)EditorGUILayout.EnumPopup("Asset Placement Location", config.PlacementLocation);
             EditorGUILayout.HelpBox(
                 config.PlacementLocation == AssetPlacementLocation.SeparateFolder
-                    ? "Saves generated materials and animation clips into 'Assets/_QUESTPATCHER/<AvatarName>/'."
+                    ? "Saves generated materials and animation clips into 'Assets/_AVATAROPTIMIZER/<AvatarName>/'."
                     : "Saves generated materials and animation clips in the same folder as the original assets.",
                 MessageType.None
             );

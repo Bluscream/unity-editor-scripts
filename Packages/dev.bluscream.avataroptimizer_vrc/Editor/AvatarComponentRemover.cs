@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using static Bluscream.Utils;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Removes platform-incompatible components from avatars based on PlatformProfile rules

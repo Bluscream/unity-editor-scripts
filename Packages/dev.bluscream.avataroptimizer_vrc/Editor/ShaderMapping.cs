@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Handles shader replacement mapping from PC shaders to Quest-compatible shaders

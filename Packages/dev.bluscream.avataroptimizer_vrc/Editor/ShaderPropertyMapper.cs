@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using static Bluscream.Utils;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Maps and transfers shader properties from source shaders to target shaders

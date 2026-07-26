@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using TextureCompressionEditor = global::Bluscream.TextureCompressor.TextureCompressionEditor;
 
-namespace VRCQuestPatcher
+namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Core conversion pipeline orchestrating the avatar optimization and platform patching process
@@ -30,7 +30,7 @@ namespace VRCQuestPatcher
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
-            public string BackupLocation = "Assets/VRCQuestPatcherBackups";
+            public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
 
         public static ConversionSummary ConvertAvatar(
@@ -145,7 +145,7 @@ namespace VRCQuestPatcher
                     AvatarAnimationRewriter.ProcessAvatarAnimationsAndVRCFury(
                         targetAvatar, 
                         materialMap, 
-                        config.PlacementLocation == AssetPlacementLocation.SeparateFolder ? "Assets/_QUESTPATCHER/" + targetAvatar.name : null, 
+                        config.PlacementLocation == AssetPlacementLocation.SeparateFolder ? "Assets/_AVATAROPTIMIZER/" + targetAvatar.name : null, 
                         (msg) => progressCallback?.Invoke(msg, 0.55f)
                     );
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
@@ -302,7 +302,7 @@ namespace VRCQuestPatcher
                 return srcMat;
             }
 
-            string dir = "Assets/_QUESTPATCHER/" + avatarName;
+            string dir = "Assets/_AVATAROPTIMIZER/" + avatarName;
             if (saveInSameFolder && !isBuiltIn)
             {
                 string srcDir = Path.GetDirectoryName(srcPath);
