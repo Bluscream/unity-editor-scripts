@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VRCQuestPatcher
@@ -69,8 +70,8 @@ namespace VRCQuestPatcher
         public int MaxAudioSources = int.MaxValue;
 
         // Component Whitelists & Blacklists
-        public System.Collections.Generic.HashSet<string> WhitelistedComponentNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        public System.Collections.Generic.HashSet<string> BlacklistedComponentNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public static PlatformProfile GetProfile(TargetPlatform platform, QuestPerformanceRank rank)
         {
@@ -102,11 +103,33 @@ namespace VRCQuestPatcher
     }
 
     // =========================================================================
-    // PC PLATFORM PROFILES (Official VRChat PC Performance Limits)
+    // BASE PLATFORM PROFILES
     // =========================================================================
-    public class PC_Excellent_Profile : PlatformProfile
+    public abstract class PC_PlatformProfile_Base : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.PC;
+    }
+
+    public abstract class Android_PlatformProfile_Base : PlatformProfile
+    {
+        public override TargetPlatform Platform => TargetPlatform.Android;
+
+        protected Android_PlatformProfile_Base()
+        {
+            // All Android profiles strictly blacklist components prohibited by VRChat Quest SDK policy
+            BlacklistedComponentNames.UnionWith(new[] {
+                "Cloth", "Camera", "Light", "AudioSource", "Rigidbody", "Joint", "SpringJoint", "HingeJoint",
+                "FixedJoint", "CharacterJoint", "ConfigurableJoint", "ParticleSystem", "DynamicBone",
+                "DynamicBoneCollider", "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
+            });
+        }
+    }
+
+    // =========================================================================
+    // PC PLATFORM PROFILES (Official VRChat PC Performance Limits)
+    // =========================================================================
+    public class PC_Excellent_Profile : PC_PlatformProfile_Base
+    {
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Excellent;
         public PC_Excellent_Profile()
         {
@@ -129,9 +152,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class PC_Good_Profile : PlatformProfile
+    public class PC_Good_Profile : PC_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.PC;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Good;
         public PC_Good_Profile()
         {
@@ -154,9 +176,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class PC_Medium_Profile : PlatformProfile
+    public class PC_Medium_Profile : PC_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.PC;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Medium;
         public PC_Medium_Profile()
         {
@@ -179,9 +200,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class PC_Poor_Profile : PlatformProfile
+    public class PC_Poor_Profile : PC_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.PC;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Poor;
         public PC_Poor_Profile()
         {
@@ -204,9 +224,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class PC_VeryPoor_Profile : PlatformProfile
+    public class PC_VeryPoor_Profile : PC_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.PC;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.VeryPoor;
         public PC_VeryPoor_Profile()
         {
@@ -231,9 +250,8 @@ namespace VRCQuestPatcher
     // =========================================================================
     // ANDROID / QUEST PLATFORM PROFILES (Official VRChat Android Limits)
     // =========================================================================
-    public class Android_Excellent_Profile : PlatformProfile
+    public class Android_Excellent_Profile : Android_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.Android;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Excellent;
         public Android_Excellent_Profile()
         {
@@ -253,18 +271,11 @@ namespace VRCQuestPatcher
             MaxParticleSystems = 0;
             MaxLights = 0;
             MaxAudioSources = 0;
-
-            BlacklistedComponentNames.UnionWith(new[] {
-                "Cloth", "Camera", "Light", "AudioSource", "Rigidbody", "Joint", "SpringJoint", "HingeJoint",
-                "FixedJoint", "CharacterJoint", "ConfigurableJoint", "ParticleSystem", "DynamicBone",
-                "DynamicBoneCollider", "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
-            });
         }
     }
 
-    public class Android_Good_Profile : PlatformProfile
+    public class Android_Good_Profile : Android_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.Android;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Good;
         public Android_Good_Profile()
         {
@@ -287,9 +298,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class Android_Medium_Profile : PlatformProfile
+    public class Android_Medium_Profile : Android_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.Android;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Medium;
         public Android_Medium_Profile()
         {
@@ -312,9 +322,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class Android_Poor_Profile : PlatformProfile
+    public class Android_Poor_Profile : Android_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.Android;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.Poor;
         public Android_Poor_Profile()
         {
@@ -337,9 +346,8 @@ namespace VRCQuestPatcher
         }
     }
 
-    public class Android_VeryPoor_Profile : PlatformProfile
+    public class Android_VeryPoor_Profile : Android_PlatformProfile_Base
     {
-        public override TargetPlatform Platform => TargetPlatform.Android;
         public override QuestPerformanceRank Rank => QuestPerformanceRank.VeryPoor;
         public Android_VeryPoor_Profile()
         {
