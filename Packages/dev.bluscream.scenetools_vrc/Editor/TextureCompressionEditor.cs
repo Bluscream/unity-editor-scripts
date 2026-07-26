@@ -408,8 +408,8 @@ namespace Bluscream.TextureCompressor
                     androidSettings.maxTextureSize = maxResolutionCap;
                     androidSettings.format = format;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
-                    androidSettings.crunchedCompression = compressionQuality > 0 && compressionQuality < 100;
-                    androidSettings.compressionQuality = compressionQuality;
+                    androidSettings.crunchedCompression = compressionQuality >= 0 && compressionQuality < 100;
+                    androidSettings.compressionQuality = Math.Max(0, compressionQuality);
 
                     importer.SetPlatformTextureSettings(androidSettings);
                     pathsToReimport.Add(importer.assetPath);
