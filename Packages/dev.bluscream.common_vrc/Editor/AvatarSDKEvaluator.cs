@@ -378,11 +378,23 @@ namespace Bluscream.VRC
                         object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
                         if (taskObj is Task task)
                         {
+                            double startWait = UnityEditor.EditorApplication.timeSinceStartup;
+                            UnityEditor.EditorApplication.CallbackFunction updateHandler = null;
+                            updateHandler = () =>
+                            {
+                                if (task.IsCompleted || task.IsFaulted || task.IsCanceled)
+                                {
+                                    UnityEditor.EditorApplication.update -= updateHandler;
+                                }
+                            };
+                            UnityEditor.EditorApplication.update += updateHandler;
+
                             while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
                             {
-                                System.Threading.Thread.Sleep(20);
-                                UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
+                                System.Threading.Thread.Sleep(10);
+                                if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 60) break;
                             }
+                            UnityEditor.EditorApplication.update -= updateHandler;
                         }
                         return GetBuiltBundleSize(out bundlePath, buildStartTime);
                     }
