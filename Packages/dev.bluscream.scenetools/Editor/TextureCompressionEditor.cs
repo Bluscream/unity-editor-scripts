@@ -302,36 +302,7 @@ namespace Bluscream.TextureCompressor
         {
             if (avatarRoot == null) return 0;
 
-            HashSet<TextureImporter> importers = new HashSet<TextureImporter>();
-            Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
-
-            foreach (Renderer r in renderers)
-            {
-                if (r == null) continue;
-                foreach (Material m in r.sharedMaterials)
-                {
-                    if (m == null || m.shader == null) continue;
-                    Shader s = m.shader;
-                    int count = ShaderUtil.GetPropertyCount(s);
-                    for (int i = 0; i < count; i++)
-                    {
-                        if (ShaderUtil.GetPropertyType(s, i) == ShaderUtil.ShaderPropertyType.TexEnv)
-                        {
-                            Texture tex = m.GetTexture(ShaderUtil.GetPropertyName(s, i));
-                            if (tex != null)
-                            {
-                                string path = AssetDatabase.GetAssetPath(tex);
-                                if (!string.IsNullOrEmpty(path))
-                                {
-                                    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                                    if (importer != null) importers.Add(importer);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
+            HashSet<TextureImporter> importers = GetUniqueTextureImporters(avatarRoot);
             if (importers.Count == 0) return 0;
 
             // Define ASTC Compression Profiles (Format, Quality, Name)
@@ -423,7 +394,8 @@ namespace Bluscream.TextureCompressor
             return optimizedCount;
         }
 
-        [MenuItem("Tools/Bluscream/Texture Compressor/Reset Default PC Texture Max Sizes for Selection")]
+        [MenuItem("Bluscream/Texture Compressor/Reset Default PC Texture Max Sizes for Selection")]
+        [MenuItem("GameObject/VRCQuestPatcher/Reset PC Max Texture Sizes", false, 40)]
         public static void ResetDefaultPCTexturesForSelection()
         {
             GameObject selected = Selection.activeGameObject;
@@ -453,6 +425,41 @@ namespace Bluscream.TextureCompressor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[TextureCompressor] Reset default PC max texture size to 4096 for {count} textures.");
+        }
+
+        public static HashSet<TextureImporter> GetUniqueTextureImporters(GameObject avatarRoot)
+        {
+            HashSet<TextureImporter> importers = new HashSet<TextureImporter>();
+            if (avatarRoot == null) return importers;
+
+            Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                foreach (Material m in r.sharedMaterials)
+                {
+                    if (m == null || m.shader == null) continue;
+                    Shader s = m.shader;
+                    int count = ShaderUtil.GetPropertyCount(s);
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (ShaderUtil.GetPropertyType(s, i) == ShaderUtil.ShaderPropertyType.TexEnv)
+                        {
+                            Texture tex = m.GetTexture(ShaderUtil.GetPropertyName(s, i));
+                            if (tex != null)
+                            {
+                                string path = AssetDatabase.GetAssetPath(tex);
+                                if (!string.IsNullOrEmpty(path))
+                                {
+                                    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                                    if (importer != null) importers.Add(importer);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return importers;
         }
 
         private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
