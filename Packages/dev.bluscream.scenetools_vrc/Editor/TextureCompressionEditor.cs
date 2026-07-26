@@ -422,7 +422,8 @@ namespace Bluscream.TextureCompressor
 
             foreach (string path in pathsToReimport)
             {
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                TextureImporter imp = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (imp != null) imp.SaveAndReimport();
             }
 
             Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
