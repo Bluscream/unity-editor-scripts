@@ -61,6 +61,16 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         private static readonly List<(string pattern, string replacement, bool caseSensitive)> PatternRules = new List<(string, string, bool)>
         {
+            // Particle patterns (MUST be before generic standard/diffuse patterns)
+            (".*particles?/.*additive.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*particles?/.*unlit.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*surface.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*alpha.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*blend.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*vertex.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*particles?/.*", QUEST_PARTICLES_ADDITIVE, false),
+
             // Poiyomi patterns
             (".*poiyomi.*toon.*", QUEST_TOON_STANDARD, false),
             (".*poiyomi.*lit.*", QUEST_TOON_LIT, false),
@@ -88,11 +98,6 @@ namespace Bluscream.VRCAvatarOptimizer
             
             // Matcap patterns
             (".*matcap.*", QUEST_MATCAP_LIT, false),
-            
-            // Particle patterns
-            (".*particle.*additive.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particle.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*particle.*", QUEST_PARTICLES_ADDITIVE, false),
         };
 
         /// <summary>
