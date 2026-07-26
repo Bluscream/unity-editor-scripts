@@ -128,14 +128,24 @@ namespace Bluscream.VRCAvatarOptimizer
 
             // Check if any animation clips inside this controller need remapping
             bool needsCopy = false;
-            AnimationClip[] clips = ac.animationClips;
-            foreach (AnimationClip clip in clips)
+            try
             {
-                if (ClipHasMaterialBindings(clip, materialMap))
+                AnimationClip[] clips = ac.animationClips;
+                if (clips != null)
                 {
-                    needsCopy = true;
-                    break;
+                    foreach (AnimationClip clip in clips)
+                    {
+                        if (clip != null && ClipHasMaterialBindings(clip, materialMap))
+                        {
+                            needsCopy = true;
+                            break;
+                        }
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AvatarAnimationRewriter] Exception inspecting animationClips on controller '{ac.name}': {ex.Message}");
             }
 
             if (!needsCopy)
