@@ -231,7 +231,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Apply top of ladder (highest quality ASTC 4x4) before initial build test
                 var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
-                TextureCompressionEditor.ApplyTextureSettings(importers, resCaps[0], formatLadder[0].format, formatLadder[0].quality, (msg) => progressCallback?.Invoke(msg, 0.98f));
+                string topStepName = $"{resCaps[0]}px {formatLadder[0].name}";
+                progressCallback?.Invoke($"Building dry-run AssetBundle [1/15]: Testing {topStepName}...", 0.96f);
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Testing initial build with highest quality: {topStepName}...");
+                TextureCompressionEditor.ApplyTextureSettings(importers, resCaps[0], formatLadder[0].format, formatLadder[0].quality, (msg) => progressCallback?.Invoke(msg, 0.96f));
 
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
@@ -239,22 +242,33 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                 {
                     bool fits = false;
+                    int totalSteps = resCaps.Length * formatLadder.Length;
+                    int currentStepIdx = 0;
 
                     foreach (int res in resCaps)
                     {
                         foreach (var step in formatLadder)
                         {
+                            currentStepIdx++;
                             double currentMB = bundleSizeBytes / (1024.0 * 1024.0);
-                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Real AssetBundle size ({currentMB:F2} MB) exceeds 10.00 MB. Applying: {res}px {step.name}...");
+                            float stepProgress = 0.96f + ((float)currentStepIdx / totalSteps) * 0.03f;
                             
-                            TextureCompressionEditor.ApplyTextureSettings(importers, res, step.format, step.quality, (msg) => progressCallback?.Invoke(msg, 0.98f));
+                            string statusMsg = $"[Step 8.5 #{currentStepIdx}] ({currentMB:F2} MB > 10.00 MB) Downscaling to {res}px {step.name}...";
+                            progressCallback?.Invoke(statusMsg, stepProgress);
+                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Real AssetBundle size ({currentMB:F2} MB) exceeds 10.00 MB limit. Downscaling attempt #{currentStepIdx}: Applying {res}px {step.name}...");
+                            
+                            TextureCompressionEditor.ApplyTextureSettings(importers, res, step.format, step.quality, (msg) => progressCallback?.Invoke($"Reimporting textures for {res}px {step.name}...", stepProgress));
+                            
+                            progressCallback?.Invoke($"Building dry-run AssetBundle ({currentMB:F2} MB)...", stepProgress);
                             bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
 
                             if (bundleSizeBytes > 0 && bundleSizeBytes <= maxBundleBytes)
                             {
                                 fits = true;
                                 double newMB = bundleSizeBytes / (1024.0 * 1024.0);
-                                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] ✓ Optimal compression achieved! Selected: {res}px {step.name} — Real AssetBundle size: {newMB:F2} MB.");
+                                string successMsg = $"✓ Optimal quality achieved ({newMB:F2} MB ≤ 10.00 MB): {res}px {step.name}!";
+                                progressCallback?.Invoke(successMsg, 0.99f);
+                                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] {successMsg}");
                                 summary.AddSuccess($"Verified AssetBundle size ({newMB:F2} MB) within 10.00 MB limit using {res}px {step.name}.");
                                 break;
                             }
