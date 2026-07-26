@@ -427,8 +427,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 return newMat;
             }
 
-            Debug.Log($"[VRCAvatarOptimizerCore] Copying material '{srcMat.name}' from '{srcPath}' → '{destPath}'");
-            AssetDatabase.CopyAsset(srcPath, destPath);
+            // Material Variants in Unity throw "Trying to set shader on a Material Variant" if copied via CopyAsset.
+            // Create a fresh independent Material asset initialized from srcMat properties instead.
+            Debug.Log($"[VRCAvatarOptimizerCore] Creating material copy of '{srcMat.name}' → '{destPath}'");
+            Material duplicatedMat = new Material(srcMat);
+            duplicatedMat.name = Path.GetFileNameWithoutExtension(destPath);
+            AssetDatabase.CreateAsset(duplicatedMat, destPath);
             return AssetDatabase.LoadAssetAtPath<Material>(destPath);
         }
 
