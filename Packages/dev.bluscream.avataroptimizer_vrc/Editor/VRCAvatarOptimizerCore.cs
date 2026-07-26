@@ -16,7 +16,7 @@ namespace Bluscream.VRCAvatarOptimizer
         public class ConversionConfig
         {
             public TargetPlatform Platform = TargetPlatform.Android;
-            public QuestPerformanceRank TargetRank = QuestPerformanceRank.Medium;
+            public AvatarPerformanceRank TargetRank = AvatarPerformanceRank.Medium;
             public AssetPlacementLocation PlacementLocation = AssetPlacementLocation.SeparateFolder;
             public PhysBonePruningStrategy PruningStrategy = PhysBonePruningStrategy.DeepestFirst;
             public bool DuplicateAvatar = true;

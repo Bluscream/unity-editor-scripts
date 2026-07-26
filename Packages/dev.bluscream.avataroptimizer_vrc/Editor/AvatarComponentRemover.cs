@@ -32,7 +32,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return removed;
             }
 
-            profile = profile ?? PlatformProfile.GetProfile(TargetPlatform.Android, QuestPerformanceRank.Medium);
+            profile = profile ?? PlatformProfile.GetProfile(TargetPlatform.Android, AvatarPerformanceRank.Medium);
 
             List<GameObject> allGameObjects = new List<GameObject>();
             CollectAllGameObjects(avatarRoot.transform, allGameObjects);
@@ -155,7 +155,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         public static List<RemovedComponent> RemoveIncompatibleComponents(GameObject avatarRoot, Action<string> progressCallback = null)
         {
-            return RemoveIncompatibleComponents(avatarRoot, PlatformProfile.GetProfile(TargetPlatform.Android, QuestPerformanceRank.Medium), progressCallback);
+            return RemoveIncompatibleComponents(avatarRoot, PlatformProfile.GetProfile(TargetPlatform.Android, AvatarPerformanceRank.Medium), progressCallback);
         }
 
         /// <summary>

@@ -11,9 +11,9 @@ namespace Bluscream.VRCAvatarOptimizer
 {
     /// <summary>
     /// Rewrites AnimatorControllers, AnimationClips, Material Swaps, Flipbooks, and VRCFury components
-    /// so they point to duplicated Quest materials and shaders.
+    /// so they point to duplicated optimized materials and shaders.
     /// </summary>
-    public static class QuestAnimationRewriter
+    public static class AvatarAnimationRewriter
     {
         public static void ProcessAvatarAnimationsAndVRCFury(
             GameObject avatarRoot, 

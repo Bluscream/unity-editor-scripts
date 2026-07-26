@@ -10,7 +10,7 @@ namespace Bluscream.VRCAvatarOptimizer
         Android
     }
 
-    public enum QuestPerformanceRank
+    public enum AvatarPerformanceRank
     {
         Excellent,
         Good,
@@ -41,7 +41,7 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile
     {
         public abstract TargetPlatform Platform { get; }
-        public abstract QuestPerformanceRank Rank { get; }
+        public abstract AvatarPerformanceRank Rank { get; }
 
         // Geometry & Mesh Limits
         public int MaxTriangles = int.MaxValue;
@@ -73,17 +73,17 @@ namespace Bluscream.VRCAvatarOptimizer
         public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public static PlatformProfile GetProfile(TargetPlatform platform, QuestPerformanceRank rank)
+        public static PlatformProfile GetProfile(TargetPlatform platform, AvatarPerformanceRank rank)
         {
             if (platform == TargetPlatform.PC)
             {
                 switch (rank)
                 {
-                    case QuestPerformanceRank.Excellent: return new PC_Excellent_Profile();
-                    case QuestPerformanceRank.Good: return new PC_Good_Profile();
-                    case QuestPerformanceRank.Medium: return new PC_Medium_Profile();
-                    case QuestPerformanceRank.Poor: return new PC_Poor_Profile();
-                    case QuestPerformanceRank.VeryPoor:
+                    case AvatarPerformanceRank.Excellent: return new PC_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new PC_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new PC_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new PC_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
                     default: return new PC_VeryPoor_Profile();
                 }
             }
@@ -91,11 +91,11 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 switch (rank)
                 {
-                    case QuestPerformanceRank.Excellent: return new Android_Excellent_Profile();
-                    case QuestPerformanceRank.Good: return new Android_Good_Profile();
-                    case QuestPerformanceRank.Medium: return new Android_Medium_Profile();
-                    case QuestPerformanceRank.Poor: return new Android_Poor_Profile();
-                    case QuestPerformanceRank.VeryPoor:
+                    case AvatarPerformanceRank.Excellent: return new Android_Excellent_Profile();
+                    case AvatarPerformanceRank.Good: return new Android_Good_Profile();
+                    case AvatarPerformanceRank.Medium: return new Android_Medium_Profile();
+                    case AvatarPerformanceRank.Poor: return new Android_Poor_Profile();
+                    case AvatarPerformanceRank.VeryPoor:
                     default: return new Android_VeryPoor_Profile();
                 }
             }
@@ -130,7 +130,7 @@ namespace Bluscream.VRCAvatarOptimizer
     // =========================================================================
     public class PC_Excellent_Profile : PC_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Excellent;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Excellent;
         public PC_Excellent_Profile()
         {
             MaxTriangles = 32000;
@@ -154,7 +154,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class PC_Good_Profile : PC_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Good;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Good;
         public PC_Good_Profile()
         {
             MaxTriangles = 70000;
@@ -178,7 +178,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class PC_Medium_Profile : PC_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Medium;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Medium;
         public PC_Medium_Profile()
         {
             MaxTriangles = 70000;
@@ -202,7 +202,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class PC_Poor_Profile : PC_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Poor;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Poor;
         public PC_Poor_Profile()
         {
             MaxTriangles = 70000;
@@ -226,7 +226,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class PC_VeryPoor_Profile : PC_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.VeryPoor;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
         public PC_VeryPoor_Profile()
         {
             MaxTriangles = int.MaxValue;
@@ -252,7 +252,7 @@ namespace Bluscream.VRCAvatarOptimizer
     // =========================================================================
     public class Android_Excellent_Profile : Android_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Excellent;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Excellent;
         public Android_Excellent_Profile()
         {
             MaxTriangles = 7500;
@@ -276,7 +276,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class Android_Good_Profile : Android_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Good;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Good;
         public Android_Good_Profile()
         {
             MaxTriangles = 15000;
@@ -300,7 +300,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class Android_Medium_Profile : Android_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Medium;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Medium;
         public Android_Medium_Profile()
         {
             MaxTriangles = 20000;
@@ -324,7 +324,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class Android_Poor_Profile : Android_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.Poor;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Poor;
         public Android_Poor_Profile()
         {
             MaxTriangles = 20000;
@@ -348,7 +348,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public class Android_VeryPoor_Profile : Android_PlatformProfile_Base
     {
-        public override QuestPerformanceRank Rank => QuestPerformanceRank.VeryPoor;
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
         public Android_VeryPoor_Profile()
         {
             MaxTriangles = int.MaxValue;

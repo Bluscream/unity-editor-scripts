@@ -40,8 +40,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
         public long AssetBundleSizeBytes = -1;
 
-        public QuestSDKEvaluator.AvatarStats InitialStats;
-        public QuestSDKEvaluator.AvatarStats FinalStats;
+        public AvatarSDKEvaluator.AvatarStats InitialStats;
+        public AvatarSDKEvaluator.AvatarStats FinalStats;
 
         /// <summary>
         /// Renders the summary UI in the editor window
@@ -117,7 +117,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// <summary>
         /// Prints comparison report to Console
         /// </summary>
-        public void PrintConsoleSummary(string avatarName, QuestPerformanceProfile profile = null)
+        public void PrintConsoleSummary(string avatarName, PlatformProfile profile = null)
         {
             if (InitialStats == null || FinalStats == null) return;
 

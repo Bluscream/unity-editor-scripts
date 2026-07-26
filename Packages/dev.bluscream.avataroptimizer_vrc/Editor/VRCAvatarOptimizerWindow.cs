@@ -36,7 +36,7 @@ namespace Bluscream.VRCAvatarOptimizer
         private void LoadPreferences()
         {
             config.Platform = (TargetPlatform)EditorPrefs.GetInt("VRCAvatarOptimizer_Platform", (int)TargetPlatform.Android);
-            config.TargetRank = (QuestPerformanceRank)EditorPrefs.GetInt("VRCAvatarOptimizer_TargetRank", (int)QuestPerformanceRank.Medium);
+            config.TargetRank = (AvatarPerformanceRank)EditorPrefs.GetInt("VRCAvatarOptimizer_TargetRank", (int)AvatarPerformanceRank.Medium);
             config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCAvatarOptimizer_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
             config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCAvatarOptimizer_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
             config.DuplicateAvatar = EditorPrefs.GetBool("VRCAvatarOptimizer_DuplicateAvatar", true);
@@ -114,7 +114,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorGUI.BeginChangeCheck();
 
             config.Platform = (TargetPlatform)EditorGUILayout.EnumPopup("Target Platform", config.Platform);
-            config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
+            config.TargetRank = (AvatarPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
 
             PlatformProfile currentProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
             string triStr = currentProfile.MaxTriangles == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxTriangles:N0}";
