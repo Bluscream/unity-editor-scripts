@@ -306,7 +306,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 summary.PrintConsoleSummary(targetAvatar.name, profile);
 
-                Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}' — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
+                string bundleStr = summary.AssetBundleSizeBytes > 0 ? $" ({summary.AssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB AssetBundle)" : "";
+                Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
             }
             catch (Exception e)
