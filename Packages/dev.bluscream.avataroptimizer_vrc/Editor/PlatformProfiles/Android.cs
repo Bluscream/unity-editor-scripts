@@ -13,6 +13,7 @@ namespace Bluscream.VRCAvatarOptimizer
         protected override HashSet<string> CreateBlacklist() => new HashSet<string>(new[]
         {
             "Cloth", "Camera", "Light", "AudioSource", "Rigidbody",
+            "Collider", "BoxCollider", "SphereCollider", "CapsuleCollider", "MeshCollider",
             "Joint", "SpringJoint", "HingeJoint", "FixedJoint", "CharacterJoint", "ConfigurableJoint",
             "ParticleSystem", "DynamicBone", "DynamicBoneCollider",
             "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
