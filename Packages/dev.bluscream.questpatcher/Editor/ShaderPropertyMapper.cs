@@ -152,6 +152,22 @@ namespace VRCQuestPatcher
             UniversalPropertyMappings["_EmissionMap"] = "_EmissionMap";
             UniversalPropertyMappings["_EmissionColor"] = "_EmissionColor";
             UniversalPropertyMappings["_Emission"] = "_EmissionColor";
+
+            // Poiyomi Pro & Toon specific properties
+            UniversalPropertyMappings["_PoiyomiMainTex"] = "_MainTex";
+            UniversalPropertyMappings["_PoiyomiColor"] = "_Color";
+            UniversalPropertyMappings["_PoiyomiNormalMap"] = "_BumpMap";
+            UniversalPropertyMappings["_PoiyomiEmissionMap"] = "_EmissionMap";
+            UniversalPropertyMappings["_PoiyomiEmissionColor"] = "_EmissionColor";
+
+            // lilToon specific properties
+            UniversalPropertyMappings["_MainColor"] = "_Color";
+            UniversalPropertyMappings["_MainTexST"] = "_MainTex_ST";
+            UniversalPropertyMappings["_Color2"] = "_Color";
+            UniversalPropertyMappings["_ShadowColor"] = "_Color";
+            UniversalPropertyMappings["_Shadow2ndColor"] = "_Color";
+            UniversalPropertyMappings["_ShadowBorder"] = "_Cutoff";
+            UniversalPropertyMappings["_ShadowBlur"] = "_Cutoff";
             
             // Metallic/Smoothness
             UniversalPropertyMappings["_MetallicGlossMap"] = "_MetallicGlossMap";
