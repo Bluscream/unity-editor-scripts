@@ -309,19 +309,13 @@ namespace Bluscream.TextureCompressor
             HashSet<TextureImporter> importers = GetUniqueTextureImporters(avatarRoot);
             if (importers.Count == 0) return 0;
 
-            // VRChat hard limits for Quest/Android
-            const long QUEST_VRAM_BUDGET_BYTES  = 40L * 1024 * 1024;  // 40 MB unpacked
-
-            // Convert user Crunch Ratio (0-100%, higher = more crunch) into Unity Crunch Quality (100-0%, lower = more crunch)
-            bool isCrunchEnabled = crunchCompressionRatio > 0;
-            int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
-
-            // Use the caller's budget but never exceed the VRChat hard cap
-            long effectiveVramBudget = Math.Min(vramBudgetBytes, QUEST_VRAM_BUDGET_BYTES);
-            // Leave 1 MB headroom for mesh and animation data
-            effectiveVramBudget = Math.Max(1024 * 1024L, effectiveVramBudget - (1024 * 1024L));
-            // Target up to 5.0 MB for packed AssetBundle so textures stay higher quality while leaving 5 MB for mesh and animation payload
+            // VRChat hard limits for Quest/Android: 40 MB total uncompressed size limit
+            // Leave 4 MB headroom for mesh, skeleton, and animation payload so total avatar uncompressed size is strictly <= 40.00 MB
+            long effectiveVramBudget = Math.Min(vramBudgetBytes, 36L * 1024 * 1024);
+            // Target up to 5.0 MB for packed AssetBundle
             long effectiveBundleBudget = (long)(5.0 * 1024 * 1024);
+
+            int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
 
             Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
