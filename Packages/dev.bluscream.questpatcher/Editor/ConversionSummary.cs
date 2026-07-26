@@ -111,21 +111,26 @@ namespace VRCQuestPatcher
         /// <summary>
         /// Prints comparison report to Console
         /// </summary>
-        public void PrintConsoleSummary(string avatarName)
+        public void PrintConsoleSummary(string avatarName, QuestPerformanceProfile profile = null)
         {
             if (InitialStats == null || FinalStats == null) return;
+
+            string triLimit = (profile != null && profile.MaxTriangles < int.MaxValue) ? $"/ {profile.MaxTriangles:N0}" : "/ Unlimited";
+            string matLimit = (profile != null && profile.MaxMaterialSlots < int.MaxValue) ? $"/ {profile.MaxMaterialSlots}" : "/ Unlimited";
+            string pbCompLimit = (profile != null && profile.MaxPhysBoneComponents < int.MaxValue) ? $"/ {profile.MaxPhysBoneComponents}" : "/ 8";
+            string smrLimit = (profile != null && profile.MaxSkinnedMeshes < int.MaxValue) ? $"/ {profile.MaxSkinnedMeshes}" : "/ Unlimited";
 
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
             Debug.Log($"<color=cyan><b>[VRC-QuestPatcher Summary] PC -> Quest Conversion Comparison for '{avatarName}':</b></color>");
             Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
             Debug.Log($"[VRC-QuestPatcher Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • Texture Memory:            {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
-            Debug.Log($"[VRC-QuestPatcher Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Colliders:        {InitialStats.PhysBoneColliderCount}  →  {FinalStats.PhysBoneColliderCount}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Collision Checks: {InitialStats.PhysBoneCollisionCheckCount}  →  {FinalStats.PhysBoneCollisionCheckCount}");
-            Debug.Log($"[VRC-QuestPatcher Summary] • Skinned Meshes:            {InitialStats.SkinnedMeshCount}  →  {FinalStats.SkinnedMeshCount}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Texture Memory:            {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / 40.00 MB");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Colliders:        {InitialStats.PhysBoneColliderCount}  →  {FinalStats.PhysBoneColliderCount} / 16");
+            Debug.Log($"[VRC-QuestPatcher Summary] • PhysBone Collision Checks: {InitialStats.PhysBoneCollisionCheckCount}  →  {FinalStats.PhysBoneCollisionCheckCount} / 64");
+            Debug.Log($"[VRC-QuestPatcher Summary] • Skinned Meshes:            {InitialStats.SkinnedMeshCount}  →  {FinalStats.SkinnedMeshCount} {smrLimit}");
             Debug.Log($"[VRC-QuestPatcher Summary] • Operations:                {materialsReplaced} Materials Replaced, {texturesOptimized} Textures Compressed, {componentsRemoved} Components Removed.");
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }

@@ -163,7 +163,7 @@ namespace VRCQuestPatcher
                 Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] AFTER Conversion Report for '{targetAvatar.name}':</b></color>");
                 QuestSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats);
 
-                summary.PrintConsoleSummary(targetAvatar.name);
+                summary.PrintConsoleSummary(targetAvatar.name, profile);
 
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
             }
