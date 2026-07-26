@@ -343,20 +343,37 @@ namespace VRCQuestPatcher
                         Debug.Log($"[QuestSDKEvaluator] Invoking VRCAvatarBuilder.ExportAvatarBlueprint for '{avatarRoot.name}'...");
                         exportBlueprintMethod.Invoke(null, new object[] { avatarRoot });
 
-                        // Search temporary cache & temp directories for generated .vrca or asset bundle files
+                        DateTime startTime = DateTime.Now;
                         string tempDir = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
-                        string[] candidateFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories);
-                        
+
+                        // Poll for up to 15 seconds for VRChat async build pipeline to complete bundle creation
                         FileInfo newestBundle = null;
-                        foreach (string file in candidateFiles)
+                        for (int attempt = 0; attempt < 30; attempt++)
                         {
-                            if (file.EndsWith(".vrca") || file.EndsWith(".vrcb") || file.Contains("vrcAvatar"))
+                            System.Threading.Thread.Sleep(500);
+
+                            if (Directory.Exists(tempDir))
                             {
-                                FileInfo fi = new FileInfo(file);
-                                if (newestBundle == null || fi.LastWriteTime > newestBundle.LastWriteTime)
+                                string[] candidateFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories);
+                                foreach (string file in candidateFiles)
                                 {
-                                    newestBundle = fi;
+                                    if (file.EndsWith(".vrca") || file.EndsWith(".vrcb") || file.Contains("vrcAvatar") || file.EndsWith(".prefab"))
+                                    {
+                                        FileInfo fi = new FileInfo(file);
+                                        if (fi.LastWriteTime >= startTime.AddSeconds(-2))
+                                        {
+                                            if (newestBundle == null || fi.LastWriteTime > newestBundle.LastWriteTime)
+                                            {
+                                                newestBundle = fi;
+                                            }
+                                        }
+                                    }
                                 }
+                            }
+
+                            if (newestBundle != null && newestBundle.Length > 0)
+                            {
+                                break;
                             }
                         }
 
