@@ -92,7 +92,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// <summary>
         /// Validates platform-specific requirements and reports issues or warnings.
         /// </summary>
-        public virtual void ValidatePlatformRules(GameObject avatarRoot, System.Collections.Generic.List<string> warnings, System.Collections.Generic.List<string> errors)
+        public virtual void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
         {
         }
 
@@ -163,16 +163,16 @@ namespace Bluscream.VRCAvatarOptimizer
             // Additional Android/Quest specific logic (e.g., stripping lightmaps, enforcing GPU instancing)
         }
 
-        public override void ValidatePlatformRules(GameObject avatarRoot, System.Collections.Generic.List<string> warnings, System.Collections.Generic.List<string> errors)
+        public override void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
         {
-            if (avatarRoot == null) return;
+            if (avatarRoot == null || summary == null) return;
             // Android platform validation checks
             var renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
                 if (r != null && r.sharedMaterials != null && r.sharedMaterials.Length > 4)
                 {
-                    warnings.Add($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (Android Quest limit is 4 per avatar).");
+                    summary.AddWarning($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (Android Quest limit is 4 per avatar).", r);
                 }
             }
         }

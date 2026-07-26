@@ -195,7 +195,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 // Step 8: Platform-Specific Profile Conversions & Rule Validation
                 progressCallback?.Invoke("Executing platform-specific profile conversions & validation...", 0.95f);
                 profile.ExecutePlatformConversions(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.95f));
-                profile.ValidatePlatformRules(targetAvatar, summary.warnings, summary.errors);
+                profile.ValidatePlatformRules(targetAvatar, summary);
 
                 // Step 8.5: Dry-Run AssetBundle Build & Verification
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
