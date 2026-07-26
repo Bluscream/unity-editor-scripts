@@ -49,6 +49,7 @@ namespace VRCQuestPatcher
         public int MaxMaterialSlots = int.MaxValue;
         public int MaxBones = int.MaxValue;
         public int MaxAnimators = int.MaxValue;
+        public Vector3 MaxBoundsSize = new Vector3(5f, 6f, 5f);
 
         // Texture & Memory Limits
         public long MaxTextureMemoryBytes = 40 * 1024 * 1024L;
@@ -111,6 +112,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 8;
             MaxBones = 75;
             MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(2.5f, 2.5f, 2.5f);
             MaxTextureMemoryBytes = 40 * 1024 * 1024L;
             MaxPhysBoneComponents = 4;
             MaxPhysBoneTransforms = 16;
@@ -135,6 +137,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 16;
             MaxBones = 150;
             MaxAnimators = 2;
+            MaxBoundsSize = new Vector3(4f, 4f, 4f);
             MaxTextureMemoryBytes = 75 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
             MaxPhysBoneTransforms = 32;
@@ -159,6 +162,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 32;
             MaxBones = 250;
             MaxAnimators = 4;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
             MaxTextureMemoryBytes = 150 * 1024 * 1024L;
             MaxPhysBoneComponents = 16;
             MaxPhysBoneTransforms = 64;
@@ -183,6 +187,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 64;
             MaxBones = 400;
             MaxAnimators = 8;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
             MaxTextureMemoryBytes = 300 * 1024 * 1024L;
             MaxPhysBoneComponents = 32;
             MaxPhysBoneTransforms = 128;
@@ -234,6 +239,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 1;
             MaxBones = 75;
             MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(2.5f, 2.5f, 2.5f);
             MaxTextureMemoryBytes = 10 * 1024 * 1024L;
             MaxPhysBoneComponents = 0;
             MaxPhysBoneTransforms = 0;
@@ -258,6 +264,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 2;
             MaxBones = 90;
             MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(4f, 4f, 4f);
             MaxTextureMemoryBytes = 10 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
             MaxPhysBoneTransforms = 16;
@@ -282,6 +289,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 4;
             MaxBones = 150;
             MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
             MaxTextureMemoryBytes = 20 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
             MaxPhysBoneTransforms = 32;
@@ -306,6 +314,7 @@ namespace VRCQuestPatcher
             MaxMaterialSlots = 4;
             MaxBones = 150;
             MaxAnimators = 1;
+            MaxBoundsSize = new Vector3(5f, 6f, 5f);
             MaxTextureMemoryBytes = 40 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
             MaxPhysBoneTransforms = 64;
