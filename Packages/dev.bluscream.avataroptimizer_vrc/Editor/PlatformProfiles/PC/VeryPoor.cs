@@ -1,9 +1,9 @@
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class PC_VeryPoor_Profile : PC_PlatformProfile_Base
+    public class PlatformProfile_PC_VeryPoor : PlatformProfile_PC
     {
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
-        public PC_VeryPoor_Profile()
+        public PlatformProfile_PC_VeryPoor()
         {
             MaxTriangles = int.MaxValue;
             MaxSkinnedMeshes = int.MaxValue;

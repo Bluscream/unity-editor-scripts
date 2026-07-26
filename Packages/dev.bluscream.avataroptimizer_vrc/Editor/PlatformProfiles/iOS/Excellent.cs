@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class Android_Excellent_Profile : Android_PlatformProfile_Base
+    public class PlatformProfile_iOS_Excellent : PlatformProfile_iOS
     {
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Excellent;
-        public Android_Excellent_Profile()
+        public PlatformProfile_iOS_Excellent()
         {
             MaxTriangles = 7500;
             MaxSkinnedMeshes = 1;

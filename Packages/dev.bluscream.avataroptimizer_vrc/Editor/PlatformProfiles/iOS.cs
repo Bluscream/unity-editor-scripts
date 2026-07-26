@@ -7,11 +7,11 @@ namespace Bluscream.VRCAvatarOptimizer
     /// VRChat iOS shares identical Mobile performance thresholds with Android Quest.
     /// Hard caps: PhysBones (8), Transforms (64), Colliders (16), Collision Checks (64), Contacts (16), Material Slots (4).
     /// </summary>
-    public abstract class iOS_PlatformProfile_Base : Android_PlatformProfile_Base
+    public abstract class PlatformProfile_iOS : PlatformProfile_Android
     {
         public override TargetPlatform Platform => TargetPlatform.iOS;
 
-        protected iOS_PlatformProfile_Base() : base()
+        protected PlatformProfile_iOS() : base()
         {
             // iOS inherits all Android/Quest prohibitions.
             // VRChat falls back to Android build if no iOS-specific upload is present.

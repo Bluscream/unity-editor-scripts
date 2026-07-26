@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class Android_Poor_Profile : Android_PlatformProfile_Base
+    public class PlatformProfile_iOS_Medium : PlatformProfile_iOS
     {
-        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Poor;
-        public Android_Poor_Profile()
+        public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Medium;
+        public PlatformProfile_iOS_Medium()
         {
             MaxTriangles = 20000;
             MaxSkinnedMeshes = 2;
@@ -14,11 +14,11 @@ namespace Bluscream.VRCAvatarOptimizer
             MaxBones = 150;
             MaxAnimators = 1;
             MaxBoundsSize = new Vector3(5f, 6f, 5f);
-            MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+            MaxTextureMemoryBytes = 20 * 1024 * 1024L;
             MaxPhysBoneComponents = 8;
-            MaxPhysBoneTransforms = 64;
+            MaxPhysBoneTransforms = 32;
             MaxPhysBoneColliders = 16;
-            MaxPhysBoneCollisionChecks = 64;
+            MaxPhysBoneCollisionChecks = 32;
             MaxMeshParticlePolyCount = 0;
             MaxParticleSystems = 0;
             MaxLights = 0;

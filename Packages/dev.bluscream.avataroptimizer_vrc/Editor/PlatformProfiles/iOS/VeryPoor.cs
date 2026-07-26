@@ -1,9 +1,9 @@
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class iOS_VeryPoor_Profile : iOS_PlatformProfile_Base
+    public class PlatformProfile_iOS_VeryPoor : PlatformProfile_iOS
     {
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
-        public iOS_VeryPoor_Profile()
+        public PlatformProfile_iOS_VeryPoor()
         {
             MaxTriangles = int.MaxValue;
             MaxSkinnedMeshes = int.MaxValue;

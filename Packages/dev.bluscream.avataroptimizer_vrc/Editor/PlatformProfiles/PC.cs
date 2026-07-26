@@ -1,6 +1,6 @@
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public abstract class PC_PlatformProfile_Base : PlatformProfile
+    public abstract class PlatformProfile_PC : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.PC;
     }

@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public abstract class Android_PlatformProfile_Base : PlatformProfile
+    public abstract class PlatformProfile_Android : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.Android;
 
-        protected Android_PlatformProfile_Base()
+        protected PlatformProfile_Android()
         {
             // All Android profiles strictly blacklist components prohibited by VRChat Quest SDK policy
             BlacklistedComponentNames.UnionWith(new[] {

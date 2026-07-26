@@ -1,9 +1,9 @@
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class Android_VeryPoor_Profile : Android_PlatformProfile_Base
+    public class PlatformProfile_Android_VeryPoor : PlatformProfile_Android
     {
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.VeryPoor;
-        public Android_VeryPoor_Profile()
+        public PlatformProfile_Android_VeryPoor()
         {
             MaxTriangles = int.MaxValue;
             MaxSkinnedMeshes = int.MaxValue;

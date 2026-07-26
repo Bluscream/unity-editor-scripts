@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public class PC_Good_Profile : PC_PlatformProfile_Base
+    public class PlatformProfile_PC_Good : PlatformProfile_PC
     {
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Good;
-        public PC_Good_Profile()
+        public PlatformProfile_PC_Good()
         {
             MaxTriangles = 70000;
             MaxSkinnedMeshes = 2;

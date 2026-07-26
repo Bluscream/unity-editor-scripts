@@ -103,36 +103,36 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new PC_Excellent_Profile();
-                    case AvatarPerformanceRank.Good: return new PC_Good_Profile();
-                    case AvatarPerformanceRank.Medium: return new PC_Medium_Profile();
-                    case AvatarPerformanceRank.Poor: return new PC_Poor_Profile();
+                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_PC_Excellent();
+                    case AvatarPerformanceRank.Good: return new PlatformProfile_PC_Good();
+                    case AvatarPerformanceRank.Medium: return new PlatformProfile_PC_Medium();
+                    case AvatarPerformanceRank.Poor: return new PlatformProfile_PC_Poor();
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new PC_VeryPoor_Profile();
+                    default: return new PlatformProfile_PC_VeryPoor();
                 }
             }
             else if (platform == TargetPlatform.iOS)
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new iOS_Excellent_Profile();
-                    case AvatarPerformanceRank.Good: return new iOS_Good_Profile();
-                    case AvatarPerformanceRank.Medium: return new iOS_Medium_Profile();
-                    case AvatarPerformanceRank.Poor: return new iOS_Poor_Profile();
+                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_iOS_Excellent();
+                    case AvatarPerformanceRank.Good: return new PlatformProfile_iOS_Good();
+                    case AvatarPerformanceRank.Medium: return new PlatformProfile_iOS_Medium();
+                    case AvatarPerformanceRank.Poor: return new PlatformProfile_iOS_Poor();
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new iOS_VeryPoor_Profile();
+                    default: return new PlatformProfile_iOS_VeryPoor();
                 }
             }
             else
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new Android_Excellent_Profile();
-                    case AvatarPerformanceRank.Good: return new Android_Good_Profile();
-                    case AvatarPerformanceRank.Medium: return new Android_Medium_Profile();
-                    case AvatarPerformanceRank.Poor: return new Android_Poor_Profile();
+                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_Android_Excellent();
+                    case AvatarPerformanceRank.Good: return new PlatformProfile_Android_Good();
+                    case AvatarPerformanceRank.Medium: return new PlatformProfile_Android_Medium();
+                    case AvatarPerformanceRank.Poor: return new PlatformProfile_Android_Poor();
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new Android_VeryPoor_Profile();
+                    default: return new PlatformProfile_Android_VeryPoor();
                 }
             }
         }
