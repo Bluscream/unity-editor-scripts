@@ -333,36 +333,40 @@ namespace Bluscream.TextureCompressor
 
             if (importers.Count == 0) return 0;
 
-            // Define ASTC Compression Profiles (Compression Format & Crunch Quality)
+            // Define ASTC Compression Profiles (Format, Quality, Name)
             var compressionSteps = new (TextureImporterFormat format, int quality, string name)[]
             {
                 (TextureImporterFormat.ASTC_4x4, 100, "ASTC 4x4 (100% Quality)"),
+                (TextureImporterFormat.ASTC_5x5, 85,  "ASTC 5x5 (85% Quality)"),
                 (TextureImporterFormat.ASTC_6x6, 75,  "ASTC 6x6 (75% Quality)"),
                 (TextureImporterFormat.ASTC_8x8, 50,  "ASTC 8x8 (50% Quality)"),
                 (TextureImporterFormat.ASTC_12x12, 25, "ASTC 12x12 (25% Quality)")
             };
 
-            // Resolution Scale Steps (100%, 75%, 50%, 25%, 12.5%)
-            int[] resolutionLimits = new int[] { defaultMaxSize, 1024, 512, 256, 128 };
+            // Resolution Scale Steps from highest to lowest (4096, 2048, 1024, 512, 256, 128)
+            int[] resolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
 
-            int bestResolutionCap = defaultMaxSize;
+            // Target 90% of max budget to maximize visual fidelity while maintaining build bundle safety
+            long effectiveTargetBudget = (long)(targetMaxBytes * 0.90);
+
+            int bestResolutionCap = 2048;
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_4x4;
             int bestQuality = 100;
 
-            // Find optimal settings step-by-step
+            // Find highest visual quality and resolution combination under budget
             bool budgetAchieved = false;
             foreach (int maxRes in resolutionLimits)
             {
                 foreach (var step in compressionSteps)
                 {
                     long estimatedMemory = EstimateTotalTextureMemory(importers, maxRes, step.format);
-                    if (estimatedMemory <= targetMaxBytes)
+                    if (estimatedMemory <= effectiveTargetBudget)
                     {
                         bestResolutionCap = maxRes;
                         bestFormat = step.format;
                         bestQuality = step.quality;
                         budgetAchieved = true;
-                        Debug.Log($"[TextureCompressor] Dynamic Selection: {maxRes}px cap, {step.name}. Estimated Memory: {estimatedMemory / (1024.0 * 1024.0):F2} MB (Target Budget: {targetMaxBytes / (1024.0 * 1024.0):F2} MB)");
+                        Debug.Log($"[TextureCompressor] Selected Highest Fidelity Profile: {maxRes}px cap, {step.name}. Estimated Memory: {estimatedMemory / (1024.0 * 1024.0):F2} MB (Target Budget: {effectiveTargetBudget / (1024.0 * 1024.0):F2} MB)");
                         break;
                     }
                 }
