@@ -375,7 +375,7 @@ namespace Bluscream.VRC
                             }
                         }
 
-                        if (newestBundle != null)
+                        if (newestBundle != null && (DateTime.Now - newestBundle.LastWriteTime).TotalMinutes <= 5)
                         {
                             bundlePath = newestBundle.FullName;
                             Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
