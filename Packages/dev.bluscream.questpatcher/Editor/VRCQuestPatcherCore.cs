@@ -152,6 +152,7 @@ namespace VRCQuestPatcher
                 EditorGUIUtility.PingObject(targetAvatar);
 
                 QuestSDKEvaluator.AvatarStats stats = QuestSDKEvaluator.EvaluateAvatar(targetAvatar);
+                QuestSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats);
                 summary.AddSuccess($"Conversion complete! Avatar: '{targetAvatar.name}', Final Estimated Rank: '{stats.RatingName}' ({stats.TriangleCount} Tris, {stats.MaterialSlotCount} Mat Slots).");
 
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);

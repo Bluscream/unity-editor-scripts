@@ -192,5 +192,86 @@ namespace VRCQuestPatcher
 
             return "Very Poor";
         }
+
+        /// <summary>
+        /// Prints all VRChat Quest validation alerts directly to the Unity Console
+        /// </summary>
+        public static void PrintSDKAlertsToConsole(GameObject avatarRoot, AvatarStats stats = null)
+        {
+            if (avatarRoot == null) return;
+            if (stats == null) stats = EvaluateAvatar(avatarRoot);
+
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Avatar SDK Evaluation Report for '{avatarRoot.name}' (Platform: Android / Quest):</b></color>");
+
+            // 1. Download & Uncompressed Size Limits
+            Debug.Log($"[VRC-QuestPatcher] ℹ️ Quest Build Limits: Max Download Size: 10.00 MB | Max Uncompressed Size: 40.00 MB");
+
+            // 2. Triangles
+            if (stats.TriangleCount > 20000)
+            {
+                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 Triangles: {stats.TriangleCount:N0} (Quest Max: 20,000, Recommended: 7,500). Avatar will be blocked by default on Quest!");
+            }
+            else
+            {
+                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Triangles: {stats.TriangleCount:N0} / 20,000 max.");
+            }
+
+            // 3. Texture Memory
+            double texMemMB = stats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
+            if (texMemMB > 40.0)
+            {
+                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 Texture Memory: {texMemMB:F2} MB (Quest Max: 40.00 MB, Recommended: 10.00 MB).");
+            }
+            else
+            {
+                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Texture Memory: {texMemMB:F2} MB / 40.00 MB max.");
+            }
+
+            // 4. Material Slots
+            if (stats.MaterialSlotCount > 4)
+            {
+                Debug.LogWarning($"[VRC-QuestPatcher Alert] 🟡 Material Slots: {stats.MaterialSlotCount} (Quest Max for VeryPoor: 4, Recommended: 1).");
+            }
+            else
+            {
+                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 Material Slots: {stats.MaterialSlotCount} / 4 max.");
+            }
+
+            // 5. PhysBone Components
+            if (stats.PhysBoneComponentCount > 8)
+            {
+                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 PhysBone Components: {stats.PhysBoneComponentCount} (Quest Hard Limit: 8). ALL PhysBones will be stripped at runtime by VRChat!");
+            }
+            else
+            {
+                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 PhysBone Components: {stats.PhysBoneComponentCount} / 8 max.");
+            }
+
+            // 6. PhysBone Collision Checks
+            if (stats.PhysBoneCollisionCheckCount > 64)
+            {
+                Debug.LogError($"[VRC-QuestPatcher Alert] 🔴 PhysBone Collision Check Count: {stats.PhysBoneCollisionCheckCount} (Quest Hard Limit: 64). ALL PhysBone Colliders will be stripped at runtime by VRChat!");
+            }
+            else
+            {
+                Debug.Log($"[VRC-QuestPatcher Alert] 🟢 PhysBone Collision Checks: {stats.PhysBoneCollisionCheckCount} / 64 max.");
+            }
+
+            // 7. Incompatible Component Check
+            Component[] components = avatarRoot.GetComponentsInChildren<Component>(true);
+            int badCompCount = 0;
+            foreach (Component c in components)
+            {
+                if (c == null) continue;
+                string typeName = c.GetType().Name;
+                if (typeName == "Camera" || typeName == "Light" || typeName == "AudioSource" || typeName == "PostProcessVolume" || typeName == "VRC_Station")
+                {
+                    badCompCount++;
+                    Debug.LogWarning($"[VRC-QuestPatcher Alert] ⚠️ Incompatible component found: '{typeName}' on '{c.gameObject.name}'.");
+                }
+            }
+
+            Debug.Log($"<color=cyan><b>[VRC-QuestPatcher] Final Rank Estimate: {stats.RatingName} (Incompatible Components: {badCompCount})</b></color>");
+        }
     }
 }
