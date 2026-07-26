@@ -354,7 +354,7 @@ namespace Bluscream.TextureCompressor
                 androidSettings.compressionQuality = 75;
 
                 importer.SetPlatformTextureSettings(androidSettings);
-                importer.SaveAndReimport();
+                EditorUtility.SetDirty(importer);
                 optimizedCount++;
             }
 
