@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using Bluscream.ComponentRemover;
+using Bluscream.TextureCompressor;
 
 namespace VRCQuestPatcher
 {
@@ -62,7 +64,7 @@ namespace VRCQuestPatcher
                 if (config.RemoveIncompatibleComponents)
                 {
                     progressCallback?.Invoke("Removing incompatible components...", 0.15f);
-                    var removedComps = Bluscream.ComponentRemover.ComponentRemover.RemoveQuestIncompatibleComponents(
+                    var removedComps = ComponentRemover.RemoveQuestIncompatibleComponents(
                         targetAvatar, 
                         (msg) => progressCallback?.Invoke(msg, 0.15f)
                     );
@@ -93,7 +95,7 @@ namespace VRCQuestPatcher
                 if (config.OptimizeTextures)
                 {
                     progressCallback?.Invoke("Optimizing texture memory budget for Quest...", 0.70f);
-                    int texCount = Bluscream.TextureCompressor.TextureCompressionEditor.OptimizeForTextureMemoryBudget(
+                    int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
                         targetAvatar, 
                         profile.MaxTextureMemoryBytes, 
                         config.MaxTextureSize, 

@@ -1,9 +1,6 @@
 {
     "name": "dev.bluscream.menumanager.Editor",
-    "references": [
-        "VRCFury-Editor-Avatars",
-        "VRCFury"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],
