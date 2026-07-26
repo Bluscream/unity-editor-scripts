@@ -123,11 +123,11 @@ namespace VRCQuestPatcher
             EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: Max {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxTriangles:N0} Tris, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxMaterialSlots} Material Slots, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxPhysBoneComponents} PhysBones.", MessageType.None);
 
             EditorGUILayout.Space(5);
-            config.DuplicateAvatar = EditorGUILayout.Toggle("Duplicate Avatar GameObject", config.DuplicateAvatar);
+            config.DuplicateAvatar = EditorGUILayout.ToggleLeft("Duplicate Avatar GameObject", config.DuplicateAvatar);
             if (config.DuplicateAvatar)
             {
                 EditorGUI.indentLevel++;
-                config.AddPlatformSuffixes = EditorGUILayout.Toggle("Add Platform Suffixes ((PC) / (Quest))", config.AddPlatformSuffixes);
+                config.AddPlatformSuffixes = EditorGUILayout.ToggleLeft("Add Platform Suffixes ((PC) / (Quest))", config.AddPlatformSuffixes);
                 EditorGUI.indentLevel--;
             }
 
@@ -140,24 +140,24 @@ namespace VRCQuestPatcher
             );
 
             EditorGUILayout.Space(5);
-            config.RemapAnimationsAndVRCFury = EditorGUILayout.Toggle("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
-            config.ReplaceShaders = EditorGUILayout.Toggle("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
-            config.OptimizeTextures = EditorGUILayout.Toggle("Optimize Texture Memory Budget", config.OptimizeTextures);
+            config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
+            config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
+            config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
             if (config.OptimizeTextures)
             {
                 EditorGUI.indentLevel++;
                 config.MaxTextureSize = EditorGUILayout.IntSlider("Max Texture Size", config.MaxTextureSize, 256, 2048);
                 EditorGUI.indentLevel--;
             }
-            config.PrunePhysBones = EditorGUILayout.Toggle("Prune Excess PhysBones to Target Rank", config.PrunePhysBones);
+            config.PrunePhysBones = EditorGUILayout.ToggleLeft("Prune Excess PhysBones to Target Rank", config.PrunePhysBones);
             if (config.PrunePhysBones)
             {
                 EditorGUI.indentLevel++;
                 config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("Pruning Strategy", config.PruningStrategy);
                 EditorGUI.indentLevel--;
             }
-            config.DecimateMeshes = EditorGUILayout.Toggle("Decimate Meshes to Poly Limit", config.DecimateMeshes);
-            config.RemoveIncompatibleComponents = EditorGUILayout.Toggle("Remove Incompatible Components", config.RemoveIncompatibleComponents);
+            config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
+            config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components", config.RemoveIncompatibleComponents);
 
             if (EditorGUI.EndChangeCheck())
             {
