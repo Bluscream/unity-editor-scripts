@@ -320,8 +320,8 @@ namespace Bluscream.TextureCompressor
             long effectiveVramBudget = Math.Min(vramBudgetBytes, QUEST_VRAM_BUDGET_BYTES);
             // Leave 1 MB headroom for mesh and animation data
             effectiveVramBudget = Math.Max(1024 * 1024L, effectiveVramBudget - (1024 * 1024L));
-            // Target up to 3.5 MB for packed AssetBundle so final build (with mesh, blendshapes, materials & animations) fits comfortably under 10.0 MB
-            long effectiveBundleBudget = (long)(3.5 * 1024 * 1024);
+            // Target up to 5.0 MB for packed AssetBundle so textures stay higher quality while leaving 5 MB for mesh and animation payload
+            long effectiveBundleBudget = (long)(5.0 * 1024 * 1024);
 
             Debug.Log($"[TextureCompressor] Budgets — VRAM: {effectiveVramBudget / (1024.0 * 1024.0):F1} MB, Bundle: {effectiveBundleBudget / (1024.0 * 1024.0):F2} MB ({importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
 
