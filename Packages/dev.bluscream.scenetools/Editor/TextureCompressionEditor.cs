@@ -331,8 +331,54 @@ namespace Bluscream.TextureCompressor
                 }
             }
 
+            if (importers.Count == 0) return 0;
+
+            // Define ASTC Compression Profiles (Compression Format & Crunch Quality)
+            var compressionSteps = new (TextureImporterFormat format, int quality, string name)[]
+            {
+                (TextureImporterFormat.ASTC_4x4, 100, "ASTC 4x4 (100% Quality)"),
+                (TextureImporterFormat.ASTC_6x6, 75,  "ASTC 6x6 (75% Quality)"),
+                (TextureImporterFormat.ASTC_8x8, 50,  "ASTC 8x8 (50% Quality)"),
+                (TextureImporterFormat.ASTC_12x12, 25, "ASTC 12x12 (25% Quality)")
+            };
+
+            // Resolution Scale Steps (100%, 75%, 50%, 25%, 12.5%)
+            int[] resolutionLimits = new int[] { defaultMaxSize, 1024, 512, 256, 128 };
+
+            int bestResolutionCap = defaultMaxSize;
+            TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_4x4;
+            int bestQuality = 100;
+
+            // Find optimal settings step-by-step
+            bool budgetAchieved = false;
+            foreach (int maxRes in resolutionLimits)
+            {
+                foreach (var step in compressionSteps)
+                {
+                    long estimatedMemory = EstimateTotalTextureMemory(importers, maxRes, step.format);
+                    if (estimatedMemory <= targetMaxBytes)
+                    {
+                        bestResolutionCap = maxRes;
+                        bestFormat = step.format;
+                        bestQuality = step.quality;
+                        budgetAchieved = true;
+                        Debug.Log($"[TextureCompressor] Dynamic Selection: {maxRes}px cap, {step.name}. Estimated Memory: {estimatedMemory / (1024.0 * 1024.0):F2} MB (Target Budget: {targetMaxBytes / (1024.0 * 1024.0):F2} MB)");
+                        break;
+                    }
+                }
+                if (budgetAchieved) break;
+            }
+
+            // Fallback to lowest settings if still over budget
+            if (!budgetAchieved)
+            {
+                bestResolutionCap = 128;
+                bestFormat = TextureImporterFormat.ASTC_12x12;
+                bestQuality = 25;
+            }
+
+            // Apply selected optimal settings to all importers
             int optimizedCount = 0;
-            int maxSize = (targetMaxBytes <= 40 * 1024 * 1024L) ? Math.Min(defaultMaxSize, 256) : defaultMaxSize;
             int total = importers.Count;
             int index = 0;
 
@@ -342,20 +388,20 @@ namespace Bluscream.TextureCompressor
                 foreach (TextureImporter importer in importers)
                 {
                     index++;
-                    progressCallback?.Invoke($"Compressing texture for Quest ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
+                    progressCallback?.Invoke($"Optimizing texture ({index}/{total}): {System.IO.Path.GetFileName(importer.assetPath)}");
 
                     Undo.RecordObject(importer, "Optimize Quest Texture");
                     importer.textureCompression = TextureImporterCompression.Compressed;
-                    importer.maxTextureSize = Math.Min(importer.maxTextureSize, maxSize);
+                    importer.maxTextureSize = Math.Min(importer.maxTextureSize, bestResolutionCap);
 
                     TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
                     androidSettings.overridden = true;
                     androidSettings.name = "Android";
-                    androidSettings.maxTextureSize = Math.Min(androidSettings.maxTextureSize > 0 ? androidSettings.maxTextureSize : importer.maxTextureSize, maxSize);
-                    androidSettings.format = TextureImporterFormat.ASTC_8x8;
+                    androidSettings.maxTextureSize = Math.Min(androidSettings.maxTextureSize > 0 ? androidSettings.maxTextureSize : importer.maxTextureSize, bestResolutionCap);
+                    androidSettings.format = bestFormat;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
                     androidSettings.crunchedCompression = true;
-                    androidSettings.compressionQuality = 50;
+                    androidSettings.compressionQuality = bestQuality;
 
                     importer.SetPlatformTextureSettings(androidSettings);
                     importer.SaveAndReimport();
@@ -370,8 +416,29 @@ namespace Bluscream.TextureCompressor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[TextureCompressor] Compressed {optimizedCount} textures for Android/Quest platform.");
+            Debug.Log($"[TextureCompressor] Dynamically optimized {optimizedCount} textures for Android/Quest platform.");
             return optimizedCount;
+        }
+
+        private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
+        {
+            double bytesPerPixel = 1.0;
+            switch (format)
+            {
+                case TextureImporterFormat.ASTC_4x4: bytesPerPixel = 1.0; break;
+                case TextureImporterFormat.ASTC_6x6: bytesPerPixel = 0.44; break;
+                case TextureImporterFormat.ASTC_8x8: bytesPerPixel = 0.25; break;
+                case TextureImporterFormat.ASTC_12x12: bytesPerPixel = 0.11; break;
+            }
+
+            long total = 0;
+            foreach (var imp in importers)
+            {
+                int w = Math.Min(maxResCap, 1024);
+                int h = Math.Min(maxResCap, 1024);
+                total += (long)(w * h * bytesPerPixel);
+            }
+            return total;
         }
     }
 
