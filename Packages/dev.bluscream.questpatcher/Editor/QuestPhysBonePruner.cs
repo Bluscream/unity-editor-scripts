@@ -101,6 +101,10 @@ namespace VRCQuestPatcher
                             progressCallback?.Invoke($"Cleared colliders from PhysBone component on {pb.gameObject.name} to reduce collision checks.");
                         }
                     }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[QuestPhysBonePruner] Could not clear colliders on {pb.name}: {e.Message}");
+                    }
                 }
             }
 
