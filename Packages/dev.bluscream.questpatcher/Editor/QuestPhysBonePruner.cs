@@ -128,12 +128,9 @@ namespace VRCQuestPatcher
             try
             {
                 int transforms = GetPhysBoneTransformCount(pb);
-                var collidersProp = pb.GetType().GetProperty("colliders") ?? pb.GetType().GetProperty("Colliders");
-                int colliders = 0;
-                if (collidersProp != null && collidersProp.GetValue(pb) is System.Collections.IList list)
-                {
-                    colliders = list.Count;
-                }
+                SerializedObject so = new SerializedObject(pb);
+                SerializedProperty collidersProp = so.FindProperty("colliders");
+                int colliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
                 return transforms * colliders;
             }
             catch
