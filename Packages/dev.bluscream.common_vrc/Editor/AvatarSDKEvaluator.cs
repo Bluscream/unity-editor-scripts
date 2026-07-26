@@ -390,12 +390,18 @@ namespace Bluscream.VRC
                             };
                             UnityEditor.EditorApplication.update += updateHandler;
 
-                            while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+                            try
                             {
-                                System.Threading.Thread.Sleep(10);
-                                if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 60) break;
+                                while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+                                {
+                                    System.Threading.Thread.Sleep(10);
+                                    if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 60) break;
+                                }
                             }
-                            UnityEditor.EditorApplication.update -= updateHandler;
+                            finally
+                            {
+                                UnityEditor.EditorApplication.update -= updateHandler;
+                            }
                         }
                         return GetBuiltBundleSize(out bundlePath, buildStartTime);
                     }
