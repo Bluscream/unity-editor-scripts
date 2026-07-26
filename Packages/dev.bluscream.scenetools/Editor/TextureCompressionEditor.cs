@@ -422,21 +422,24 @@ namespace Bluscream.TextureCompressor
 
         private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
         {
+            // Exact BPP values from Thry VRAM Calculator (TextureVRAM.cs)
             double bytesPerPixel = 1.0;
             switch (format)
             {
-                case TextureImporterFormat.ASTC_4x4: bytesPerPixel = 1.0; break;
-                case TextureImporterFormat.ASTC_6x6: bytesPerPixel = 0.44; break;
-                case TextureImporterFormat.ASTC_8x8: bytesPerPixel = 0.25; break;
-                case TextureImporterFormat.ASTC_12x12: bytesPerPixel = 0.11; break;
+                case TextureImporterFormat.ASTC_4x4: bytesPerPixel = 8.0 / 8.0; break;     // 1.000 BPP
+                case TextureImporterFormat.ASTC_5x5: bytesPerPixel = 5.12 / 8.0; break;    // 0.640 BPP
+                case TextureImporterFormat.ASTC_6x6: bytesPerPixel = 3.55 / 8.0; break;    // 0.44375 BPP
+                case TextureImporterFormat.ASTC_8x8: bytesPerPixel = 2.00 / 8.0; break;    // 0.250 BPP
+                case TextureImporterFormat.ASTC_10x10: bytesPerPixel = 1.28 / 8.0; break;  // 0.160 BPP
+                case TextureImporterFormat.ASTC_12x12: bytesPerPixel = 1.00 / 8.0; break;  // 0.125 BPP
             }
 
             long total = 0;
             foreach (var imp in importers)
             {
-                int w = Math.Min(maxResCap, 1024);
-                int h = Math.Min(maxResCap, 1024);
-                total += (long)(w * h * bytesPerPixel);
+                int maxTarget = Math.Min(imp.maxTextureSize > 0 ? imp.maxTextureSize : maxResCap, maxResCap);
+                double mipMapMultiplier = imp.mipmapEnabled ? 1.33333 : 1.0;
+                total += (long)(maxTarget * maxTarget * bytesPerPixel * mipMapMultiplier);
             }
             return total;
         }
