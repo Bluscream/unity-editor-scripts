@@ -71,17 +71,26 @@ namespace Bluscream.VRCAvatarOptimizer
         public int MaxAudioSources = int.MaxValue;
 
         // Contact Limits
-        public int MaxContacts = int.MaxValue;
+        public virtual int MaxContacts => int.MaxValue;
 
-        // Asset Bundle Size Limit (bytes; int.MaxValue = unlimited)
+        // Asset Bundle Size Limit
         public virtual long MaxAssetBundleSizeBytes => long.MaxValue;
 
-        // Platform suffix used when naming duplicated avatars and optimized materials
-        public virtual string PlatformSuffix => " (Optimized)";
+        // Platform suffix for duplicated avatars/materials, e.g. " (Android) [Very Poor]"
+        public virtual string PlatformSuffix => $" ({Platform}) [{FormatRank(Rank)}]";
+        protected static string FormatRank(AvatarPerformanceRank rank)
+            => rank == AvatarPerformanceRank.VeryPoor ? "Very Poor" : rank.ToString();
 
-        // Component Whitelists & Blacklists
-        public HashSet<string> WhitelistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> BlacklistedComponentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Component Whitelists & Blacklists — lazy-cached, override CreateBlacklist/CreateWhitelist per platform
+        private HashSet<string> _blacklist;
+        public HashSet<string> BlacklistedComponentNames => _blacklist ??= CreateBlacklist();
+        protected virtual HashSet<string> CreateBlacklist()
+            => new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private HashSet<string> _whitelist;
+        public HashSet<string> WhitelistedComponentNames => _whitelist ??= CreateWhitelist();
+        protected virtual HashSet<string> CreateWhitelist()
+            => new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Performs custom, platform-specific component compatibility check.

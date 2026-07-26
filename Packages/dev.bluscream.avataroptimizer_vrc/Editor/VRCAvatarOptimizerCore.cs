@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using TextureCompressionEditor = global::Bluscream.TextureCompressor.TextureCompressionEditor;
@@ -65,10 +66,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     progressCallback?.Invoke("Duplicating avatar GameObject...", 0.05f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Duplicating avatar '{avatarRoot.name}' for target platform '{config.Platform}'...");
-                    string cleanName = avatarRoot.name;
-                    // Strip any known platform suffixes from the source name
-                    foreach (var knownSuffix in new[] { " (PC)", " (Quest)", " (Android)", " (iOS)", " (Optimized)" })
-                        if (cleanName.EndsWith(knownSuffix)) { cleanName = cleanName.Substring(0, cleanName.Length - knownSuffix.Length); break; }
+                    // Strip any trailing platform/rank suffix e.g. " (Android) [Very Poor]" or " (PC) [Excellent]"
+                    string cleanName = Regex.Replace(
+                        avatarRoot.name,
+                        @"\s*\((?:PC|Android|iOS|Quest|Original|Optimized)\)(?:\s*\[[^\]]*\])?\s*$",
+                        ""
+                    ).TrimEnd();
 
                     string suffix = profile.PlatformSuffix;
                     if (config.AddPlatformSuffixes)
