@@ -441,7 +441,22 @@ namespace Bluscream.TextureCompressor
             long total = 0;
             foreach (var imp in importers)
             {
-                int maxTarget = Math.Min(imp.maxTextureSize > 0 ? imp.maxTextureSize : maxResCap, maxResCap);
+                int nativeSize = maxResCap;
+                try
+                {
+                    MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    if (getSourceSizeMethod != null)
+                    {
+                        object[] args = new object[] { 0, 0 };
+                        getSourceSizeMethod.Invoke(imp, args);
+                        int w = (int)args[0];
+                        int h = (int)args[1];
+                        if (w > 0 && h > 0) nativeSize = Math.Max(w, h);
+                    }
+                }
+                catch { }
+
+                int maxTarget = Math.Min(nativeSize, maxResCap);
                 double mipMapMultiplier = imp.mipmapEnabled ? 1.33333 : 1.0;
                 total += (long)(maxTarget * maxTarget * bytesPerPixel * mipMapMultiplier);
             }
