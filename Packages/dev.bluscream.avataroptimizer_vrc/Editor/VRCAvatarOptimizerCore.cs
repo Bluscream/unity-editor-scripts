@@ -203,40 +203,40 @@ namespace Bluscream.VRCAvatarOptimizer
                 // Step 8.5: Multi-Stage Iterative AssetBundle Verification & Smart Quality Ladder
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
+                
+                // Quality Ladder Options: (Format, Quality, DisplayName)
+                var formatLadder = new (UnityEditor.TextureImporterFormat format, int quality, string name)[]
+                {
+                    (UnityEditor.TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_5x5,   100, "ASTC 5x5 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_6x6,   100, "ASTC 6x6 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_8x8,   100, "ASTC 8x8 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_8x8,    85, "ASTC 8x8 (Crunch 15%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_8x8,    70, "ASTC 8x8 (Crunch 30%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_8x8,    55, "ASTC 8x8 (Crunch 45%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_8x8,    40, "ASTC 8x8 (Crunch 60%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_10x10, 100, "ASTC 10x10 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_10x10,  50, "ASTC 10x10 (Crunch 50%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_12x12, 100, "ASTC 12x12 (Uncrunched)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_12x12,  75, "ASTC 12x12 (Crunch 25%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_12x12,  50, "ASTC 12x12 (Crunch 50%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 (Crunch 75%)"),
+                    (UnityEditor.TextureImporterFormat.ASTC_12x12,   0, "ASTC 12x12 (Crunch 100%)"),
+                };
+
+                int[] resCaps = new int[] { 4096, 2048, 1024, 512, 256, 128 }
+                    .Where(r => r <= config.MaxTextureResolution)
+                    .ToArray();
+                if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
+
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
                 if (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes)
                 {
-                    // Fine-Grained Quality Ladder: All ASTC formats + 10-15% Crunch quality increments
-                    var formatLadder = new (UnityEditor.TextureImporterFormat format, int quality, string name)[]
-                    {
-                        (UnityEditor.TextureImporterFormat.ASTC_4x4,   100, "ASTC 4x4 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_5x5,   100, "ASTC 5x5 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_6x6,   100, "ASTC 6x6 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_8x8,   100, "ASTC 8x8 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_8x8,    85, "ASTC 8x8 (Crunch 15%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_8x8,    70, "ASTC 8x8 (Crunch 30%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_8x8,    55, "ASTC 8x8 (Crunch 45%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_8x8,    40, "ASTC 8x8 (Crunch 60%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_10x10, 100, "ASTC 10x10 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_10x10,  50, "ASTC 10x10 (Crunch 50%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_12x12, 100, "ASTC 12x12 (Uncrunched)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_12x12,  75, "ASTC 12x12 (Crunch 25%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_12x12,  50, "ASTC 12x12 (Crunch 50%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_12x12,  25, "ASTC 12x12 (Crunch 75%)"),
-                        (UnityEditor.TextureImporterFormat.ASTC_12x12,   0, "ASTC 12x12 (Crunch 100%)"),
-                    };
-
-                    int[] resCaps = new int[] { 4096, 2048, 1024, 512, 256, 128 }
-                        .Where(r => r <= config.MaxTextureResolution)
-                        .ToArray();
-                    if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
-
                     bool fits = false;
                     var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
 
-                    // Stage 1 & 2: Loop resolutions from highest down to lowest, and ASTC formats from highest to lowest
                     foreach (int res in resCaps)
                     {
                         foreach (var step in formatLadder)
