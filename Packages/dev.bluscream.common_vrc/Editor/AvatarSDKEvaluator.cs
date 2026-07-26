@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -364,11 +365,14 @@ namespace Bluscream.VRC
                 Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor");
                 if (builderType != null)
                 {
-                    MethodInfo buildMethod = builderType.GetMethod("Build", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    MethodInfo buildMethod = builderType.GetMethod("Build", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(GameObject), typeof(bool), typeof(List<>).MakeGenericType(Type.GetType("VRC.SDK3A.Editor.PerPlatformOverrides+Option, com.vrchat.avatars.Editor") ?? typeof(object)) }, null)
+                        ?? builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
+
                     if (buildMethod != null)
                     {
+                        object builderInstance = Activator.CreateInstance(builderType);
                         Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build for '{avatarRoot.name}'...");
-                        object taskObj = buildMethod.Invoke(null, new object[] { avatarRoot, true, null });
+                        object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
                         if (taskObj is Task task)
                         {
                             task.Wait();
