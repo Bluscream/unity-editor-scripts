@@ -135,9 +135,10 @@ namespace VRCQuestPatcher
                     stats.PhysBoneTransformCount += chainTransforms;
 
                     SerializedProperty collidersProp = so.FindProperty("colliders");
-                    int referencedColliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
+                    int explicitColliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
+                    int effectiveColliders = explicitColliders > 0 ? explicitColliders : stats.PhysBoneColliderCount;
 
-                    totalChecks += (chainTransforms * referencedColliders);
+                    totalChecks += (chainTransforms * effectiveColliders);
                 }
                 else if (typeName.Contains("VRCPhysBoneCollider"))
                 {

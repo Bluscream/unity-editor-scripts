@@ -144,7 +144,7 @@ namespace VRCQuestPatcher
             return total;
         }
 
-        private static int GetCollisionCheckCount(Component pb)
+        private static int GetCollisionCheckCount(Component pb, int totalAvatarColliders = 14)
         {
             if (pb == null) return 0;
             try
@@ -152,8 +152,9 @@ namespace VRCQuestPatcher
                 int transforms = GetPhysBoneTransformCount(pb);
                 SerializedObject so = new SerializedObject(pb);
                 SerializedProperty collidersProp = so.FindProperty("colliders");
-                int colliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
-                return transforms * colliders;
+                int explicitColliders = (collidersProp != null && collidersProp.isArray) ? collidersProp.arraySize : 0;
+                int effectiveColliders = explicitColliders > 0 ? explicitColliders : totalAvatarColliders;
+                return transforms * effectiveColliders;
             }
             catch
             {
