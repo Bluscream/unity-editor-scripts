@@ -199,23 +199,31 @@ namespace VRCQuestPatcher
             if (srcMat == null) return null;
 
             string srcPath = AssetDatabase.GetAssetPath(srcMat);
-            if (string.IsNullOrEmpty(srcPath)) return new Material(srcMat);
+            bool isBuiltIn = string.IsNullOrEmpty(srcPath) || srcPath.Contains("unity_builtin_extra") || srcPath.StartsWith("Resources/");
 
-            string filename = Path.GetFileNameWithoutExtension(srcPath);
+            string filename = !string.IsNullOrEmpty(srcMat.name) ? srcMat.name : "Material";
             if (filename.EndsWith(" (Quest)"))
                 return srcMat;
 
-            string dir = Path.GetDirectoryName(srcPath);
-            if (!saveInSameFolder)
+            string dir = "Assets/QuestPatched/" + avatarName;
+            if (saveInSameFolder && !isBuiltIn)
             {
-                dir = "Assets/QuestPatched/" + avatarName;
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                string srcDir = Path.GetDirectoryName(srcPath);
+                if (!string.IsNullOrEmpty(srcDir)) dir = srcDir;
             }
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
             string destPath = Path.Combine(dir, filename + " (Quest).mat").Replace('\\', '/');
             if (File.Exists(destPath))
             {
                 return AssetDatabase.LoadAssetAtPath<Material>(destPath);
+            }
+
+            if (isBuiltIn)
+            {
+                Material newMat = new Material(srcMat);
+                AssetDatabase.CreateAsset(newMat, destPath);
+                return newMat;
             }
 
             AssetDatabase.CopyAsset(srcPath, destPath);
