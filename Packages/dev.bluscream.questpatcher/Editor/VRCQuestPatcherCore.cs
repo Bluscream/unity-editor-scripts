@@ -19,6 +19,7 @@ namespace VRCQuestPatcher
             public AssetPlacementLocation PlacementLocation = AssetPlacementLocation.SeparateFolder;
             public PhysBonePruningStrategy PruningStrategy = PhysBonePruningStrategy.DeepestFirst;
             public bool DuplicateAvatar = true;
+            public bool AddPlatformSuffixes = true;
             public string AvatarSuffix = " (Quest)";
             public bool RemoveIncompatibleComponents = true;
             public bool ReplaceShaders = true;
@@ -50,12 +51,31 @@ namespace VRCQuestPatcher
 
             try
             {
-                // Step 1: Duplicate Avatar GameObject
+                // Step 1: Duplicate Avatar GameObject & Manage Platform Suffixes / Active State
                 if (config.DuplicateAvatar)
                 {
                     progressCallback?.Invoke("Duplicating avatar GameObject for Quest...", 0.05f);
+
+                    string cleanName = avatarRoot.name;
+                    if (cleanName.EndsWith(" (PC)")) cleanName = cleanName.Substring(0, cleanName.Length - 5);
+                    if (cleanName.EndsWith(" (Quest)")) cleanName = cleanName.Substring(0, cleanName.Length - 8);
+
+                    if (config.AddPlatformSuffixes)
+                    {
+                        Undo.RecordObject(avatarRoot, "Rename PC Avatar");
+                        avatarRoot.name = cleanName + " (PC)";
+                    }
+
+                    // Disable PC avatar before conversion
+                    Undo.RecordObject(avatarRoot, "Disable PC Avatar");
+                    avatarRoot.SetActive(false);
+
                     targetAvatar = UnityEngine.Object.Instantiate(avatarRoot, avatarRoot.transform.parent);
-                    targetAvatar.name = avatarRoot.name + config.AvatarSuffix;
+                    targetAvatar.name = config.AddPlatformSuffixes ? cleanName + " (Quest)" : cleanName + (config.AvatarSuffix ?? " (Quest)");
+
+                    // Enable Quest avatar after duplication
+                    targetAvatar.SetActive(true);
+
                     Undo.RegisterCreatedObjectUndo(targetAvatar, "Create Quest Avatar Clone");
                     summary.AddSuccess($"Created Quest Avatar clone: {targetAvatar.name}", targetAvatar);
                 }

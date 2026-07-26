@@ -38,7 +38,7 @@ namespace VRCQuestPatcher
             config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCQuestPatcher_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
             config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCQuestPatcher_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
             config.DuplicateAvatar = EditorPrefs.GetBool("VRCQuestPatcher_DuplicateAvatar", true);
-            config.AvatarSuffix = EditorPrefs.GetString("VRCQuestPatcher_AvatarSuffix", " (Quest)");
+            config.AddPlatformSuffixes = EditorPrefs.GetBool("VRCQuestPatcher_AddPlatformSuffixes", true);
             config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", true);
             config.ReplaceShaders = EditorPrefs.GetBool("VRCQuestPatcher_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCQuestPatcher_OptimizeTextures", true);
@@ -54,7 +54,7 @@ namespace VRCQuestPatcher
             EditorPrefs.SetInt("VRCQuestPatcher_PlacementLocation", (int)config.PlacementLocation);
             EditorPrefs.SetInt("VRCQuestPatcher_PruningStrategy", (int)config.PruningStrategy);
             EditorPrefs.SetBool("VRCQuestPatcher_DuplicateAvatar", config.DuplicateAvatar);
-            EditorPrefs.SetString("VRCQuestPatcher_AvatarSuffix", config.AvatarSuffix ?? " (Quest)");
+            EditorPrefs.SetBool("VRCQuestPatcher_AddPlatformSuffixes", config.AddPlatformSuffixes);
             EditorPrefs.SetBool("VRCQuestPatcher_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
             EditorPrefs.SetBool("VRCQuestPatcher_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCQuestPatcher_OptimizeTextures", config.OptimizeTextures);
@@ -127,7 +127,7 @@ namespace VRCQuestPatcher
             if (config.DuplicateAvatar)
             {
                 EditorGUI.indentLevel++;
-                config.AvatarSuffix = EditorGUILayout.TextField("Avatar Suffix", config.AvatarSuffix);
+                config.AddPlatformSuffixes = EditorGUILayout.Toggle("Add Platform Suffixes ((PC) / (Quest))", config.AddPlatformSuffixes);
                 EditorGUI.indentLevel--;
             }
 
