@@ -29,7 +29,13 @@ namespace Bluscream.VRCAvatarOptimizer
         public override void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
         {
             progressCallback?.Invoke("Executing Android/Quest platform-specific conversions...");
-            // Additional Android/Quest specific logic (e.g., stripping lightmaps, enforcing GPU instancing)
+            
+            // Enforce VRChat Mobile Quality Setting: Pixel Light Count <= 1 (prevents VRChat SDK build error)
+            if (QualitySettings.pixelLightCount > 1)
+            {
+                Debug.Log($"[PlatformProfile_Android] Adjusting QualitySettings.pixelLightCount from {QualitySettings.pixelLightCount} -> 1 for VRChat Mobile compliance.");
+                QualitySettings.pixelLightCount = 1;
+            }
         }
 
         public override void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
