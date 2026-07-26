@@ -119,8 +119,10 @@ namespace VRCQuestPatcher
 
             EditorGUI.BeginChangeCheck();
 
-            config.TargetRank = (QuestPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
-            EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: Max {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxTriangles:N0} Tris, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxMaterialSlots} Material Slots, {QuestPerformanceProfile.GetProfile(config.TargetRank).MaxPhysBoneComponents} PhysBones.", MessageType.None);
+            QuestPerformanceProfile currentProfile = QuestPerformanceProfile.GetProfile(config.TargetRank);
+            string triStr = currentProfile.MaxTriangles == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxTriangles:N0}";
+            string matStr = currentProfile.MaxMaterialSlots == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxMaterialSlots}";
+            EditorGUILayout.HelpBox($"Target Rank '{config.TargetRank}' Profile Limits: {triStr} Tris, {matStr} Material Slots, {currentProfile.MaxPhysBoneComponents} PhysBones.", MessageType.None);
 
             EditorGUILayout.Space(5);
             config.DuplicateAvatar = EditorGUILayout.ToggleLeft("Duplicate Avatar GameObject", config.DuplicateAvatar);
