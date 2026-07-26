@@ -46,8 +46,14 @@ namespace Bluscream.VRCAvatarOptimizer
             
             // Particle shaders
             { "particles/additive", QUEST_PARTICLES_ADDITIVE },
-            { "particles/multiply", QUEST_PARTICLES_MULTIPLY },
+            { "particles/additive (soft)", QUEST_PARTICLES_ADDITIVE },
+            { "particles/alpha blended", QUEST_PARTICLES_ADDITIVE },
+            { "particles/alpha blended premultiply", QUEST_PARTICLES_ADDITIVE },
+            { "particles/vertexlit blended", QUEST_PARTICLES_ADDITIVE },
             { "particles/standard surface", QUEST_PARTICLES_ADDITIVE },
+            { "particles/standard unlit", QUEST_PARTICLES_ADDITIVE },
+            { "particles/multiply", QUEST_PARTICLES_MULTIPLY },
+            { "particles/multiply (double)", QUEST_PARTICLES_MULTIPLY },
         };
 
         /// <summary>
