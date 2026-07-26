@@ -222,8 +222,6 @@ namespace VRCQuestPatcher
                     FieldInfo instanceField = avatarBuilderType.GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
                     object builderInstance = instanceField?.GetValue(null);
 
-                    if (builderInstance != null)
-                    {
                         FieldInfo panelField = avatarBuilderType.GetField("_builder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                         object sdkPanel = panelField?.GetValue(builderInstance);
 
@@ -236,10 +234,14 @@ namespace VRCQuestPatcher
                                 FieldInfo selBuilderField = currType.GetField("_selectedBuilder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                                 if (selBuilderField != null)
                                 {
-                                    if (selBuilderField.GetValue(sdkPanel) == null)
+                                    try
                                     {
-                                        selBuilderField.SetValue(sdkPanel, builderInstance);
+                                        if (selBuilderField.GetValue(sdkPanel) == null && builderInstance != null)
+                                        {
+                                            selBuilderField.SetValue(sdkPanel, builderInstance);
+                                        }
                                     }
+                                    catch { }
                                     break;
                                 }
                                 currType = currType.BaseType;
