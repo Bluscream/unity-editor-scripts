@@ -771,142 +771,49 @@ namespace Bluscream.ComponentRemover
     }
 
     /// <summary>
-    /// Helper class to optionally use BackupSystem for creating backups before removing scripts
+    /// Helper class to use BackupSystem for creating backups before removing scripts
     /// </summary>
     internal static class BackupSystemHelper
     {
-
-        /// <summary>
-        /// Creates a backup for the current selection
-        /// </summary>
         public static string CreateBackupForSelection(string backupName)
         {
-            if (!Utils.IsBackupSystemAvailable() || Selection.gameObjects == null || Selection.gameObjects.Length == 0)
-                return null;
-
-            try
-            {
-                // Use BackupSystem to create backup for all selected GameObjects
-                System.Type backupSystemType = System.Type.GetType("Bluscream.BackupSystem.BackupSystem, Assembly-CSharp-Editor")
-                    ?? System.Type.GetType("Bluscream.BackupSystem.BackupSystem");
-                
-                if (backupSystemType != null)
-                {
-                    System.Type configType = System.Type.GetType("Bluscream.BackupSystem.BackupConfig, Assembly-CSharp-Editor")
-                        ?? System.Type.GetType("Bluscream.BackupSystem.BackupConfig");
-                    
-                    if (configType != null)
-                    {
-                        object config = Activator.CreateInstance(configType);
-                        configType.GetProperty("backupMaterials").SetValue(config, true);
-                        configType.GetProperty("backupComponents").SetValue(config, true);
-                        configType.GetProperty("backupTextures").SetValue(config, false);
-                        configType.GetProperty("backupGameObjectHierarchy").SetValue(config, false);
-                        configType.GetProperty("includeMaterialProperties").SetValue(config, false);
-                        configType.GetProperty("includeComponentData").SetValue(config, true);
-                        configType.GetProperty("backupLocation").SetValue(config, "Assets/ComponentRemoverBackups");
-                        configType.GetProperty("backupName").SetValue(config, backupName);
-
-                        System.Type scopeType = System.Type.GetType("Bluscream.BackupSystem.BackupScope, Assembly-CSharp-Editor")
-                            ?? System.Type.GetType("Bluscream.BackupSystem.BackupScope");
-                        
-                        if (scopeType != null)
-                        {
-                            // Create backup for each selected GameObject
-                            string lastBackupPath = null;
-                            foreach (GameObject go in Selection.gameObjects)
-                            {
-                                if (go != null)
-                                {
-                                    object scope = Enum.Parse(scopeType, "GameObjectRecursive");
-                                    
-                                    var createBackupMethod = backupSystemType.GetMethod("CreateBackup", 
-                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                                    
-                                    if (createBackupMethod != null)
-                                    {
-                                        object result = createBackupMethod.Invoke(null, new object[] { config, scope, go, null });
-                                        lastBackupPath = result as string;
-                                    }
-                                }
-                            }
-                            return lastBackupPath;
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Failed to create backup: {e.Message}");
-            }
-            
-            return null;
+            if (Selection.gameObjects == null || Selection.gameObjects.Length == 0) return null;
+            return CreateBackupForGameObjects(Selection.gameObjects, backupName);
         }
 
-        /// <summary>
-        /// Creates a backup for an array of GameObjects
-        /// </summary>
         public static string CreateBackupForGameObjects(GameObject[] gameObjects, string backupName)
         {
-            if (!Utils.IsBackupSystemAvailable() || gameObjects == null || gameObjects.Length == 0)
-                return null;
+            if (gameObjects == null || gameObjects.Length == 0) return null;
 
             try
             {
-                System.Type backupSystemType = System.Type.GetType("Bluscream.BackupSystem.BackupSystem, Assembly-CSharp-Editor")
-                    ?? System.Type.GetType("Bluscream.BackupSystem.BackupSystem");
-                
-                if (backupSystemType != null)
+                Bluscream.BackupConfig config = new Bluscream.BackupConfig
                 {
-                    System.Type configType = System.Type.GetType("Bluscream.BackupSystem.BackupConfig, Assembly-CSharp-Editor")
-                        ?? System.Type.GetType("Bluscream.BackupSystem.BackupConfig");
-                    
-                    if (configType != null)
-                    {
-                        object config = Activator.CreateInstance(configType);
-                        configType.GetProperty("backupMaterials").SetValue(config, true);
-                        configType.GetProperty("backupComponents").SetValue(config, true);
-                        configType.GetProperty("backupTextures").SetValue(config, false);
-                        configType.GetProperty("backupGameObjectHierarchy").SetValue(config, false);
-                        configType.GetProperty("includeMaterialProperties").SetValue(config, false);
-                        configType.GetProperty("includeComponentData").SetValue(config, true);
-                        configType.GetProperty("backupLocation").SetValue(config, "Assets/ComponentRemoverBackups");
-                        configType.GetProperty("backupName").SetValue(config, backupName);
+                    backupMaterials = true,
+                    backupComponents = true,
+                    backupTextures = false,
+                    backupGameObjectHierarchy = false,
+                    includeMaterialProperties = false,
+                    includeComponentData = true,
+                    backupLocation = "Assets/ComponentRemoverBackups",
+                    backupName = backupName
+                };
 
-                        System.Type scopeType = System.Type.GetType("Bluscream.BackupSystem.BackupScope, Assembly-CSharp-Editor")
-                            ?? System.Type.GetType("Bluscream.BackupSystem.BackupScope");
-                        
-                        if (scopeType != null)
-                        {
-                            // Create backup for each GameObject
-                            string lastBackupPath = null;
-                            foreach (GameObject go in gameObjects)
-                            {
-                                if (go != null)
-                                {
-                                    object scope = Enum.Parse(scopeType, "GameObjectRecursive");
-                                    
-                                    var createBackupMethod = backupSystemType.GetMethod("CreateBackup", 
-                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                                    
-                                    if (createBackupMethod != null)
-                                    {
-                                        object result = createBackupMethod.Invoke(null, new object[] { config, scope, go, null });
-                                        lastBackupPath = result as string;
-                                    }
-                                }
-                            }
-                            return lastBackupPath;
-                        }
+                string lastBackupPath = null;
+                foreach (GameObject go in gameObjects)
+                {
+                    if (go != null)
+                    {
+                        lastBackupPath = Bluscream.BackupSystem.CreateBackup(config, Bluscream.BackupScope.GameObjectRecursive, go, null);
                     }
                 }
+                return lastBackupPath;
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"Failed to create backup: {e.Message}");
+                return null;
             }
-            
-            return null;
         }
     }
 }

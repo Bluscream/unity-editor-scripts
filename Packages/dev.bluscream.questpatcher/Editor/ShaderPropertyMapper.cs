@@ -295,7 +295,7 @@ namespace VRCQuestPatcher
         /// Transfers properties from backup data to a material with a new shader
         /// </summary>
         public static PropertyTransferResult TransferPropertiesFromBackup(
-            BackupManager.MaterialBackup backup,
+            Bluscream.MaterialBackup backup,
             Material targetMaterial,
             Shader targetShader)
         {
@@ -449,7 +449,7 @@ namespace VRCQuestPatcher
         private static void SetPropertyFromBackupEntry(
             Material target,
             string targetPropertyName,
-            BackupManager.MaterialPropertyEntry entry)
+            Bluscream.MaterialPropertyEntry entry)
         {
             switch (entry.propertyType)
             {

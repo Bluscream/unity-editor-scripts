@@ -367,66 +367,33 @@ namespace Bluscream.TextureCompressor
     }
 
     /// <summary>
-    /// Helper class to optionally use BackupSystem for creating backups before compressing textures
+    /// Helper class to use BackupSystem for creating backups before compressing textures
     /// </summary>
     internal static class BackupSystemHelper
     {
-
-        /// <summary>
-        /// Creates a backup for all textures in the project
-        /// </summary>
         public static string CreateBackupForAllTextures(string backupName)
         {
-            if (!Utils.IsBackupSystemAvailable())
-                return null;
-
             try
             {
-                System.Type backupSystemType = System.Type.GetType("Bluscream.BackupSystem.BackupSystem, Assembly-CSharp-Editor")
-                    ?? System.Type.GetType("Bluscream.BackupSystem.BackupSystem");
-                
-                if (backupSystemType != null)
+                Bluscream.BackupConfig config = new Bluscream.BackupConfig
                 {
-                    System.Type configType = System.Type.GetType("Bluscream.BackupSystem.BackupConfig, Assembly-CSharp-Editor")
-                        ?? System.Type.GetType("Bluscream.BackupSystem.BackupConfig");
-                    
-                    if (configType != null)
-                    {
-                        object config = Activator.CreateInstance(configType);
-                        configType.GetProperty("backupMaterials").SetValue(config, false);
-                        configType.GetProperty("backupComponents").SetValue(config, false);
-                        configType.GetProperty("backupTextures").SetValue(config, true); // Only backup textures
-                        configType.GetProperty("backupGameObjectHierarchy").SetValue(config, false);
-                        configType.GetProperty("includeMaterialProperties").SetValue(config, false);
-                        configType.GetProperty("includeComponentData").SetValue(config, false);
-                        configType.GetProperty("backupLocation").SetValue(config, "Assets/TextureCompressorBackups");
-                        configType.GetProperty("backupName").SetValue(config, backupName);
+                    backupMaterials = false,
+                    backupComponents = false,
+                    backupTextures = true,
+                    backupGameObjectHierarchy = false,
+                    includeMaterialProperties = false,
+                    includeComponentData = false,
+                    backupLocation = "Assets/TextureCompressorBackups",
+                    backupName = backupName
+                };
 
-                        System.Type scopeType = System.Type.GetType("Bluscream.BackupSystem.BackupScope, Assembly-CSharp-Editor")
-                            ?? System.Type.GetType("Bluscream.BackupSystem.BackupScope");
-                        
-                        if (scopeType != null)
-                        {
-                            object scope = Enum.Parse(scopeType, "AllAssets");
-                            
-                            var createBackupMethod = backupSystemType.GetMethod("CreateBackup", 
-                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                            
-                            if (createBackupMethod != null)
-                            {
-                                object result = createBackupMethod.Invoke(null, new object[] { config, scope, null, null });
-                                return result as string;
-                            }
-                        }
-                    }
-                }
+                return Bluscream.BackupSystem.CreateBackup(config, Bluscream.BackupScope.AllAssets, null, null);
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"Failed to create backup: {e.Message}");
+                return null;
             }
-            
-            return null;
         }
     }
 }
