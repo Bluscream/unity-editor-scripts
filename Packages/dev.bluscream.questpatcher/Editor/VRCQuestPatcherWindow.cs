@@ -143,12 +143,6 @@ namespace VRCQuestPatcher
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
             config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
             config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
-            if (config.OptimizeTextures)
-            {
-                EditorGUI.indentLevel++;
-                config.MaxTextureSize = EditorGUILayout.IntSlider("Max Texture Size", config.MaxTextureSize, 256, 2048);
-                EditorGUI.indentLevel--;
-            }
             config.PrunePhysBones = EditorGUILayout.ToggleLeft("Prune Excess PhysBones to Target Rank", config.PrunePhysBones);
             if (config.PrunePhysBones)
             {
