@@ -435,9 +435,9 @@ namespace Bluscream.VRCAvatarOptimizer
         private static void ReplaceShaderOnMaterial(Material srcMat, Material questMat, ConversionSummary summary)
         {
             if (questMat == null || questMat.shader == null) return;
-            string originalShaderName = questMat.shader.name;
+            string originalShaderName = srcMat != null && srcMat.shader != null ? srcMat.shader.name : questMat.shader.name;
 
-            if (originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
+            if (questMat.shader.name.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase) && originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Material '{questMat.name}' already uses mobile shader '{originalShaderName}' — skipping.");
                 summary.materialsSkipped++;
