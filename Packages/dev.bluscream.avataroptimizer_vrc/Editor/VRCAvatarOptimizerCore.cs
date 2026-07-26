@@ -204,7 +204,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
                 
-                // Fine-Grained Quality Ladder: All ASTC formats (4x4 to 12x12) + Granular 5% Crunch quality steps
+                // Fine-Grained Quality Ladder: All ASTC formats (4x4 to 12x12) + ETC2 Crunched 5% steps
                 var formatLadderList = new List<(UnityEditor.TextureImporterFormat format, int quality, string name)>();
                 var astcFormats = new (UnityEditor.TextureImporterFormat format, string name)[]
                 {
@@ -218,13 +218,13 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 foreach (var fmt in astcFormats)
                 {
-                    // Add Uncrunched step first
+                    // Add Uncrunched ASTC step first
                     formatLadderList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)"));
-                    // Add 5% Crunch steps from 95% down to 0%
+                    // Add 5% ETC2 Crunch steps from 95% down to 0%
                     for (int q = 95; q >= 0; q -= 5)
                     {
                         int crunchPercent = 100 - q;
-                        formatLadderList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)"));
+                        formatLadderList.Add((UnityEditor.TextureImporterFormat.ETC2_RGBA8_CRUNCHED, q, $"{fmt.name} (ETC2 Crunch {crunchPercent}%)"));
                     }
                 }
                 var formatLadder = formatLadderList.ToArray();

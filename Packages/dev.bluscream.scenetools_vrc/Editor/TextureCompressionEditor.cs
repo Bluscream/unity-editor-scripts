@@ -417,12 +417,13 @@ namespace Bluscream.TextureCompressor
                     Undo.RecordObject(importer, "Optimize Quest Texture");
 
                     TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
+                    bool isCrunch = compressionQuality >= 0 && compressionQuality < 100;
                     androidSettings.overridden = true;
                     androidSettings.name = "Android";
                     androidSettings.maxTextureSize = maxResolutionCap;
-                    androidSettings.format = format;
+                    androidSettings.format = isCrunch ? TextureImporterFormat.ETC2_RGBA8_CRUNCHED : format;
                     androidSettings.textureCompression = TextureImporterCompression.Compressed;
-                    androidSettings.crunchedCompression = compressionQuality >= 0 && compressionQuality < 100;
+                    androidSettings.crunchedCompression = isCrunch;
                     androidSettings.compressionQuality = Math.Max(0, compressionQuality);
 
                     importer.SetPlatformTextureSettings(androidSettings);
