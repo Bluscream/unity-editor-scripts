@@ -799,9 +799,27 @@ namespace Bluscream.VRC
                     }
                 }
 
-                bool isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
+                bool isTestAvatar = false;
+                try
+                {
+                    MethodInfo supportsTestParam = builderType.GetMethod("PlatformSupportsBuildAndTest", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    if (supportsTestParam != null && builderInstance != null)
+                    {
+                        object result = supportsTestParam.Invoke(builderInstance, null);
+                        if (result is bool supports) isTestAvatar = supports;
+                    }
+                    else
+                    {
+                        isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
+                    }
+                }
+                catch
+                {
+                    isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
+                }
+
                 Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
-                // Pass testAvatar based on platform support (false for Android/iOS where Build & Test is unsupported)
+                // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
                 object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
                 if (taskObj is Task task)
