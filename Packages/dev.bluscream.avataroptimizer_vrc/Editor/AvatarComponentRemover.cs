@@ -98,7 +98,6 @@ namespace Bluscream.VRCAvatarOptimizer
             Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
         }
-        }
 
         /// <summary>
         /// Legacy overload for backward compatibility
