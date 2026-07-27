@@ -42,6 +42,29 @@ namespace Bluscream.VRC
             }
         }
 
+        public static void SafeCloseVRCControlPanel()
+        {
+            try
+            {
+                Type windowType = Type.GetType("VRCSdkControlPanel, VRCSDK3A-Editor")
+                    ?? Type.GetType("VRCSdkControlPanel, VRC.SDKBase.Editor")
+                    ?? Type.GetType("VRCSdkControlPanel");
+
+                if (windowType != null)
+                {
+                    var window = EditorWindow.GetWindow(windowType, false, null, false);
+                    if (window != null)
+                    {
+                        window.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[VRCCommonHelper] SafeCloseVRCControlPanel warning: {ex.Message}");
+            }
+        }
+
         public static GameObject GetSelectedAvatarInEditor()
         {
             if (Selection.activeGameObject != null)
