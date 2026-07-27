@@ -269,10 +269,112 @@ namespace Bluscream.VRC
             }
         }
 
+        private static readonly Dictionary<TextureFormat, float> FormatBPP = new Dictionary<TextureFormat, float>()
+        {
+            { TextureFormat.Alpha8, 8f },
+            { TextureFormat.ARGB4444, 16f },
+            { TextureFormat.RGB24, 24f },
+            { TextureFormat.RGBA32, 32f },
+            { TextureFormat.ARGB32, 32f },
+            { TextureFormat.RGB565, 16f },
+            { TextureFormat.R16, 16f },
+            { TextureFormat.DXT1, 4f },
+            { TextureFormat.DXT5, 8f },
+            { TextureFormat.RGBA4444, 16f },
+            { TextureFormat.BGRA32, 32f },
+            { TextureFormat.RHalf, 16f },
+            { TextureFormat.RGHalf, 32f },
+            { TextureFormat.RGBAHalf, 64f },
+            { TextureFormat.RFloat, 32f },
+            { TextureFormat.RGFloat, 64f },
+            { TextureFormat.RGBAFloat, 128f },
+            { TextureFormat.BC6H, 8f },
+            { TextureFormat.BC7, 8f },
+            { TextureFormat.BC4, 4f },
+            { TextureFormat.BC5, 8f },
+            { TextureFormat.DXT1Crunched, 4f },
+            { TextureFormat.DXT5Crunched, 8f },
+            { TextureFormat.PVRTC_RGB2, 2f },
+            { TextureFormat.PVRTC_RGBA2, 2f },
+            { TextureFormat.PVRTC_RGB4, 4f },
+            { TextureFormat.PVRTC_RGBA4, 4f },
+            { TextureFormat.ETC_RGB4, 4f },
+            { TextureFormat.ETC2_RGB, 4f },
+            { TextureFormat.ETC2_RGBA1, 4f },
+            { TextureFormat.ETC2_RGBA8, 8f },
+            { TextureFormat.ETC_RGB4Crunched, 4f },
+            { TextureFormat.ETC2_RGBA8Crunched, 8f },
+            { TextureFormat.ASTC_4x4, 8f },
+            { TextureFormat.ASTC_5x5, 5.12f },
+            { TextureFormat.ASTC_6x6, 3.55f },
+            { TextureFormat.ASTC_8x8, 2f },
+            { TextureFormat.ASTC_10x10, 1.28f },
+            { TextureFormat.ASTC_12x12, 1f },
+            { TextureFormat.R8, 8f }
+        };
+
+        private static float GetFormatBPP(TextureImporterFormat format, TextureFormat fallbackFormat)
+        {
+            switch (format)
+            {
+                case TextureImporterFormat.DXT1:
+                case TextureImporterFormat.DXT1Crunched:
+                case TextureImporterFormat.BC4:
+                case TextureImporterFormat.ETC_RGB4:
+                case TextureImporterFormat.ETC2_RGB:
+                case TextureImporterFormat.ETC2_RGBA1:
+                case TextureImporterFormat.ETC_RGB4Crunched:
+                    return 4.0f;
+                case TextureImporterFormat.DXT5:
+                case TextureImporterFormat.DXT5Crunched:
+                case TextureImporterFormat.BC5:
+                case TextureImporterFormat.BC7:
+                case TextureImporterFormat.BC6H:
+                case TextureImporterFormat.ETC2_RGBA8:
+                case TextureImporterFormat.ETC2_RGBA8Crunched:
+                    return 8.0f;
+                case TextureImporterFormat.ASTC_4x4:
+                case TextureImporterFormat.ASTC_HDR_4x4:
+                    return 8.0f;
+                case TextureImporterFormat.ASTC_5x5:
+                case TextureImporterFormat.ASTC_HDR_5x5:
+                    return 5.12f;
+                case TextureImporterFormat.ASTC_6x6:
+                case TextureImporterFormat.ASTC_HDR_6x6:
+                    return 3.55f;
+                case TextureImporterFormat.ASTC_8x8:
+                case TextureImporterFormat.ASTC_HDR_8x8:
+                    return 2.0f;
+                case TextureImporterFormat.ASTC_10x10:
+                case TextureImporterFormat.ASTC_HDR_10x10:
+                    return 1.28f;
+                case TextureImporterFormat.ASTC_12x12:
+                case TextureImporterFormat.ASTC_HDR_12x12:
+                    return 1.0f;
+                case TextureImporterFormat.RGBA32:
+                case TextureImporterFormat.ARGB32:
+                case TextureImporterFormat.BGRA32:
+                    return 32.0f;
+                case TextureImporterFormat.RGB24:
+                    return 24.0f;
+                case TextureImporterFormat.RGB16:
+                case TextureImporterFormat.RGBA16:
+                    return 16.0f;
+                case TextureImporterFormat.Alpha8:
+                    return 8.0f;
+            }
+
+            if (FormatBPP.TryGetValue(fallbackFormat, out float bpp)) return bpp;
+            return 16.0f;
+        }
+
         private static long CalculateTextureMemory(GameObject avatarRoot)
         {
+            string platformName = EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android ? "Android" :
+                           (EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS ? "iPhone" : "Standalone");
+
             long totalBytes = 0;
-            System.Collections.Generic.HashSet<Texture> textures = new System.Collections.Generic.HashSet<Texture>();
+            HashSet<Texture> textures = new HashSet<Texture>();
 
             Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
             foreach (Renderer r in renderers)
@@ -292,11 +394,92 @@ namespace Bluscream.VRC
                             if (tex != null && !textures.Contains(tex))
                             {
                                 textures.Add(tex);
-                                totalBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(tex);
+
+                                string path = AssetDatabase.GetAssetPath(tex);
+                                if (!string.IsNullOrEmpty(path) && AssetImporter.GetAtPath(path) is TextureImporter imp)
+                                {
+                                    TextureImporterPlatformSettings settings = imp.GetPlatformTextureSettings(platformName);
+                                    bool isOverridden = settings != null && settings.overridden;
+                                    int maxRes = isOverridden ? settings.maxTextureSize : imp.maxTextureSize;
+                                    float bpp = isOverridden ? GetFormatBPP(settings.format, (tex is Texture2D t2d) ? t2d.format : TextureFormat.RGBA32) : 16.0f;
+
+                                    int w = Math.Min(tex.width, maxRes > 0 ? maxRes : tex.width);
+                                    int h = Math.Min(tex.height, maxRes > 0 ? maxRes : tex.height);
+
+                                    long texBytes = 0;
+                                    int mipCount = tex.mipmapCount > 0 ? tex.mipmapCount : 1;
+                                    for (int mLevel = 0; mLevel < mipCount; mLevel++)
+                                    {
+                                        int mipW = Math.Max(1, w >> mLevel);
+                                        int mipH = Math.Max(1, h >> mLevel);
+                                        texBytes += (long)Math.Max(1, (mipW * mipH * bpp) / 8.0f);
+                                    }
+
+                                    if (tex is Cubemap) texBytes *= 6;
+                                    else if (tex is Texture2DArray arr) texBytes *= arr.depth;
+
+                                    totalBytes += texBytes;
+                                }
+                                else
+                                {
+                                    totalBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(tex);
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            return totalBytes;
+        }
+
+        public static long CalculateMeshVRAM(GameObject avatarRoot)
+        {
+            long totalBytes = 0;
+            HashSet<Mesh> meshes = new HashSet<Mesh>();
+
+            foreach (Renderer r in avatarRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                Mesh mesh = r is SkinnedMeshRenderer smr ? smr.sharedMesh : (r is MeshRenderer mr && mr.GetComponent<MeshFilter>() != null ? mr.GetComponent<MeshFilter>().sharedMesh : null);
+                if (mesh == null || meshes.Contains(mesh)) continue;
+                meshes.Add(mesh);
+
+                long vertexAttributeVRAMSize = 0;
+                var vertexAttributes = mesh.GetVertexAttributes();
+                bool isSkinned = r is SkinnedMeshRenderer;
+
+                foreach (var attr in vertexAttributes)
+                {
+                    int skinnedMultiplier = (isSkinned && (attr.attribute == UnityEngine.Rendering.VertexAttribute.Position || attr.attribute == UnityEngine.Rendering.VertexAttribute.Normal || attr.attribute == UnityEngine.Rendering.VertexAttribute.Tangent)) ? 2 : 1;
+                    int formatSize = 4;
+                    if (attr.format == UnityEngine.Rendering.VertexAttributeFormat.Float16 || attr.format == UnityEngine.Rendering.VertexAttributeFormat.SNorm16 || attr.format == UnityEngine.Rendering.VertexAttributeFormat.UNorm16) formatSize = 2;
+                    else if (attr.format == UnityEngine.Rendering.VertexAttributeFormat.UInt8 || attr.format == UnityEngine.Rendering.VertexAttributeFormat.SInt8 || attr.format == UnityEngine.Rendering.VertexAttributeFormat.UNorm8 || attr.format == UnityEngine.Rendering.VertexAttributeFormat.SNorm8) formatSize = 1;
+
+                    vertexAttributeVRAMSize += formatSize * attr.dimension * skinnedMultiplier;
+                }
+
+                long blendShapeVRAMSize = 0;
+                var deltaPositions = new Vector3[mesh.vertexCount];
+                var deltaNormals = new Vector3[mesh.vertexCount];
+                var deltaTangents = new Vector3[mesh.vertexCount];
+
+                for (int i = 0; i < mesh.blendShapeCount; i++)
+                {
+                    int frameCount = mesh.GetBlendShapeFrameCount(i);
+                    for (int f = 0; f < frameCount; f++)
+                    {
+                        mesh.GetBlendShapeFrameVertices(i, f, deltaPositions, deltaNormals, deltaTangents);
+                        for (int k = 0; k < deltaPositions.Length; k++)
+                        {
+                            if (deltaPositions[k] != Vector3.zero || deltaNormals[k] != Vector3.zero || deltaTangents[k] != Vector3.zero)
+                            {
+                                blendShapeVRAMSize += 40;
+                            }
+                        }
+                    }
+                }
+
+                totalBytes += (vertexAttributeVRAMSize * mesh.vertexCount) + blendShapeVRAMSize;
             }
 
             return totalBytes;
