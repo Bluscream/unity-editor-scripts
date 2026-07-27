@@ -67,10 +67,17 @@ namespace Bluscream.VRCAvatarOptimizer
             progressCallback?.Invoke($"Ensuring active build target is set to {config.Platform}...", 0.01f);
             SwitchBuildTargetIfNeeded(config.Platform);
 
+            GameObject targetAvatar = avatarRoot;
+            PlatformProfile profile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
+
+            // The name the converted avatar will have — asset output paths are derived from it,
+            // so it must be known before we can delete the placement folder.
+            string expectedTargetName = config.DuplicateAvatar ? GetTargetAvatarName(avatarRoot.name, config, profile) : avatarRoot.name;
+
             // Delete placement location before starting if configured
             if (config.DeletePlacementLocationBeforeConversion)
             {
-                string folderPath = GetPlacementFolder(avatarRoot.name, config.PlacementLocation);
+                string folderPath = GetPlacementFolder(expectedTargetName, config.PlacementLocation);
                 if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
                 {
                     Debug.Log($"[VRCAvatarOptimizerCore] Deleting asset placement location before starting: '{folderPath}'");
@@ -82,9 +89,6 @@ namespace Bluscream.VRCAvatarOptimizer
             summary.InitialStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
             Debug.Log($"[VRCAvatarOptimizerCore] Initial stats — Tris: {summary.InitialStats.TriangleCount:N0}, TexMem: {summary.InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F1} MB, MatSlots: {summary.InitialStats.MaterialSlotCount}, PhysBones: {summary.InitialStats.PhysBoneComponentCount}, Colliders: {summary.InitialStats.PhysBoneColliderCount}, CollisionChecks: {summary.InitialStats.PhysBoneCollisionCheckCount}");
 
-            GameObject targetAvatar = avatarRoot;
-            PlatformProfile profile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
-
             Debug.Log($"[VRCAvatarOptimizerCore] Profile limits — Platform: {profile.Platform}, Rank: {profile.Rank}, Tris: {(profile.MaxTriangles == int.MaxValue ? "Unlimited" : profile.MaxTriangles.ToString("N0"))}, TexMem: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB, PhysBones: {profile.MaxPhysBoneComponents}, Colliders: {profile.MaxPhysBoneColliders}, CollisionChecks: {profile.MaxPhysBoneCollisionChecks}");
 
             try
@@ -94,15 +98,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     progressCallback?.Invoke("Duplicating avatar GameObject...", 0.05f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Duplicating avatar '{avatarRoot.name}' for target platform '{config.Platform}'...");
-                    // Strip any trailing platform/rank suffix e.g. " (Android) [Very Poor]" or " (PC) [Excellent]"
-                    string cleanName = Regex.Replace(
-                        avatarRoot.name,
-                        @"\s*\((?:PC|Android|iOS|Quest|Original|Optimized)\)(?:\s*\[[^\]]*\])?\s*$",
-                        ""
-                    ).TrimEnd();
-
-                    string suffix = profile.PlatformSuffix;
-                    string expectedTargetName = config.AddPlatformSuffixes ? cleanName + suffix : cleanName + (config.AvatarSuffix ?? suffix);
+                    string cleanName = StripPlatformSuffix(avatarRoot.name);
 
                     // Delete existing GameObjects with the target name if requested
                     if (config.DeleteExistingTargetGameObjects)
@@ -188,9 +184,9 @@ namespace Bluscream.VRCAvatarOptimizer
                     progressCallback?.Invoke("Rewriting Animator, Clips, Material Swaps, and VRCFury...", 0.55f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Rewriting animations/VRCFury for '{targetAvatar.name}' with {materialMap.Count} material remaps...");
                     AvatarAnimationRewriter.ProcessAvatarAnimationsAndVRCFury(
-                        targetAvatar, 
-                        materialMap, 
-                        config.PlacementLocation == AssetPlacementLocation.SeparateFolder ? "Assets/_AVATAROPTIMIZER/" + targetAvatar.name : null, 
+                        targetAvatar,
+                        materialMap,
+                        GetPlacementFolder(targetAvatar.name, config.PlacementLocation),
                         (msg) => progressCallback?.Invoke(msg, 0.55f)
                     );
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
@@ -242,7 +238,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Step 7.5: Material Slot Consolidation & Mesh Count Optimization
                 progressCallback?.Invoke("Consolidating material slots and mesh count...", 0.94f);
-                string meshAssetDir = config.PlacementLocation == AssetPlacementLocation.SeparateFolder ? "Assets/_AVATAROPTIMIZER/" + targetAvatar.name : null;
+                string meshAssetDir = GetPlacementFolder(targetAvatar.name, config.PlacementLocation);
                 AvatarMaterialSlotOptimizer.OptimizeMaterialSlots(targetAvatar, profile.MaxMaterialSlots, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
                 AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
 
@@ -368,17 +364,39 @@ namespace Bluscream.VRCAvatarOptimizer
             return summary;
         }
 
-        public static string GetPlacementFolder(string avatarName, AssetPlacementLocation location)
+        /// <summary>
+        /// Strips any trailing platform/rank suffix, e.g. " (Android) [Very Poor]" or " (PC) [Excellent]".
+        /// </summary>
+        public static string StripPlatformSuffix(string avatarName)
+        {
+            return Regex.Replace(
+                avatarName,
+                @"\s*\((?:PC|Android|iOS|Quest|Original|Optimized)\)(?:\s*\[[^\]]*\])?\s*$",
+                ""
+            ).TrimEnd();
+        }
+
+        /// <summary>
+        /// Computes the name the converted avatar duplicate will get for the given config/profile.
+        /// </summary>
+        public static string GetTargetAvatarName(string sourceName, ConversionConfig config, PlatformProfile profile)
+        {
+            string cleanName = StripPlatformSuffix(sourceName);
+            if (config.AddPlatformSuffixes)
+                return cleanName + profile.PlatformSuffix;
+            // Without platform suffixes, only append an explicitly configured custom suffix.
+            return cleanName + (config.AvatarSuffix ?? "");
+        }
+
+        /// <summary>
+        /// Asset output folder for a converted avatar. Expects the FINAL (target) avatar name —
+        /// this must match the folder that DuplicateMaterial and the animation rewriter write into.
+        /// </summary>
+        public static string GetPlacementFolder(string targetAvatarName, AssetPlacementLocation location)
         {
             if (location == AssetPlacementLocation.SeparateFolder)
             {
-                // Clean avatar name of any platform suffixes
-                string cleanName = System.Text.RegularExpressions.Regex.Replace(
-                    avatarName,
-                    @"\s*\((?:PC|Android|iOS|Quest|Original|Optimized)\)(?:\s*\[[^\]]*\])?\s*$",
-                    ""
-                ).TrimEnd();
-                return "Assets/_AVATAROPTIMIZER/" + cleanName;
+                return "Assets/_AVATAROPTIMIZER/" + targetAvatarName;
             }
             return null;
         }
@@ -505,7 +523,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return srcMat;
             }
 
-            string dir = "Assets/_AVATAROPTIMIZER/" + avatarName;
+            string dir = GetPlacementFolder(avatarName, AssetPlacementLocation.SeparateFolder);
             if (saveInSameFolder && !isBuiltIn)
             {
                 string srcDir = Path.GetDirectoryName(srcPath);
