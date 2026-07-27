@@ -234,7 +234,11 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Only check bundle size if we successfully got one (bundleSizeBytes > 0)
                 bool bundleExceeds = (bundleSizeBytes > 0 && maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
-                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > maxUncompressedBytes);
+                // Allow 5% tolerance on uncompressed budget to avoid re-downscaling for marginal overages
+                // e.g. 36.53 MB vs 36.0 MB limit won't trigger an unnecessary full re-downscale pass
+                const double uncompressedToleranceFactor = 1.05; // 5% headroom
+                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)(maxUncompressedBytes * uncompressedToleranceFactor));
+
 
                 if (bundleExceeds || uncompressedExceeds)
                 {
