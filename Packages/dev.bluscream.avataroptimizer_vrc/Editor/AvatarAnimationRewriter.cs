@@ -123,6 +123,10 @@ namespace Bluscream.VRCAvatarOptimizer
             if (controllerMap.TryGetValue(sourceController, out RuntimeAnimatorController existing))
                 return existing;
 
+            // AnimatorOverrideControllers wrap a base controller plus clip overrides — process both
+            if (sourceController is AnimatorOverrideController aoc)
+                return ProcessOverrideController(aoc, materialMap, clipMap, controllerMap, outputDirectory, progressCallback);
+
             AnimatorController ac = sourceController as AnimatorController;
             if (ac == null) return sourceController;
 
@@ -158,7 +162,11 @@ namespace Bluscream.VRCAvatarOptimizer
             string sourcePath = AssetDatabase.GetAssetPath(sourceController);
             string destPath = GetQuestAssetPath(sourcePath, "controller", outputDirectory);
 
-            AssetDatabase.CopyAsset(sourcePath, destPath);
+            if (!CopyAssetChecked(sourcePath, destPath, "AnimatorController"))
+            {
+                controllerMap[sourceController] = sourceController;
+                return sourceController;
+            }
             AnimatorController newAc = AssetDatabase.LoadAssetAtPath<AnimatorController>(destPath);
 
             if (newAc != null)
@@ -175,6 +183,80 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             return sourceController;
+        }
+
+        private static RuntimeAnimatorController ProcessOverrideController(
+            AnimatorOverrideController aoc,
+            Dictionary<Material, Material> materialMap,
+            Dictionary<AnimationClip, AnimationClip> clipMap,
+            Dictionary<RuntimeAnimatorController, RuntimeAnimatorController> controllerMap,
+            string outputDirectory,
+            Action<string> progressCallback)
+        {
+            RuntimeAnimatorController newBase = ProcessController(aoc.runtimeAnimatorController, materialMap, clipMap, controllerMap, outputDirectory, progressCallback);
+
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            aoc.GetOverrides(overrides);
+
+            bool needsCopy = newBase != aoc.runtimeAnimatorController
+                || overrides.Any(kv => kv.Value != null && ClipHasMaterialBindings(kv.Value, materialMap));
+
+            if (!needsCopy)
+            {
+                controllerMap[aoc] = aoc;
+                return aoc;
+            }
+
+            string sourcePath = AssetDatabase.GetAssetPath(aoc);
+            string destPath = GetQuestAssetPath(sourcePath, "overrideController", outputDirectory);
+
+            if (!CopyAssetChecked(sourcePath, destPath, "AnimatorOverrideController"))
+            {
+                controllerMap[aoc] = aoc;
+                return aoc;
+            }
+
+            AnimatorOverrideController newAoc = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(destPath);
+            if (newAoc == null)
+            {
+                controllerMap[aoc] = aoc;
+                return aoc;
+            }
+
+            newAoc.runtimeAnimatorController = newBase;
+            var newOverrides = overrides
+                .Select(kv => new KeyValuePair<AnimationClip, AnimationClip>(
+                    kv.Key,
+                    kv.Value != null ? ProcessClip(kv.Value, materialMap, clipMap, outputDirectory, progressCallback) : null))
+                .ToList();
+            newAoc.ApplyOverrides(newOverrides);
+
+            EditorUtility.SetDirty(newAoc);
+            controllerMap[aoc] = newAoc;
+            progressCallback?.Invoke($"Created Quest override controller copy: {newAoc.name}");
+            return newAoc;
+        }
+
+        /// <summary>
+        /// Copies an asset, replacing any stale destination from a previous run, and reports failures.
+        /// </summary>
+        private static bool CopyAssetChecked(string sourcePath, string destPath, string label)
+        {
+            if (string.IsNullOrEmpty(sourcePath))
+            {
+                Debug.LogWarning($"[AvatarAnimationRewriter] Cannot duplicate {label}: source has no asset path (runtime-only asset). Leaving original reference.");
+                return false;
+            }
+
+            if (File.Exists(destPath))
+                AssetDatabase.DeleteAsset(destPath);
+
+            if (!AssetDatabase.CopyAsset(sourcePath, destPath))
+            {
+                Debug.LogWarning($"[AvatarAnimationRewriter] Failed to copy {label} '{sourcePath}' -> '{destPath}'. Leaving original reference.");
+                return false;
+            }
+            return true;
         }
 
         private static void RemapStateMachineClips(
@@ -250,7 +332,11 @@ namespace Bluscream.VRCAvatarOptimizer
             string sourcePath = AssetDatabase.GetAssetPath(sourceClip);
             string destPath = GetQuestAssetPath(sourcePath, "anim", outputDirectory);
 
-            AssetDatabase.CopyAsset(sourcePath, destPath);
+            if (!CopyAssetChecked(sourcePath, destPath, "AnimationClip"))
+            {
+                clipMap[sourceClip] = sourceClip;
+                return sourceClip;
+            }
             AnimationClip newClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(destPath);
 
             if (newClip != null)
