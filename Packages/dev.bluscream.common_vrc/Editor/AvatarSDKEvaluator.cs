@@ -816,9 +816,16 @@ namespace Bluscream.VRC
                             UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
                             System.Threading.Thread.Sleep(5);
 
-                            if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 90)
+                            // Early success exit if the .vrca bundle file has already been written to temp cache
+                            if (GetBuiltBundleSize(out string earlyPath, buildStartTime) > 0)
                             {
-                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after 90 seconds for '{avatarRoot.name}'.");
+                                Debug.Log($"[AvatarSDKEvaluator] Detected generated .vrca AssetBundle on disk early during build loop: '{earlyPath}'");
+                                break;
+                            }
+
+                            if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 300)
+                            {
+                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after 300 seconds for '{avatarRoot.name}'.");
                                 break;
                             }
                         }
