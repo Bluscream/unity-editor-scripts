@@ -774,32 +774,25 @@ namespace Bluscream.VRC
 
             try
             {
-                Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor")
+                Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, VRC.SDK3A.Editor")
                     ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder");
 
                 if (builderType == null)
                     throw new InvalidOperationException("[AvatarSDKEvaluator] VRChat SDK builder type 'VRCSdkControlPanelAvatarBuilder' could not be located. Ensure the VRChat Avatars SDK package is installed.");
 
+                // The SDK's Build() throws BuilderException("Open the SDK panel...") unless the builder's
+                // _builder field holds the (open) VRCSdkControlPanel window. Acquire the panel's own
+                // registered avatar builder via the public TryGetBuilder<T> API, opening the panel if needed.
+                object builderInstance = AcquireRegisteredAvatarBuilder(builderType);
+                if (builderInstance == null)
+                    throw new InvalidOperationException("[AvatarSDKEvaluator] Could not acquire a VRChat SDK avatar builder registered with the SDK Control Panel. Open 'VRChat SDK > Show Control Panel' once and retry.");
+
+                builderType = builderInstance.GetType();
                 MethodInfo buildMethod = builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                     .FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
 
                 if (buildMethod == null)
                     throw new InvalidOperationException("[AvatarSDKEvaluator] Could not find 'Build(GameObject, bool, List<Option>)' method on VRCSdkControlPanelAvatarBuilder. SDK API may have changed.");
-
-                object builderInstance = Activator.CreateInstance(builderType);
-                
-                // Initialize _builder field if it's null so VRCSdkControlPanelAvatarBuilder.Build() does not throw BuilderException
-                FieldInfo builderField = builderType.GetField("_builder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                if (builderField != null && builderField.GetValue(builderInstance) == null)
-                {
-                    Type avatarBuilderType = Type.GetType("VRC.SDK3A.Editor.VRCAvatarBuilder, com.vrchat.avatars.Editor")
-                        ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCAvatarBuilder");
-                    if (avatarBuilderType != null)
-                    {
-                        object avatarBuilderInstance = Activator.CreateInstance(avatarBuilderType);
-                        builderField.SetValue(builderInstance, avatarBuilderInstance);
-                    }
-                }
 
                 // Register live VRCSdkControlPanelAvatarBuilder instance events for detailed console feedback
                 RegisterBuildCallbacks(
@@ -830,7 +823,8 @@ namespace Bluscream.VRC
                             System.Threading.Thread.Sleep(5);
 
                             // Early success exit if the .vrca bundle file has already been written to temp cache
-                            if (GetBuiltBundleSize(out string earlyPath, buildStartTime) > 0)
+                            // (verbose: false — this polls every few ms and would otherwise flood Editor.log)
+                            if (GetBuiltBundleSize(out string earlyPath, buildStartTime, verbose: false) > 0)
                             {
                                 Debug.Log($"[AvatarSDKEvaluator] Detected generated .vrca AssetBundle on disk early during build loop: '{earlyPath}'");
                                 break;
@@ -867,7 +861,62 @@ namespace Bluscream.VRC
             return size;
         }
 
-        public static long GetBuiltBundleSize(out string bundlePath, DateTime minCreationTime)
+        /// <summary>
+        /// Returns an avatar builder instance that is registered with the VRChat SDK Control Panel
+        /// (required for VRCSdkControlPanelAvatarBuilder.Build() to run). Opens the panel if needed.
+        /// Returns null if no registered builder could be acquired.
+        /// </summary>
+        private static object AcquireRegisteredAvatarBuilder(Type builderType)
+        {
+            try
+            {
+                Type panelType = Type.GetType("VRCSdkControlPanel, VRC.SDKBase.Editor")
+                    ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.Name == "VRCSdkControlPanel" && typeof(UnityEditor.EditorWindow).IsAssignableFrom(t));
+                if (panelType == null) return null;
+
+                FieldInfo windowField = panelType.GetField("window", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                object panelWindow = windowField?.GetValue(null);
+                if (panelWindow == null)
+                {
+                    Debug.Log("[AvatarSDKEvaluator] VRChat SDK Control Panel is not open — opening it (the SDK build pipeline requires it)...");
+                    MethodInfo showMethod = panelType.GetMethod("ShowControlPanel", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    showMethod?.Invoke(null, null);
+                    panelWindow = windowField?.GetValue(null);
+                }
+                if (panelWindow == null) return null;
+
+                // Preferred: the panel's own registered builder via public static TryGetBuilder<IVRCSdkAvatarBuilderApi>()
+                Type builderApiType = Type.GetType("VRC.SDK3A.Editor.IVRCSdkAvatarBuilderApi, VRC.SDK3A.Editor")
+                    ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.IVRCSdkAvatarBuilderApi");
+                MethodInfo tryGetBuilder = panelType.GetMethod("TryGetBuilder", BindingFlags.Public | BindingFlags.Static);
+                if (builderApiType != null && tryGetBuilder != null)
+                {
+                    object[] args = new object[] { null };
+                    if (tryGetBuilder.MakeGenericMethod(builderApiType).Invoke(null, args) is bool found && found && args[0] != null)
+                    {
+                        Debug.Log($"[AvatarSDKEvaluator] Acquired panel-registered avatar builder: {args[0].GetType().Name}");
+                        return args[0];
+                    }
+                }
+
+                // Fallback: create our own instance and register it with the panel window
+                object instance = Activator.CreateInstance(builderType);
+                MethodInfo registerMethod = builderType.GetMethod("RegisterBuilder", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (registerMethod != null)
+                {
+                    registerMethod.Invoke(instance, new object[] { panelWindow });
+                    Debug.Log("[AvatarSDKEvaluator] Created avatar builder instance and registered it with the SDK Control Panel.");
+                    return instance;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Failed to acquire panel-registered avatar builder: {e.Message}");
+            }
+            return null;
+        }
+
+        public static long GetBuiltBundleSize(out string bundlePath, DateTime minCreationTime, bool verbose = true)
         {
             bundlePath = null;
             try
@@ -893,21 +942,21 @@ namespace Bluscream.VRC
                         if (newestBundle != null)
                         {
                             bundlePath = newestBundle.FullName;
-                            Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
+                            if (verbose) Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
                             return newestBundle.Length;
                         }
 
                         // Bundles exist but none are newer than buildStartTime
-                        Debug.LogWarning($"[AvatarSDKEvaluator] {files.Length} .vrca file(s) found in temp cache but none were written after {minCreationTime:HH:mm:ss}. The build may have been suppressed or cached.");
+                        if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] {files.Length} .vrca file(s) found in temp cache but none were written after {minCreationTime:HH:mm:ss}. The build may have been suppressed or cached.");
                     }
                     else
                     {
-                        Debug.LogWarning($"[AvatarSDKEvaluator] No .vrca files found in Unity temp cache at '{cachePath}'. Build may not have produced output.");
+                        if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] No .vrca files found in Unity temp cache at '{cachePath}'. Build may not have produced output.");
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"[AvatarSDKEvaluator] Unity temp cache directory does not exist: '{cachePath}'.");
+                    if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] Unity temp cache directory does not exist: '{cachePath}'.");
                 }
             }
             catch (Exception e)
