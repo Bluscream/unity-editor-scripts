@@ -203,8 +203,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Step 7.5: Material Slot Consolidation & Mesh Count Optimization
                 progressCallback?.Invoke("Consolidating material slots and mesh count...", 0.94f);
-                AvatarComponentRemover.OptimizeMaterialSlots(targetAvatar, profile.MaxMaterialSlots, (msg) => progressCallback?.Invoke(msg, 0.94f));
-                AvatarComponentRemover.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                AvatarMaterialSlotOptimizer.OptimizeMaterialSlots(targetAvatar, profile.MaxMaterialSlots, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, (msg) => progressCallback?.Invoke(msg, 0.94f));
 
                 // Step 8: Platform-Specific Profile Conversions & Rule Validation
                 progressCallback?.Invoke("Executing platform-specific profile conversions & validation...", 0.95f);
