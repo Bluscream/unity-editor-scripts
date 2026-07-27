@@ -54,6 +54,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
+            config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.AutoSwitchBuildTarget = (AutoSwitchBuildTarget)EditorPrefs.GetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)AutoSwitchBuildTarget.BeforeConversion);
         }
 
@@ -77,6 +78,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)config.AutoSwitchBuildTarget);
         }
 
@@ -142,6 +144,10 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 EditorGUI.indentLevel++;
                 config.AddPlatformSuffixes = EditorGUILayout.ToggleLeft("Add Platform Suffixes ((PC) / (Quest))", config.AddPlatformSuffixes);
+                config.DeleteExistingTargetGameObjects = EditorGUILayout.ToggleLeft(
+                    "Delete existing target GameObjects before starting", 
+                    config.DeleteExistingTargetGameObjects
+                );
                 EditorGUI.indentLevel--;
             }
 

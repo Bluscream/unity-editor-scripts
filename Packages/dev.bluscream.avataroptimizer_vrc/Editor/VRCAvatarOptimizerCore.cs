@@ -36,6 +36,7 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
+            public bool DeleteExistingTargetGameObjects = false;
             public AutoSwitchBuildTarget AutoSwitchBuildTarget = AutoSwitchBuildTarget.BeforeConversion;
             public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
@@ -98,6 +99,22 @@ namespace Bluscream.VRCAvatarOptimizer
                     ).TrimEnd();
 
                     string suffix = profile.PlatformSuffix;
+                    string expectedTargetName = config.AddPlatformSuffixes ? cleanName + suffix : cleanName + (config.AvatarSuffix ?? suffix);
+
+                    // Delete existing GameObjects with the target name if requested
+                    if (config.DeleteExistingTargetGameObjects)
+                    {
+                        var existingObjects = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                            .Where(go => go != null && go != avatarRoot && go.name == expectedTargetName)
+                            .ToList();
+
+                        foreach (var existing in existingObjects)
+                        {
+                            Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Deleting existing target GameObject '{existing.name}' before conversion...");
+                            Undo.DestroyObjectImmediate(existing);
+                        }
+                    }
+
                     if (config.AddPlatformSuffixes)
                     {
                         Undo.RecordObject(avatarRoot, "Rename Original Avatar");
@@ -108,8 +125,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     avatarRoot.SetActive(false);
 
                     targetAvatar = UnityEngine.Object.Instantiate(avatarRoot, avatarRoot.transform.parent);
-                    targetAvatar.name = config.AddPlatformSuffixes ? cleanName + suffix : cleanName + (config.AvatarSuffix ?? suffix);
-
+                    targetAvatar.name = expectedTargetName;
                     targetAvatar.SetActive(true);
 
                     Undo.RegisterCreatedObjectUndo(targetAvatar, "Create Avatar Clone");
