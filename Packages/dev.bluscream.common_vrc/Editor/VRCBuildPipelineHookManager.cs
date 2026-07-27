@@ -279,6 +279,11 @@ namespace Bluscream.VRC
             return !result.Abort;
         }
 
+        public void OnPostprocessAvatar()
+        {
+            InvokePostprocessAvatar(null);
+        }
+
         public void OnPostprocessAvatar(GameObject avatarRoot)
         {
             InvokePostprocessAvatar(avatarRoot);
