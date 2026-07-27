@@ -799,25 +799,7 @@ namespace Bluscream.VRC
                     }
                 }
 
-                bool isTestAvatar = false;
-                try
-                {
-                    MethodInfo supportsTestParam = builderType.GetMethod("PlatformSupportsBuildAndTest", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                    if (supportsTestParam != null && builderInstance != null)
-                    {
-                        object result = supportsTestParam.Invoke(builderInstance, null);
-                        if (result is bool supports) isTestAvatar = supports;
-                    }
-                    else
-                    {
-                        isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
-                    }
-                }
-                catch
-                {
-                    isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
-                }
-
+                bool isTestAvatar = PlatformSupportsBuildAndTest(builderInstance, builderType);
                 Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
                 // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
                 object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
@@ -914,6 +896,37 @@ namespace Bluscream.VRC
             }
 
             return -1;
+        }
+
+        /// <summary>
+        /// Queries the VRChat SDK's PlatformSupportsBuildAndTest method via reflection to check if
+        /// local "Build & Test" mode is supported on the active build target platform (e.g. PC = true, Android/iOS = false).
+        /// </summary>
+        public static bool PlatformSupportsBuildAndTest(object builderInstance = null, Type builderType = null)
+        {
+            try
+            {
+                if (builderType == null)
+                {
+                    builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor")
+                        ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder");
+                }
+
+                if (builderType != null)
+                {
+                    MethodInfo supportsTestParam = builderType.GetMethod("PlatformSupportsBuildAndTest", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    if (supportsTestParam != null)
+                    {
+                        if (builderInstance == null) builderInstance = Activator.CreateInstance(builderType);
+                        object result = supportsTestParam.Invoke(builderInstance, null);
+                        if (result is bool supports) return supports;
+                    }
+                }
+            }
+            catch { }
+
+            // Safe fallback if SDK reflection fails
+            return EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
         }
     }
 }
