@@ -33,12 +33,10 @@ namespace Bluscream.VRCAvatarOptimizer
             public float CompressedAvatarHeadroomMB = 1.5f;   // Headroom in MB reserved for compressed avatar AssetBundle from 10.0 MB limit
             public int CrunchStepPercent = 10;                 // Step size for Crunch quality ladder in Step 5 estimator and Step 8.5 real build verification (1-50)
             public bool DecimateMeshes = true;
-            public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
             public bool ClearEditorLogBeforeConversion = false;
-            public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
 
         public static ConversionSummary ConvertAvatar(
@@ -60,6 +58,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 return summary;
             }
 
+            // Group all scene operations into a single Undo step (asset writes cannot be undone)
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName($"Avatar Optimization ({avatarRoot.name})");
+            int undoGroup = Undo.GetCurrentGroup();
+
             Debug.Log($"[VRCAvatarOptimizerCore] ===== Starting Avatar Conversion for '{avatarRoot.name}' =====");
             Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, DeleteExistingTargetName={config.DeleteExistingTargetGameObjects}");
 
@@ -69,6 +72,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             GameObject targetAvatar = avatarRoot;
             PlatformProfile profile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
+            summary.Profile = profile;
 
             // The name the converted avatar will have — asset output paths are derived from it,
             // so it must be known before we can delete the placement folder.
@@ -360,6 +364,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 summary.AddError($"Conversion failed: {e.Message}\n{e.StackTrace}");
                 Debug.LogError($"[VRCAvatarOptimizerCore] Conversion FAILED for '{avatarRoot.name}': {e.Message}\n{e.StackTrace}");
             }
+            finally
+            {
+                // One Ctrl+Z reverts all scene changes of this conversion
+                Undo.CollapseUndoOperations(undoGroup);
+            }
 
             return summary;
         }
@@ -440,7 +449,20 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             try
             {
-                string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config/unity3d/Editor.log");
+                string logPath;
+                if (Application.platform == RuntimePlatform.WindowsEditor)
+                {
+                    logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Unity", "Editor", "Editor.log");
+                }
+                else if (Application.platform == RuntimePlatform.OSXEditor)
+                {
+                    logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library/Logs/Unity/Editor.log");
+                }
+                else // Linux
+                {
+                    logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config/unity3d/Editor.log");
+                }
+
                 if (File.Exists(logPath))
                 {
                     using (FileStream fs = new FileStream(logPath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))

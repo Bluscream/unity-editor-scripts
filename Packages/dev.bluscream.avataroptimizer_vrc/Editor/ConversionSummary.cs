@@ -44,6 +44,9 @@ namespace Bluscream.VRCAvatarOptimizer
         public AvatarSDKEvaluator.AvatarStats InitialStats;
         public AvatarSDKEvaluator.AvatarStats FinalStats;
 
+        /// <summary>Profile the conversion targeted — used to render correct limits in reports.</summary>
+        [NonSerialized] public PlatformProfile Profile;
+
         /// <summary>
         /// Renders the summary UI in the editor window
         /// </summary>
@@ -57,15 +60,19 @@ namespace Bluscream.VRCAvatarOptimizer
             if (InitialStats != null && FinalStats != null)
             {
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField("Category", "Original (PC)  →  Patched (Quest)", EditorStyles.boldLabel);
+                string targetLabel = Profile != null ? $"Optimized ({Profile.Platform} {Profile.Rank})" : "Optimized";
+                EditorGUILayout.LabelField("Category", $"Original  →  {targetLabel}", EditorStyles.boldLabel);
                 EditorGUILayout.Space(3);
+
+                string texLimit = Profile != null ? $" / {Profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB" : "";
+                string bundleLimit = Profile != null && Profile.MaxAssetBundleSizeBytes != long.MaxValue ? $" / {Profile.MaxAssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB" : "";
 
                 RenderMetricRow("Performance Rating", InitialStats.RatingName, FinalStats.RatingName);
                 RenderMetricRow("Triangles", $"{InitialStats.TriangleCount:N0}", $"{FinalStats.TriangleCount:N0}");
-                RenderMetricRow("Texture Memory (VRAM)", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB");
+                RenderMetricRow("Texture Memory (VRAM)", $"{InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB", $"{FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB{texLimit}");
                 if (CompressedAvatarSizeBytes > 0)
                 {
-                    RenderMetricRow("Compressed Avatar Size (Disk)", "N/A", $"{CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+                    RenderMetricRow("Compressed Avatar Size (Disk)", "N/A", $"{CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB{bundleLimit}");
                 }
                 RenderMetricRow("Material Slots", $"{InitialStats.MaterialSlotCount}", $"{FinalStats.MaterialSlotCount}");
                 RenderMetricRow("PhysBone Components", $"{InitialStats.PhysBoneComponentCount}", $"{FinalStats.PhysBoneComponentCount}");
@@ -140,10 +147,12 @@ namespace Bluscream.VRCAvatarOptimizer
             Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / 40.00 MB");
+            string texMemLimit = (profile != null) ? $"/ {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F2} MB" : "";
+            string bundleSizeLimit = (profile != null && profile.MaxAssetBundleSizeBytes != long.MaxValue) ? $"/ {profile.MaxAssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB" : "";
+            Debug.Log($"[VRC-AvatarOptimizer Summary] • Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB {texMemLimit}");
             if (CompressedAvatarSizeBytes > 0)
             {
-                Debug.Log($"[VRC-AvatarOptimizer Summary] • Compressed Avatar Size (Disk): {CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB / 10.00 MB");
+                Debug.Log($"[VRC-AvatarOptimizer Summary] • Compressed Avatar Size (Disk): {CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB {bundleSizeLimit}");
             }
             Debug.Log($"[VRC-AvatarOptimizer Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
             Debug.Log($"[VRC-AvatarOptimizer Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");

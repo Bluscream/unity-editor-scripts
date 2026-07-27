@@ -32,8 +32,7 @@ namespace Bluscream.VRCAvatarOptimizer
     {
         Disabled,
         DeepestFirst,
-        ShallowestFirst,
-        InteractiveChecklist
+        ShallowestFirst
     }
 
     /// <summary>

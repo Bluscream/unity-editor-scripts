@@ -39,7 +39,10 @@ namespace Bluscream.VRCAvatarOptimizer
             config.Platform = (TargetPlatform)EditorPrefs.GetInt("VRCAvatarOptimizer_Platform", (int)TargetPlatform.Android);
             config.TargetRank = (AvatarPerformanceRank)EditorPrefs.GetInt("VRCAvatarOptimizer_TargetRank", (int)AvatarPerformanceRank.Medium);
             config.PlacementLocation = (AssetPlacementLocation)EditorPrefs.GetInt("VRCAvatarOptimizer_PlacementLocation", (int)AssetPlacementLocation.SeparateFolder);
-            config.PruningStrategy = (PhysBonePruningStrategy)EditorPrefs.GetInt("VRCAvatarOptimizer_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
+            int storedStrategy = EditorPrefs.GetInt("VRCAvatarOptimizer_PruningStrategy", (int)PhysBonePruningStrategy.DeepestFirst);
+            config.PruningStrategy = Enum.IsDefined(typeof(PhysBonePruningStrategy), storedStrategy)
+                ? (PhysBonePruningStrategy)storedStrategy
+                : PhysBonePruningStrategy.DeepestFirst;
             config.DuplicateAvatar = EditorPrefs.GetBool("VRCAvatarOptimizer_DuplicateAvatar", true);
             config.AddPlatformSuffixes = EditorPrefs.GetBool("VRCAvatarOptimizer_AddPlatformSuffixes", true);
             config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCAvatarOptimizer_RemapAnimationsAndVRCFury", true);
@@ -50,7 +53,6 @@ namespace Bluscream.VRCAvatarOptimizer
             config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 4.0f);
             config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 1.5f);
             config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
-            config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
@@ -74,7 +76,6 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", config.UncompressedAvatarHeadroomMB);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", config.CompressedAvatarHeadroomMB);
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchStepPercent", config.CrunchStepPercent);
-            EditorPrefs.SetBool("VRCAvatarOptimizer_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
@@ -227,29 +228,24 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
 
-            // Progress
-            if (isConverting)
+            // The conversion runs synchronously with a modal progress bar, so no in-window
+            // progress section is needed.
+
+            // Avatar Descriptor validation
+            bool hasDescriptor = avatarRoot != null && HasAvatarDescriptor(avatarRoot);
+            if (avatarRoot != null && !hasDescriptor)
             {
-                EditorGUILayout.LabelField("Progress & Conversion Status", EditorStyles.boldLabel);
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(progressMessage, EditorStyles.boldLabel);
-                if (!string.IsNullOrEmpty(timeDetailsMessage))
-                {
-                    EditorGUILayout.LabelField(timeDetailsMessage, EditorStyles.miniLabel);
-                }
-                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(0, 22, GUILayout.ExpandWidth(true)), progressValue, $"{progressValue * 100:F1}%");
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(10);
+                EditorGUILayout.HelpBox($"'{avatarRoot.name}' has no VRC Avatar Descriptor component. Select the avatar root GameObject.", MessageType.Error);
             }
 
             // Action Button
-            EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null);
-            
+            EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null || !hasDescriptor);
+
             if (GUILayout.Button($"Optimize Avatar for {config.Platform}", GUILayout.Height(38)))
             {
                 StartConversion();
             }
-            
+
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.Space(10);
 
@@ -306,6 +302,14 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Checks for a VRC Avatar Descriptor by type name so this window has no hard SDK dependency.
+        /// </summary>
+        private static bool HasAvatarDescriptor(GameObject go)
+        {
+            return go != null && go.GetComponents<Component>().Any(c => c != null && c.GetType().Name.Contains("AvatarDescriptor"));
         }
 
         private void UpdateStats()
