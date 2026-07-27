@@ -49,7 +49,7 @@ namespace Bluscream.VRC
                 var desc = VRCAvatarHelper.GetAvatarDescriptor(Selection.activeGameObject);
                 if (desc != null) return desc.gameObject;
             }
-            var allDescs = UnityEngine.Object.FindObjectsOfType<VRC.SDKBase.VRC_AvatarDescriptor>();
+            var allDescs = UnityEngine.Object.FindObjectsOfType<global::VRC.SDKBase.VRC_AvatarDescriptor>();
             return allDescs.Length > 0 ? allDescs[0].gameObject : null;
         }
 
