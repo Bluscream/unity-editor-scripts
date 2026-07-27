@@ -321,8 +321,8 @@ namespace Bluscream.VRC
                 case TextureImporterFormat.DXT1Crunched:
                 case TextureImporterFormat.BC4:
                 case TextureImporterFormat.ETC_RGB4:
-                case TextureImporterFormat.ETC2_RGB:
-                case TextureImporterFormat.ETC2_RGBA1:
+                case TextureImporterFormat.ETC2_RGB4:
+                case TextureImporterFormat.ETC2_RGB4_PUNCHTHROUGH_ALPHA:
                 case TextureImporterFormat.ETC_RGB4Crunched:
                     return 4.0f;
                 case TextureImporterFormat.DXT5:
@@ -353,7 +353,6 @@ namespace Bluscream.VRC
                     return 1.0f;
                 case TextureImporterFormat.RGBA32:
                 case TextureImporterFormat.ARGB32:
-                case TextureImporterFormat.BGRA32:
                     return 32.0f;
                 case TextureImporterFormat.RGB24:
                     return 24.0f;
