@@ -801,18 +801,16 @@ namespace Bluscream.VRC
                     }
                 }
 
-                bool isTestAvatar = PlatformSupportsBuildAndTest(builderInstance, builderType);
-                Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
-
-                // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
-                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
-
-                // Register live VRC_SdkBuilder callbacks AFTER Build() initializes (to avoid ClearCallbacks() wiping our listeners)
+                // Register live VRCSdkControlPanelAvatarBuilder instance events for detailed console feedback
                 RegisterBuildCallbacks(
+                    builderInstance,
                     onProgress: (status) => Debug.Log($"[VRChat SDK Live] Build Progress: {status}"),
                     onError:    (err) => Debug.LogError($"[VRChat SDK Live] Build Error: {err}"),
                     onSuccess:  (path) => Debug.Log($"[VRChat SDK Live] Build Success: {path}")
                 );
+
+                // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
+                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
                 if (taskObj is Task task)
                 {
@@ -920,45 +918,44 @@ namespace Bluscream.VRC
         }
 
         /// <summary>
-        /// Registers custom callbacks with VRChat SDK's VRC_SdkBuilder via reflection.
-        /// Allows other packages in dev.bluscream to hook into VRChat SDK build events cleanly.
+        /// Registers custom callbacks with VRChat SDK's VRCSdkControlPanelAvatarBuilder via reflection.
+        /// Allows other packages in dev.bluscream to hook into VRChat SDK build events cleanly without overwriting internal delegates.
         /// </summary>
-        public static bool RegisterBuildCallbacks(Action<string> onProgress = null, Action<string> onError = null, Action<string> onSuccess = null)
+        public static bool RegisterBuildCallbacks(object builderInstance, Action<string> onProgress = null, Action<string> onError = null, Action<string> onSuccess = null)
         {
+            if (builderInstance == null) return false;
+
             try
             {
-                Type sdkBuilderType = Type.GetType("VRC.SDKBase.Editor.BuildPipeline.VRC_SdkBuilder, VRC.SDKBase.Editor")
-                    ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDKBase.Editor.BuildPipeline.VRC_SdkBuilder");
-
-                if (sdkBuilderType == null) return false;
+                Type builderType = builderInstance.GetType();
 
                 if (onProgress != null)
                 {
-                    MethodInfo regProgress = sdkBuilderType.GetMethod("RegisterBuildProgressCallback", BindingFlags.Static | BindingFlags.Public);
-                    if (regProgress != null)
+                    EventInfo evtProgress = builderType.GetEvent("OnSdkBuildProgress", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (evtProgress != null)
                     {
-                        EventHandler<string> progressHandler = (s, status) => onProgress.Invoke(status);
-                        regProgress.Invoke(null, new object[] { progressHandler });
+                        EventHandler<string> handler = (s, msg) => onProgress.Invoke(msg);
+                        evtProgress.AddEventHandler(builderInstance, handler);
                     }
                 }
 
                 if (onError != null)
                 {
-                    MethodInfo regError = sdkBuilderType.GetMethod("RegisterBuildErrorCallback", BindingFlags.Static | BindingFlags.Public);
-                    if (regError != null)
+                    EventInfo evtError = builderType.GetEvent("OnSdkBuildError", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (evtError != null)
                     {
-                        EventHandler<string> errorHandler = (s, err) => onError.Invoke(err);
-                        regError.Invoke(null, new object[] { errorHandler });
+                        EventHandler<string> handler = (s, err) => onError.Invoke(err);
+                        evtError.AddEventHandler(builderInstance, handler);
                     }
                 }
 
                 if (onSuccess != null)
                 {
-                    MethodInfo regSuccess = sdkBuilderType.GetMethod("RegisterBuildSuccessCallback", BindingFlags.Static | BindingFlags.Public);
-                    if (regSuccess != null)
+                    EventInfo evtSuccess = builderType.GetEvent("OnSdkBuildSuccess", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (evtSuccess != null)
                     {
-                        Action<object, (string path, string signature)> successHandler = (s, res) => onSuccess.Invoke(res.path);
-                        regSuccess.Invoke(null, new object[] { successHandler });
+                        EventHandler<string> handler = (s, path) => onSuccess.Invoke(path);
+                        evtSuccess.AddEventHandler(builderInstance, handler);
                     }
                 }
 
@@ -966,7 +963,7 @@ namespace Bluscream.VRC
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Could not register VRC_SdkBuilder callbacks: {ex.Message}");
+                Debug.LogWarning($"[AvatarSDKEvaluator] Could not register VRCSdkControlPanelAvatarBuilder event handlers: {ex.Message}");
                 return false;
             }
         }
