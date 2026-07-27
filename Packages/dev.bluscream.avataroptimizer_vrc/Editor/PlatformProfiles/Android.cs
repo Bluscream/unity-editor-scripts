@@ -21,8 +21,23 @@ namespace Bluscream.VRCAvatarOptimizer
         public override bool ShouldRemoveComponentCustom(Component comp)
         {
             if (comp == null) return false;
+
+            Type compType = comp.GetType();
+            string typeName = compType.Name;
+            string typeNameLower = (compType.FullName ?? typeName).ToLowerInvariant();
+
             // VRCContact components are pruned separately via MaxContacts; not removed via blacklist
-            if (comp.GetType().Name.Contains("VRCContact")) return false;
+            if (typeName.Contains("VRCContact")) return false;
+
+            // Components that are never allowed on VRChat Mobile avatars (but legal on PC):
+            if (comp is Camera) return true;
+            if (comp is Joint) return true;
+            if (typeNameLower.Contains("dynamicbone")) return true;
+            if (typeNameLower.Contains("finalik") || typeNameLower.Contains("rootmotion")) return true;
+            if (typeNameLower.Contains("postprocess")) return true;
+            // Unity constraints are not mobile-whitelisted; VRChat constraints are and get pruned via MaxConstraints
+            if (typeNameLower.Contains("constraint") && !typeNameLower.Contains("vrc")) return true;
+
             return base.ShouldRemoveComponentCustom(comp);
         }
 

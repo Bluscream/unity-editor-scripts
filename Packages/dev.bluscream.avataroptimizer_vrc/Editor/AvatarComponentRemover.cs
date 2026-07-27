@@ -38,56 +38,72 @@ namespace Bluscream.VRCAvatarOptimizer
             List<GameObject> allGameObjects = avatarRoot.transform.CollectAllGameObjects();
             Debug.Log($"[AvatarComponentRemover] Starting component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects) using profile '{profile.Platform}_{profile.Rank}'.");
 
-            int total = allGameObjects.Count;
-            for (int i = 0; i < allGameObjects.Count; i++)
+            // Component removal can fail on dependency chains (e.g. a Joint that [RequireComponent]s a
+            // Rigidbody: DestroyImmediate on the Rigidbody logs an error and silently leaves it alive).
+            // The base-first sort handles the common cases; the fixpoint loop sweeps up whatever remains
+            // once its dependents were removed in an earlier pass.
+            const int maxPasses = 5;
+            for (int pass = 1; pass <= maxPasses; pass++)
             {
-                GameObject go = allGameObjects[i];
-                if (go == null) continue;
+                int removedThisPass = 0;
 
-                progressCallback?.Invoke($"Removing incompatible components ({i + 1}/{total})...");
-
-                Component[] components = go.GetComponents<Component>();
-
-                // Pass: Remove blacklisted / incompatible components
-                // Sort components so dependent scripts (e.g. VRCSpatialAudioSource) are removed BEFORE base components (e.g. AudioSource)
-                var toRemoveList = components.Where(c => c != null && ShouldRemoveComponent(c, profile)).ToList();
-                toRemoveList.Sort((a, b) =>
+                int total = allGameObjects.Count;
+                for (int i = 0; i < allGameObjects.Count; i++)
                 {
-                    bool isABase = a is AudioSource || a is Transform;
-                    bool isBBase = b is AudioSource || b is Transform;
-                    if (!isABase && isBBase) return -1;
-                    if (isABase && !isBBase) return 1;
-                    return 0;
-                });
+                    GameObject go = allGameObjects[i];
+                    if (go == null) continue;
 
-                foreach (Component comp in toRemoveList)
-                {
-                    if (comp == null) continue;
+                    progressCallback?.Invoke($"Removing incompatible components (pass {pass}, {i + 1}/{total})...");
 
-                    RemovedComponent removedComp = new RemovedComponent
-                    {
-                        gameObject = go,
-                        componentType = comp.GetType().FullName,
-                        gameObjectPath = GetGameObjectPath(go)
-                    };
+                    Component[] components = go.GetComponents<Component>();
 
-                    try
+                    // Sort components so dependent scripts (e.g. VRCSpatialAudioSource, Joints) are removed
+                    // BEFORE the base components they require (AudioSource, Rigidbody, Colliders).
+                    var toRemoveList = components.Where(c => c != null && ShouldRemoveComponent(c, profile)).ToList();
+                    toRemoveList.Sort((a, b) => GetRemovalOrder(a).CompareTo(GetRemovalOrder(b)));
+
+                    foreach (Component comp in toRemoveList)
                     {
-                        Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
-                        
-                        if (Application.isPlaying)
-                            UnityEngine.Object.Destroy(comp);
-                        else
-                            UnityEngine.Object.DestroyImmediate(comp, true);
-                        
-                        Debug.Log($"[AvatarComponentRemover] [Pass 2] Removed '{comp.GetType().Name}' from '{GetGameObjectPath(go)}'");
-                        removed.Add(removedComp);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{comp.GetType().Name}' from {go.name}: {e.Message}");
+                        if (comp == null) continue;
+
+                        RemovedComponent removedComp = new RemovedComponent
+                        {
+                            gameObject = go,
+                            componentType = comp.GetType().FullName,
+                            gameObjectPath = GetGameObjectPath(go)
+                        };
+                        string compTypeName = comp.GetType().Name;
+
+                        try
+                        {
+                            Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
+
+                            if (Application.isPlaying)
+                                UnityEngine.Object.Destroy(comp);
+                            else
+                                UnityEngine.Object.DestroyImmediate(comp, true);
+
+                            // DestroyImmediate does not throw on dependency failures — it logs an error
+                            // and leaves the component alive. Only count it if it is actually gone.
+                            if (comp == null)
+                            {
+                                Debug.Log($"[AvatarComponentRemover] [Pass {pass}] Removed '{compTypeName}' from '{GetGameObjectPath(go)}'");
+                                removed.Add(removedComp);
+                                removedThisPass++;
+                            }
+                            else if (pass == maxPasses)
+                            {
+                                Debug.LogWarning($"[AvatarComponentRemover] Could not remove '{compTypeName}' from '{GetGameObjectPath(go)}' — another component still depends on it.");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{compTypeName}' from {go.name}: {e.Message}");
+                        }
                     }
                 }
+
+                if (removedThisPass == 0) break; // fixpoint reached
             }
 
             // Delegate dedicated pruning passes to specialized optimizers
@@ -108,7 +124,22 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         /// <summary>
-        /// Determines if a component should be removed based on the given PlatformProfile
+        /// Removal ordering: dependent components (lower value) must be destroyed before the
+        /// base components they [RequireComponent] (higher value).
+        /// </summary>
+        private static int GetRemovalOrder(Component c)
+        {
+            if (c is Joint) return 0;               // Joints require Rigidbody
+            if (c is AudioSource) return 2;          // VRCSpatialAudioSource & co. require AudioSource
+            if (c is Rigidbody) return 2;
+            if (c is Collider) return 2;
+            return 1;                                // everything else in between
+        }
+
+        /// <summary>
+        /// Determines if a component should be removed based on the given PlatformProfile.
+        /// Platform-specific rules (e.g. the Quest component whitelist) live in the profile's
+        /// blacklist / ShouldRemoveComponentCustom — this method only applies profile-limit rules.
         /// </summary>
         public static bool ShouldRemoveComponent(Component comp, PlatformProfile profile)
         {
@@ -126,66 +157,34 @@ namespace Bluscream.VRCAvatarOptimizer
             if (profile.BlacklistedComponentNames.Contains(typeName) || profile.BlacklistedComponentNames.Contains(typeFullName))
                 return true;
 
-            // 3. Custom profile method check
+            // 3. Custom profile method check (platform-specific rules live here)
             if (profile.ShouldRemoveComponentCustom(comp))
                 return true;
 
-            string typeNameLower = typeFullName.ToLowerInvariant();
-
-            // Dynamic Bones
-            if (typeNameLower.Contains("dynamicbone") || typeName.Contains("DynamicBone"))
-                return true;
-
-            // Cloth
+            // 4. Profile-limit rules: only remove component classes the profile allows zero of
             if (comp is Cloth && profile.MaxClothComponents <= 0)
                 return true;
 
-            // Camera (avatars only)
-            if (comp is Camera)
-                return true;
-
-            // Light (avatars only)
             if (comp is Light && profile.MaxLights <= 0)
                 return true;
 
-            // AudioSource / VRCSpatialAudioSource (avatars only)
             if ((comp is AudioSource || typeName.Contains("AudioSource")) && profile.MaxAudioSources <= 0)
                 return true;
 
-            // Rigidbody
             if (comp is Rigidbody && profile.MaxRigidbodies <= 0)
                 return true;
 
-            // Joints
-            if (comp is Joint || compType.IsSubclassOf(typeof(Joint)))
-                return true;
-
-            // Particle Systems
             if (comp is ParticleSystem && profile.MaxParticleSystems <= 0)
                 return true;
 
-            // TrailRenderer
             if (comp is TrailRenderer && profile.MaxTrailRenderers <= 0)
                 return true;
 
-            // LineRenderer
             if (comp is LineRenderer && profile.MaxLineRenderers <= 0)
                 return true;
 
             // Physics Colliders (exclude PhysBoneColliders)
             if (comp is Collider && !typeName.Contains("VRCPhysBoneCollider") && profile.MaxPhysicsColliders <= 0)
-                return true;
-
-            // Constraints (non-VRChat)
-            if (typeNameLower.Contains("constraint") && !typeNameLower.Contains("vrchat"))
-                return true;
-
-            // FinalIK
-            if (typeNameLower.Contains("finalik") || typeNameLower.Contains("rootmotion.finalik"))
-                return true;
-
-            // Post-processing components
-            if (typeNameLower.Contains("postprocess") || typeNameLower.Contains("postprocesslayer"))
                 return true;
 
             return false;
