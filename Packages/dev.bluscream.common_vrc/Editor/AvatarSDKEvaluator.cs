@@ -899,11 +899,17 @@ namespace Bluscream.VRC
         }
 
         /// <summary>
-        /// Queries the VRChat SDK's PlatformSupportsBuildAndTest method via reflection to check if
-        /// local "Build & Test" mode is supported on the active build target platform (e.g. PC = true, Android/iOS = false).
+        /// Checks if local "Build & Test" mode is supported on the active build target platform (e.g. PC = true, Android/iOS = false).
         /// </summary>
         public static bool PlatformSupportsBuildAndTest(object builderInstance = null, Type builderType = null)
         {
+            // VRChat SDK only supports local Build & Test on Standalone Windows platform targets
+            BuildTarget activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            if (activeTarget != BuildTarget.StandaloneWindows64 && activeTarget != BuildTarget.StandaloneWindows)
+            {
+                return false;
+            }
+
             try
             {
                 if (builderType == null)
@@ -925,8 +931,7 @@ namespace Bluscream.VRC
             }
             catch { }
 
-            // Safe fallback if SDK reflection fails
-            return EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
+            return true;
         }
     }
 }
