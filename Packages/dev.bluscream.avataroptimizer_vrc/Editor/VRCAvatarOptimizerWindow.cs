@@ -55,7 +55,6 @@ namespace Bluscream.VRCAvatarOptimizer
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
-            config.AutoSwitchBuildTarget = (AutoSwitchBuildTarget)EditorPrefs.GetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)AutoSwitchBuildTarget.BeforeConversion);
         }
 
         private void SavePreferences()
@@ -79,7 +78,6 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
-            EditorPrefs.SetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)config.AutoSwitchBuildTarget);
         }
 
         private void OnGUI()
@@ -168,11 +166,6 @@ namespace Bluscream.VRCAvatarOptimizer
                 );
                 EditorGUI.indentLevel--;
             }
-
-            config.AutoSwitchBuildTarget = (AutoSwitchBuildTarget)EditorGUILayout.EnumPopup(
-                "Switch Build Target", 
-                config.AutoSwitchBuildTarget
-            );
 
             EditorGUILayout.Space(5);
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);

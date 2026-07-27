@@ -36,13 +36,6 @@ namespace Bluscream.VRCAvatarOptimizer
         InteractiveChecklist
     }
 
-    public enum AutoSwitchBuildTarget
-    {
-        [Description("Before Conversion")] BeforeConversion,
-        [Description("After Conversion")] AfterConversion,
-        [Description("Don't automatically switch")] DontSwitch
-    }
-
     /// <summary>
     /// Base abstract class for platform performance profiles defining resource and component limits
     /// according to official VRChat SDK Performance Rank specifications.

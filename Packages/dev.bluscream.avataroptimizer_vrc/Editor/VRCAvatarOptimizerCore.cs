@@ -37,7 +37,6 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
-            public AutoSwitchBuildTarget AutoSwitchBuildTarget = AutoSwitchBuildTarget.BeforeConversion;
             public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
 
@@ -56,13 +55,11 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             Debug.Log($"[VRCAvatarOptimizerCore] ===== Starting Avatar Conversion for '{avatarRoot.name}' =====");
-            Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, AutoSwitchTarget={config.AutoSwitchBuildTarget}");
+            Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, DeleteExistingTargetName={config.DeleteExistingTargetGameObjects}");
 
-            // Auto-switch build target "Before Conversion" if configured
-            if (config.AutoSwitchBuildTarget == AutoSwitchBuildTarget.BeforeConversion)
-            {
-                SwitchBuildTargetIfNeeded(config.Platform);
-            }
+            // Step 0: Always switch active build target to match target platform as mandatory first step
+            progressCallback?.Invoke($"Ensuring active build target is set to {config.Platform}...", 0.01f);
+            SwitchBuildTargetIfNeeded(config.Platform);
 
             // Delete placement location before starting if configured
             if (config.DeletePlacementLocationBeforeConversion)
@@ -387,7 +384,15 @@ namespace Bluscream.VRCAvatarOptimizer
             if (EditorUserBuildSettings.activeBuildTarget != expectedTarget)
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Switching active build target to {expectedTarget} ({expectedGroup})...");
-                EditorUserBuildSettings.SwitchActiveBuildTarget(expectedGroup, expectedTarget);
+                bool success = EditorUserBuildSettings.SwitchActiveBuildTarget(expectedGroup, expectedTarget);
+                if (success)
+                {
+                    Debug.Log($"[VRCAvatarOptimizerCore] Successfully switched build target to {expectedTarget}.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[VRCAvatarOptimizerCore] Build target switch to {expectedTarget} scheduled / pending.");
+                }
             }
         }
 
