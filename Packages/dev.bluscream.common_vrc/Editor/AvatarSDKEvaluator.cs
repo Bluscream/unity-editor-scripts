@@ -493,6 +493,94 @@ namespace Bluscream.VRC
             public string Category;
             public string Message;
             public UnityEngine.Object TargetObject;
+            public System.Action SelectAction;
+            public System.Action AutoFixAction;
+
+            public bool HasSelect => SelectAction != null;
+            public bool HasAutoFix => AutoFixAction != null;
+
+            public void InvokeSelect() => SelectAction?.Invoke();
+            public void InvokeAutoFix() => AutoFixAction?.Invoke();
+        }
+
+        /// <summary>
+        /// Attempts to extract live VRChat SDK validation alerts directly from the VRCSdkControlPanelBuilder instance,
+        /// including exact alert messages, target object pointers, Select actions, and Auto-Fix delegates.
+        /// </summary>
+        public static List<SDKAlert> GetSDKAlertsFromVRCSDK(GameObject avatarRoot)
+        {
+            var alerts = new List<SDKAlert>();
+            try
+            {
+                Type windowType = Type.GetType("VRCSdkControlPanel, VRCSDK3A-Editor")
+                    ?? Type.GetType("VRCSdkControlPanel, VRC.SDKBase.Editor")
+                    ?? Type.GetType("VRCSdkControlPanel");
+
+                if (windowType == null) return alerts;
+
+                FieldInfo windowInstanceField = windowType.GetField("Instance", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                object windowInstance = windowInstanceField?.GetValue(null);
+
+                if (windowInstance == null)
+                {
+                    UnityEngine.Object[] windows = Resources.FindObjectsOfTypeAll(windowType);
+                    if (windows != null && windows.Length > 0) windowInstance = windows[0];
+                }
+
+                if (windowInstance == null) return alerts;
+
+                FieldInfo builderField = windowType.GetField("_selectedBuilder", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                object selectedBuilder = builderField?.GetValue(windowInstance);
+
+                if (selectedBuilder == null) return alerts;
+
+                ExtractIssuesFromDict(selectedBuilder, "GUIErrors", AlertSeverity.Error, alerts);
+                ExtractIssuesFromDict(selectedBuilder, "GUIWarnings", AlertSeverity.Warning, alerts);
+                ExtractIssuesFromDict(selectedBuilder, "GUIInfos", AlertSeverity.Info, alerts);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Failed to reflect VRChat SDK Builder alerts: {ex.Message}");
+            }
+            return alerts;
+        }
+
+        private static void ExtractIssuesFromDict(object selectedBuilder, string dictFieldName, AlertSeverity severity, List<SDKAlert> alerts)
+        {
+            Type builderType = selectedBuilder.GetType();
+            FieldInfo dictField = builderType.GetField(dictFieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (dictField == null) return;
+
+            object dictObj = dictField.GetValue(selectedBuilder);
+            if (dictObj is System.Collections.IDictionary dict)
+            {
+                foreach (System.Collections.DictionaryEntry entry in dict)
+                {
+                    UnityEngine.Object targetObj = entry.Key as UnityEngine.Object;
+                    if (entry.Value is System.Collections.IEnumerable issueList)
+                    {
+                        foreach (object issue in issueList)
+                        {
+                            if (issue == null) continue;
+                            Type issueType = issue.GetType();
+
+                            string text = issueType.GetField("IssueText", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(issue) as string;
+                            System.Action showAct = issueType.GetField("ShowAction", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(issue) as System.Action;
+                            System.Action fixAct = issueType.GetField("FixAction", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(issue) as System.Action;
+
+                            alerts.Add(new SDKAlert
+                            {
+                                Severity = severity,
+                                Category = severity.ToString(),
+                                Message = text,
+                                TargetObject = targetObj,
+                                SelectAction = showAct,
+                                AutoFixAction = fixAct
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         private static string DetermineRating(AvatarStats stats, bool isMobile = false)
@@ -528,7 +616,9 @@ namespace Bluscream.VRC
         /// </summary>
         public static System.Collections.Generic.List<SDKAlert> GetSDKAlerts(GameObject avatarRoot)
         {
-            var alerts = new System.Collections.Generic.List<SDKAlert>();
+            var alerts = GetSDKAlertsFromVRCSDK(avatarRoot);
+            if (alerts.Count > 0) return alerts;
+
             if (avatarRoot == null) return alerts;
 
             AvatarStats stats = EvaluateAvatar(avatarRoot);
