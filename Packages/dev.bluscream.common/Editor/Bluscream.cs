@@ -643,6 +643,7 @@ namespace Bluscream
         {
             Dictionary<string, List<Shader>> shadersByPath = new Dictionary<string, List<Shader>>();
             
+            string[] shaderGuids = UnityEditor.AssetDatabase.FindAssets("t:Shader");
             const string hiddenGroupName = "Hidden";
             
             foreach (string guid in shaderGuids)
