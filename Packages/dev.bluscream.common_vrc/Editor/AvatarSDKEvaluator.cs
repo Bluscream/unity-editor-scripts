@@ -810,6 +810,7 @@ namespace Bluscream.VRC
                 );
 
                 // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
+                bool isTestAvatar = PlatformSupportsBuildAndTest(builderInstance, builderType);
                 object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
                 if (taskObj is Task task)
