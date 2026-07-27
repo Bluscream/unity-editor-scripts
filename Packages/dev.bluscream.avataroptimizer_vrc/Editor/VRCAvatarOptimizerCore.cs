@@ -346,11 +346,6 @@ namespace Bluscream.VRCAvatarOptimizer
                 Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
 
-                // Auto-switch build target "After Conversion" if configured
-                if (config.AutoSwitchBuildTarget == AutoSwitchBuildTarget.AfterConversion)
-                {
-                    SwitchBuildTargetIfNeeded(config.Platform);
-                }
             }
             catch (Exception e)
             {
