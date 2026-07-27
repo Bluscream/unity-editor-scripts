@@ -353,6 +353,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
 
             }
+            catch (OperationCanceledException)
+            {
+                // User canceled via the progress bar — let the caller (window) handle it, don't report success.
+                throw;
+            }
             catch (Exception e)
             {
                 summary.AddError($"Conversion failed: {e.Message}\n{e.StackTrace}");
@@ -379,8 +384,23 @@ namespace Bluscream.VRCAvatarOptimizer
 
         public static void SwitchBuildTargetIfNeeded(TargetPlatform targetPlatform)
         {
-            BuildTargetGroup expectedGroup = targetPlatform == TargetPlatform.Android ? BuildTargetGroup.Android : BuildTargetGroup.Standalone;
-            BuildTarget expectedTarget = targetPlatform == TargetPlatform.Android ? BuildTarget.Android : BuildTarget.StandaloneWindows64;
+            BuildTargetGroup expectedGroup;
+            BuildTarget expectedTarget;
+            switch (targetPlatform)
+            {
+                case TargetPlatform.Android:
+                    expectedGroup = BuildTargetGroup.Android;
+                    expectedTarget = BuildTarget.Android;
+                    break;
+                case TargetPlatform.iOS:
+                    expectedGroup = BuildTargetGroup.iOS;
+                    expectedTarget = BuildTarget.iOS;
+                    break;
+                default:
+                    expectedGroup = BuildTargetGroup.Standalone;
+                    expectedTarget = BuildTarget.StandaloneWindows64;
+                    break;
+            }
 
             if (EditorUserBuildSettings.activeBuildTarget != expectedTarget)
             {
