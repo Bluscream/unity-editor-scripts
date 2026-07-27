@@ -37,6 +37,7 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
+            public bool ClearEditorLogBeforeConversion = false;
             public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
 
@@ -46,6 +47,11 @@ namespace Bluscream.VRCAvatarOptimizer
             Action<string, float> progressCallback = null)
         {
             ConversionSummary summary = new ConversionSummary();
+
+            if (config.ClearEditorLogBeforeConversion)
+            {
+                ClearEditorLog();
+            }
 
             if (avatarRoot == null)
             {
@@ -388,6 +394,26 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     Debug.LogWarning($"[VRCAvatarOptimizerCore] Build target switch to {expectedTarget} scheduled / pending.");
                 }
+            }
+        }
+
+        public static void ClearEditorLog()
+        {
+            try
+            {
+                string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config/unity3d/Editor.log");
+                if (File.Exists(logPath))
+                {
+                    using (FileStream fs = new FileStream(logPath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))
+                    {
+                        fs.SetLength(0);
+                    }
+                    Debug.Log("[VRCAvatarOptimizerCore] Unity Editor.log cleared successfully before conversion.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[VRCAvatarOptimizerCore] Could not clear Editor.log: {ex.Message}");
             }
         }
 
