@@ -211,92 +211,40 @@ namespace Bluscream.VRCAvatarOptimizer
                 profile.ExecutePlatformConversions(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.95f));
                 profile.ValidatePlatformRules(targetAvatar, summary);
 
-                // Step 8.5: Multi-Stage Iterative AssetBundle Verification & Smart Quality Ladder
-                progressCallback?.Invoke("Building dry-run AssetBundle to verify compressed bundle size...", 0.98f);
-                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Running dry-run AssetBundle build verification for '{targetAvatar.name}'...");
-                
-                // Streamlined Quality Ladder for fast build verification: ASTC block formats + 25% Crunch steps
-                var formatLadderList = new List<(UnityEditor.TextureImporterFormat format, int quality, string name)>();
-                var astcFormats = new (UnityEditor.TextureImporterFormat format, string name)[]
-                {
-                    (UnityEditor.TextureImporterFormat.ASTC_4x4,   "ASTC 4x4"),
-                    (UnityEditor.TextureImporterFormat.ASTC_5x5,   "ASTC 5x5"),
-                    (UnityEditor.TextureImporterFormat.ASTC_6x6,   "ASTC 6x6"),
-                    (UnityEditor.TextureImporterFormat.ASTC_8x8,   "ASTC 8x8"),
-                    (UnityEditor.TextureImporterFormat.ASTC_10x10, "ASTC 10x10"),
-                    (UnityEditor.TextureImporterFormat.ASTC_12x12, "ASTC 12x12"),
-                };
-
-                foreach (var fmt in astcFormats)
-                {
-                    formatLadderList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)"));
-                    int stepSize = Math.Max(1, Math.Min(50, config.CrunchStepPercent));
-                    for (int q = 100 - stepSize; q >= 0; q -= stepSize)
-                    {
-                        int crunchPercent = 100 - q;
-                        formatLadderList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)"));
-                    }
-                }
-                var formatLadder = formatLadderList.ToArray();
-
-                int[] resCaps = new int[] { 4096, 2048, 1024, 512, 256, 128 }
-                    .Where(r => r <= config.MaxTextureResolution)
-                    .ToArray();
-                if (resCaps.Length == 0) resCaps = new int[] { config.MaxTextureResolution };
+                // Step 8.5: Fast Math Iterative AssetBundle Verification & Smart Quality Ladder
+                progressCallback?.Invoke("Verifying compressed AssetBundle size...", 0.98f);
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Verifying AssetBundle size for '{targetAvatar.name}'...");
 
                 long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
                 AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
-                long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024); // Convert MB headroom to Bytes
+                long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024);
                 long maxUncompressedBytes = Math.Max(1024 * 1024L /* 1 MB */, profile.MaxTextureMemoryBytes - headroomBytes);
                 bool bundleExceeds = (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
                 bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > maxUncompressedBytes);
 
                 if (bundleExceeds || uncompressedExceeds)
                 {
-                    bool fits = false;
-                    var importers = TextureCompressionEditor.GetUniqueTextureImporters(targetAvatar);
-                    int totalSteps = resCaps.Length * formatLadder.Length;
-                    int currentStepIdx = 0;
+                    double currentBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
+                    double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
+                    double targetUncompressedMB = maxUncompressedBytes / (1024.0 * 1024.0);
+                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds budget (Compressed: {currentBundleMB:F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Re-running fast downscaler pass...");
 
-                    foreach (int res in resCaps)
-                    {
-                        foreach (var step in formatLadder)
-                        {
-                            currentStepIdx++;
-                            double currentBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
-                            double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
-                            double targetUncompressedMB = maxUncompressedBytes / (1024.0 * 1024.0);
-                            float stepProgress = 0.96f + ((float)currentStepIdx / totalSteps) * 0.03f;
-                            
-                            string statusMsg = $"[Step 8.5 #{currentStepIdx}] Downscaling to {res}px {step.name}...";
-                            progressCallback?.Invoke(statusMsg, stepProgress);
-                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds limits (Compressed: {currentBundleMB:F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB > target {targetUncompressedMB:F1} MB). Downscaling attempt #{currentStepIdx}: Applying {res}px {step.name}...");
-                            
-                            TextureCompressionEditor.ApplyTextureSettings(importers, res, step.format, step.quality, (msg) => progressCallback?.Invoke($"Reimporting textures for {res}px {step.name}...", stepProgress));
-                            
-                            progressCallback?.Invoke($"Building dry-run AssetBundle...", stepProgress);
-                            bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
-                            currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+                    TextureCompressionEditor.OptimizeForTextureMemoryBudget(
+                        targetAvatar, 
+                        profile.MaxTextureMemoryBytes, 
+                        (msg) => progressCallback?.Invoke(msg, 0.98f),
+                        config.MaxTextureResolution,
+                        config.CrunchCompressionQuality,
+                        config.UncompressedAvatarHeadroomMB,
+                        config.CompressedAvatarHeadroomMB,
+                        config.CrunchStepPercent
+                    );
 
-                            bool passBundle = (maxBundleBytes == long.MaxValue || (bundleSizeBytes > 0 && bundleSizeBytes <= maxBundleBytes));
-                            bool passUncompressed = (currentStats.TotalTextureMemoryBytes <= maxUncompressedBytes);
-
-                            if (passBundle && passUncompressed)
-                            {
-                                fits = true;
-                                double newBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
-                                double newUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
-                                string successMsg = $"✓ Optimal quality achieved (Compressed: {newBundleMB:F2} MB ≤ 10 MB, Uncompressed TexMem: {newUncompressedMB:F2} MB ≤ {targetUncompressedMB:F1} MB): {res}px {step.name}!";
-                                progressCallback?.Invoke(successMsg, 0.99f);
-                                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] {successMsg}");
-                                summary.AddSuccess($"Verified avatar sizes (Compressed: {newBundleMB:F2} MB, Uncompressed TexMem: {newUncompressedMB:F2} MB) within limits using {res}px {step.name}.");
-                                break;
-                            }
-                        }
-                        if (fits) break;
-                    }
+                    progressCallback?.Invoke($"Building final dry-run AssetBundle verification...", 0.99f);
+                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                    currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 }
 
                 summary.CompressedAvatarSizeBytes = bundleSizeBytes;

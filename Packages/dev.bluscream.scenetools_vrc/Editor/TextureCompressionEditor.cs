@@ -309,31 +309,51 @@ namespace Bluscream.TextureCompressor
         {
             if (avatarRoot == null) return 0;
 
-            HashSet<TextureImporter> importers = GetUniqueTextureImporters(avatarRoot);
-            if (importers.Count == 0) return 0;
+            HashSet<TextureImporter> importersSet = GetUniqueTextureImporters(avatarRoot);
+            if (importersSet.Count == 0) return 0;
 
             // VRChat hard limits for Quest/Android: 40 MB total uncompressed limit & 10 MB compressed bundle limit
-            // Subtract user-configured headroom for mesh, skeleton, and animation payload
             long uncompressedHeadroomBytes = (long)(uncompressedHeadroomMB * 1024 * 1024);
             long effectiveUncompressedAvatarBudget = Math.Max(1024 * 1024L, Math.Min(uncompressedAvatarBudgetBytes, (40L * 1024 * 1024) - uncompressedHeadroomBytes));
-            // Subtract user-configured compressed headroom from VRChat's 10.0 MB hard compressed bundle limit
             long compressedHeadroomBytes = (long)(compressedHeadroomMB * 1024 * 1024);
             long effectiveCompressedAvatarBudget = Math.Max(512 * 1024L, (10L * 1024 * 1024) - compressedHeadroomBytes);
 
             int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
 
-            Debug.Log($"[TextureCompressor] Budgets — UncompressedAvatar: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB (Headroom: {uncompressedHeadroomMB:F1} MB), CompressedAvatar: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB (Headroom: {compressedHeadroomMB:F1} MB, {importers.Count} unique textures), MaxResCap: {maxResolutionCap}px, Crunch: {crunchCompressionRatio}% (Unity Quality: {unityCrunchQuality}%)");
+            // Pre-Filter Textures by Contribution (Sort descending by estimated raw memory)
+            var importerList = importersSet.Select(imp => {
+                long estimatedMemory = EstimateSingleTextureMemory(imp, maxResolutionCap, TextureImporterFormat.ASTC_4x4);
+                return new { Importer = imp, InitialMemory = estimatedMemory };
+            })
+            .OrderByDescending(x => x.InitialMemory)
+            .ToList();
 
-            // Define ASTC Compression Profiles: All ASTC block formats (4x4 to 12x12) with 5% Crunch quality steps
+            long totalInitialMemory = importerList.Sum(x => x.InitialMemory);
+            
+            // Only compress the textures that make up 95% of total memory to avoid touching small icons/utility maps
+            long accum = 0;
+            var targetImportersList = new List<TextureImporter>();
+            foreach (var item in importerList)
+            {
+                targetImportersList.Add(item.Importer);
+                accum += item.InitialMemory;
+                if (totalInitialMemory > 0 && ((double)accum / totalInitialMemory) >= 0.95)
+                    break;
+            }
+            HashSet<TextureImporter> targetImporters = new HashSet<TextureImporter>(targetImportersList);
+
+            Debug.Log($"[TextureCompressor] Budgets — Uncompressed: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB, Compressed: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB. Pre-filtered {targetImporters.Count}/{importersSet.Count} top contributing textures.");
+
+            // Define ASTC Compression Profiles
             var stepsList = new List<(TextureImporterFormat format, int quality, string name, double crunchRatio)>();
             var astcFormats = new (TextureImporterFormat format, string name, double baseRatio)[]
             {
                 (TextureImporterFormat.ASTC_4x4,   "ASTC 4x4",   1.00),
                 (TextureImporterFormat.ASTC_5x5,   "ASTC 5x5",   0.85),
                 (TextureImporterFormat.ASTC_6x6,   "ASTC 6x6",   0.70),
-                (TextureImporterFormat.ASTC_8x8,   "ASTC 8x8",   0.50),
-                (TextureImporterFormat.ASTC_10x10, "ASTC 10x10", 0.35),
-                (TextureImporterFormat.ASTC_12x12, "ASTC 12x12", 0.25),
+                (TextureImporterFormat.ASTC_8x8,   "ASTC 8x8",   0.25),
+                (TextureImporterFormat.ASTC_10x10, "ASTC 10x10", 0.16),
+                (TextureImporterFormat.ASTC_12x12, "ASTC 12x12", 0.125),
             };
 
             foreach (var fmt in astcFormats)
@@ -353,46 +373,60 @@ namespace Bluscream.TextureCompressor
             var resolutionLimits = allResolutionLimits.Where(r => r <= maxResolutionCap).ToArray();
             if (resolutionLimits.Length == 0) resolutionLimits = new int[] { maxResolutionCap };
 
-            int bestResolutionCap = resolutionLimits[0];
+            // Binary Search on Resolution Tier
+            int bestResolutionCap = resolutionLimits[resolutionLimits.Length - 1];
             TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_12x12;
             int bestQuality = unityCrunchQuality;
-
             bool budgetAchieved = false;
-            foreach (int maxRes in resolutionLimits)
+
+            int lowResIdx = 0;
+            int highResIdx = resolutionLimits.Length - 1;
+
+            while (lowResIdx <= highResIdx)
             {
+                int midResIdx = lowResIdx + (highResIdx - lowResIdx) / 2;
+                int candidateRes = resolutionLimits[midResIdx];
+                bool foundFitForRes = false;
+
                 foreach (var step in compressionSteps)
                 {
-                    long uncompressedAvatarEstimate = EstimateTotalTextureMemory(importers, maxRes, step.format);
+                    long uncompressedAvatarEstimate = EstimateTotalTextureMemory(importersSet, candidateRes, step.format);
                     long compressedAvatarEstimate   = (long)(uncompressedAvatarEstimate * step.crunchRatio);
 
                     bool uncompressedAvatarOk = uncompressedAvatarEstimate <= effectiveUncompressedAvatarBudget;
                     bool compressedAvatarOk   = compressedAvatarEstimate   <= effectiveCompressedAvatarBudget;
 
-                    Debug.Log($"[TextureCompressor] {maxRes}px {step.name}: " +
-                              $"UncompressedAvatar ~{uncompressedAvatarEstimate / (1024.0 * 1024.0):F2} MB [{(uncompressedAvatarOk ? "OK" : "OVER")}], " +
-                              $"CompressedAvatar ~{compressedAvatarEstimate / (1024.0 * 1024.0):F2} MB [{(compressedAvatarOk ? "OK" : "OVER")}]");
-
                     if (uncompressedAvatarOk && compressedAvatarOk)
                     {
-                        bestResolutionCap = maxRes;
+                        bestResolutionCap = candidateRes;
                         bestFormat        = step.format;
                         bestQuality       = step.quality;
+                        foundFitForRes    = true;
                         budgetAchieved    = true;
-                        Debug.Log($"[TextureCompressor] ✓ Selected: {maxRes}px {step.name} — " +
-                                  $"UncompressedAvatar ~{uncompressedAvatarEstimate / (1024.0 * 1024.0):F2} MB, CompressedAvatar ~{compressedAvatarEstimate / (1024.0 * 1024.0):F2} MB");
                         break;
                     }
                 }
-                if (budgetAchieved) break;
+
+                if (foundFitForRes)
+                {
+                    // Try to see if higher resolution can also fit
+                    highResIdx = midResIdx - 1;
+                }
+                else
+                {
+                    // Need lower resolution
+                    lowResIdx = midResIdx + 1;
+                }
             }
 
             if (!budgetAchieved)
             {
-                Debug.LogWarning($"[TextureCompressor] Could not meet dual budget within any resolution/format — applying minimum: 128px ASTC_12x12 Crunch 25%. Bundle may still exceed 10 MB.");
+                Debug.LogWarning($"[TextureCompressor] Could not meet dual budget within any resolution/format — applying minimum: 128px ASTC_12x12.");
             }
 
-            ApplyTextureSettings(importers, bestResolutionCap, bestFormat, bestQuality, progressCallback);
-            return importers.Count;
+            Debug.Log($"[TextureCompressor] Fast math selection: {bestResolutionCap}px {bestFormat} (Quality: {bestQuality}%). Reimporting batch...");
+            ApplyTextureSettings(targetImporters, bestResolutionCap, bestFormat, bestQuality, progressCallback);
+            return targetImporters.Count;
         }
 
         public static void ApplyTextureSettings(
@@ -404,7 +438,6 @@ namespace Bluscream.TextureCompressor
         {
             int total = importers.Count;
             int index = 0;
-            var pathsToReimport = new System.Collections.Generic.List<string>();
 
             AssetDatabase.StartAssetEditing();
             try
@@ -427,18 +460,12 @@ namespace Bluscream.TextureCompressor
                     androidSettings.compressionQuality = Math.Max(0, compressionQuality);
 
                     importer.SetPlatformTextureSettings(androidSettings);
-                    pathsToReimport.Add(importer.assetPath);
+                    importer.SaveAndReimport();
                 }
             }
             finally
             {
                 AssetDatabase.StopAssetEditing();
-            }
-
-            foreach (string path in pathsToReimport)
-            {
-                TextureImporter imp = AssetImporter.GetAtPath(path) as TextureImporter;
-                if (imp != null) imp.SaveAndReimport();
             }
 
             Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
@@ -605,50 +632,54 @@ namespace Bluscream.TextureCompressor
             return importers;
         }
 
-        private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
+        public static long EstimateSingleTextureMemory(TextureImporter imp, int maxResCap, TextureImporterFormat format)
         {
-            // Exact BPP values from Thry VRAM Calculator (TextureVRAM.cs)
+            if (imp == null) return 0;
             double bytesPerPixel = 1.0;
             switch (format)
             {
-                case TextureImporterFormat.ASTC_4x4: bytesPerPixel = 8.0 / 8.0; break;     // 1.000 BPP
-                case TextureImporterFormat.ASTC_5x5: bytesPerPixel = 5.12 / 8.0; break;    // 0.640 BPP
-                case TextureImporterFormat.ASTC_6x6: bytesPerPixel = 3.55 / 8.0; break;    // 0.44375 BPP
-                case TextureImporterFormat.ASTC_8x8: bytesPerPixel = 2.00 / 8.0; break;    // 0.250 BPP
-                case TextureImporterFormat.ASTC_10x10: bytesPerPixel = 1.28 / 8.0; break;  // 0.160 BPP
-                case TextureImporterFormat.ASTC_12x12: bytesPerPixel = 1.00 / 8.0; break;  // 0.125 BPP
+                case TextureImporterFormat.ASTC_4x4: bytesPerPixel = 8.0 / 8.0; break;
+                case TextureImporterFormat.ASTC_5x5: bytesPerPixel = 5.12 / 8.0; break;
+                case TextureImporterFormat.ASTC_6x6: bytesPerPixel = 3.55 / 8.0; break;
+                case TextureImporterFormat.ASTC_8x8: bytesPerPixel = 2.00 / 8.0; break;
+                case TextureImporterFormat.ASTC_10x10: bytesPerPixel = 1.28 / 8.0; break;
+                case TextureImporterFormat.ASTC_12x12: bytesPerPixel = 1.00 / 8.0; break;
             }
 
+            int srcWidth = maxResCap;
+            int srcHeight = maxResCap;
+            try
+            {
+                MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                if (getSourceSizeMethod != null)
+                {
+                    object[] args = new object[] { 0, 0 };
+                    getSourceSizeMethod.Invoke(imp, args);
+                    int w = (int)args[0];
+                    int h = (int)args[1];
+                    if (w > 0 && h > 0)
+                    {
+                        srcWidth = w;
+                        srcHeight = h;
+                    }
+                }
+            }
+            catch { }
+
+            double scale = Math.Min(1.0, (double)maxResCap / Math.Max(srcWidth, srcHeight));
+            int targetWidth = Math.Max(1, (int)(srcWidth * scale));
+            int targetHeight = Math.Max(1, (int)(srcHeight * scale));
+
+            double mipMapMultiplier = imp.mipmapEnabled ? 1.33333 : 1.0;
+            return (long)(targetWidth * targetHeight * bytesPerPixel * mipMapMultiplier);
+        }
+
+        private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
+        {
             long total = 0;
             foreach (var imp in importers)
             {
-                int srcWidth = maxResCap;
-                int srcHeight = maxResCap;
-                try
-                {
-                    MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                    if (getSourceSizeMethod != null)
-                    {
-                        object[] args = new object[] { 0, 0 };
-                        getSourceSizeMethod.Invoke(imp, args);
-                        int w = (int)args[0];
-                        int h = (int)args[1];
-                        if (w > 0 && h > 0)
-                        {
-                            srcWidth = w;
-                            srcHeight = h;
-                        }
-                    }
-                }
-                catch { }
-
-                // Scale dimensions while maintaining aspect ratio, capped at maxResCap
-                double scale = Math.Min(1.0, (double)maxResCap / Math.Max(srcWidth, srcHeight));
-                int targetWidth = Math.Max(1, (int)(srcWidth * scale));
-                int targetHeight = Math.Max(1, (int)(srcHeight * scale));
-
-                double mipMapMultiplier = imp.mipmapEnabled ? 1.33333 : 1.0;
-                total += (long)(targetWidth * targetHeight * bytesPerPixel * mipMapMultiplier);
+                total += EstimateSingleTextureMemory(imp, maxResCap, format);
             }
             return total;
         }
