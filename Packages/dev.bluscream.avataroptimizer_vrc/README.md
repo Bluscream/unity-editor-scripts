@@ -1,10 +1,16 @@
 # VRChat Avatar Optimizer (`dev.bluscream.avataroptimizer_vrc`)
 
-Automated, platform-aware avatar conversion and optimization pipeline targeting PC and Mobile (Android / iOS Quest) performance ranks for VRChat.
+Automated, platform-aware avatar conversion and optimization pipeline targeting PC and Mobile (Android/Quest, iOS) performance ranks for VRChat.
 
 ## Overview
 
-`dev.bluscream.avataroptimizer_vrc` automates cross-platform avatar optimization by downscaling textures, re-encoding materials to mobile-compliant toon shaders, pruning excess PhysBones, Contacts, Constraints, and particles, stripping blacklisted components, and re-writing animation clips.
+`dev.bluscream.avataroptimizer_vrc` automates cross-platform avatar optimization by downscaling textures, re-encoding materials to mobile-compliant shaders, pruning excess PhysBones, Contacts, Constraints, and particles, stripping mobile-incompatible components, decimating meshes, and rewriting animator controllers / animation clips / VRCFury components to point at the optimized materials.
+
+---
+
+## Editor Window
+
+`Bluscream/VRChat/Avatar Optimizer` — GUI dashboard for selecting the target platform and rank profile, previewing the avatar's current rating estimate, tuning texture/crunch budgets, and executing the conversion. The selected avatar root must have a VRC Avatar Descriptor.
 
 ---
 
@@ -14,82 +20,54 @@ Automated, platform-aware avatar conversion and optimization pipeline targeting 
 
 Core pipeline driver for platform conversion and optimization.
 
-#### Data Structures
-
-##### `OptimizerConfig`
-- `TargetPlatform`: `TargetPlatform` (`PC`, `Android`, `iOS`)
+#### `ConversionConfig`
+- `Platform`: `TargetPlatform` (`PC`, `Android`, `iOS`)
 - `TargetRank`: `AvatarPerformanceRank` (`Excellent`, `Good`, `Medium`, `Poor`, `VeryPoor`)
-- `MaxTextureResolution`: `int` (128, 256, 512, 1024, 2048, 4096)
-- `UncompressedAvatarHeadroomMB`: `float` (Default: `5.0f`)
-- `RemapShaders`: `bool`
-- `RemapMaterials`: `bool`
-- `PrunePhysBones`: `bool`
-- `PruneContacts`: `bool`
-- `PruneConstraints`: `bool`
-- `StripIncompatibleComponents`: `bool`
+- `PlacementLocation`: `AssetPlacementLocation` (`SeparateFolder` → `Assets/_AVATAROPTIMIZER/<TargetAvatarName>/`, `SameFolderAsOriginal`)
+- `PruningStrategy`: `PhysBonePruningStrategy` (`Disabled`, `DeepestFirst`, `ShallowestFirst`)
+- `DuplicateAvatar`: `bool` — clone the avatar instead of editing in place
+- `AddPlatformSuffixes`: `bool` — rename clone to `<Name> (<Platform>) [<Rank>]`
+- `AvatarSuffix`: `string` — custom clone suffix when `AddPlatformSuffixes` is off (`null` = none)
+- `RemoveIncompatibleComponents`, `ReplaceShaders`, `OptimizeTextures`, `DecimateMeshes`, `RemapAnimationsAndVRCFury`: `bool` pipeline toggles
+- `MaxTextureResolution`: `int` (128–4096)
+- `CrunchCompressionQuality`: `int` (0 = no crunch/raw ASTC … 100 = max crunch)
+- `UncompressedAvatarHeadroomMB` / `CompressedAvatarHeadroomMB`: `float` — headroom reserved for mesh/animation payload inside the VRAM / bundle-size budgets
+- `CrunchStepPercent`: `int` — granularity of the crunch quality ladder
+- `DeletePlacementLocationBeforeConversion`, `DeleteExistingTargetGameObjects`, `ClearEditorLogBeforeConversion`: `bool`
 
 #### Methods
-- `OptimizeAvatar(GameObject sourceAvatar, OptimizerConfig config, Action<string, float> progressCallback = null)`: `ConversionSummary`
-  - Runs full optimization pipeline on avatar duplicate and returns `ConversionSummary`.
-- `CreateOptimizedDuplicate(GameObject sourceAvatar, TargetPlatform platform)`: `GameObject`
-  - Creates a cleaned duplicate GameObject for platform optimization.
+- `ConvertAvatar(GameObject avatarRoot, ConversionConfig config, Action<string, float> progressCallback = null)`: `ConversionSummary`
+  - Runs the full pipeline (build-target switch → duplicate → component removal → material/shader remap → animation rewrite → texture budget → PhysBone pruning → decimation → slot/mesh consolidation → platform rules → bundle-size verification). Throws `OperationCanceledException` when canceled via the progress callback.
+- `GetTargetAvatarName(string sourceName, ConversionConfig config, PlatformProfile profile)`: `string`
+- `GetPlacementFolder(string targetAvatarName, AssetPlacementLocation location)`: `string`
+- `StripPlatformSuffix(string avatarName)`: `string`
+- `SwitchBuildTargetIfNeeded(TargetPlatform platform)`
+- `ClearEditorLog()` — truncates `Editor.log` (Windows/macOS/Linux)
 
 ---
 
-### 2. Platform Profiles System (`PlatformProfiles/`)
+### 2. Platform Profiles (`PlatformProfiles/`)
 
-Defines quantitative performance rank limits for PC and Mobile platforms.
+`PlatformProfile.GetProfile(TargetPlatform, AvatarPerformanceRank)` returns the quantitative limits for a platform/rank combination (triangles, skinned meshes, material slots, bones, texture memory, PhysBones/colliders/collision checks, contacts, constraints, particles, renderers, cloth, physics, lights, audio, bounds, asset-bundle size).
 
-#### Base Class: `PlatformProfile` (`PlatformProfiles/PlatformProfile.cs`)
-- `Platform`: `TargetPlatform`
-- `Rank`: `AvatarPerformanceRank`
-- `MaxTriangles`: `int`
-- `MaxSkinnedMeshes`: `int`
-- `MaxMeshRenderers`: `int`
-- `MaxMaterialSlots`: `int`
-- `MaxBones`: `int`
-- `MaxAnimators`: `int`
-- `MaxBoundsSize`: `Vector3`
-- `MaxTextureMemoryBytes`: `long` (e.g. `40 * 1024 * 1024L; // 40 MB`)
-- `MaxAssetBundleSizeBytes`: `long` (e.g. `10 * 1024 * 1024L; // 10 MB`)
-- `MaxPhysBoneComponents`: `int`
-- `MaxPhysBoneTransforms`: `int`
-- `MaxPhysBoneColliders`: `int`
-- `MaxPhysBoneCollisionChecks`: `int`
-- `MaxContacts`: `int`
-- `MaxConstraints`: `int`
-- `MaxConstraintDepth`: `int`
-- `MaxParticleSystems`: `int`
-- `MaxActiveParticles`: `int`
-- `MaxMeshParticlePolyCount`: `int`
-- `ParticleTrailsEnabledAllowed`: `bool`
-- `ParticleCollisionEnabledAllowed`: `bool`
-- `MaxTrailRenderers`: `int`
-- `MaxLineRenderers`: `int`
-- `MaxRaycasts`: `int`
-- `MaxClothComponents`: `int`
-- `MaxClothVertices`: `int`
-- `MaxPhysicsColliders`: `int`
-- `MaxRigidbodies`: `int`
-- `MaxLights`: `int`
-- `MaxAudioSources`: `int`
+Profiles also carry behavior:
+- `BlacklistedComponentNames` / `WhitelistedComponentNames` — per-platform component rules
+- `ShouldRemoveComponentCustom(Component)` — e.g. mobile profiles remove Cameras, Joints, DynamicBones, FinalIK, post-processing, and non-VRC constraints
+- `ExecutePlatformConversions(GameObject, ...)` — e.g. mobile pixel-light clamp
+- `ValidatePlatformRules(GameObject, ConversionSummary)` — bounds & material-slot warnings
 
-#### Concrete Profile Classes
-- **PC Profiles**: `PC/Excellent.cs`, `PC/Good.cs`, `PC/Medium.cs`, `PC/Poor.cs`, `PC/VeryPoor.cs`
-- **Android Profiles**: `Android/Excellent.cs`, `Android/Good.cs`, `Android/Medium.cs`, `Android/Poor.cs`, `Android/VeryPoor.cs`
-- **iOS Profiles**: `iOS/Excellent.cs`, `iOS/Good.cs`, `iOS/Medium.cs`, `iOS/Poor.cs`, `iOS/VeryPoor.cs`
+iOS profiles inherit all Android/Quest limits and rules.
 
 ---
 
-### 3. Pipeline Processing Modules
+### 3. Pipeline Modules
 
-- `AvatarComponentRemover` (`AvatarComponentRemover.cs`): Strips blacklisted components and prunes excess Contacts, Constraints, Trail/Line renderers, and Rigidbodies.
-- `AvatarPhysBonePruner` (`AvatarPhysBonePruner.cs`): Calculates PhysBone transform trees and prunes excess components/colliders to fit target profile limits.
-- `ShaderMapping` & `ShaderPropertyMapper` (`ShaderMapping.cs`, `ShaderPropertyMapper.cs`): Remaps Poiyomi/LilToon/Standard materials to VRChat Mobile Toon shaders while mapping property values.
-- `AvatarAnimationRewriter` (`AvatarAnimationRewriter.cs`): Rewrites animator controllers and animation clips when components or transform paths are modified during optimization.
-
----
-
-## Editor Windows
-
-- `VRCAvatarOptimizerWindow` (`Tools/Bluscream/VRChat/Avatar Optimizer`): GUI dashboard for selecting target platform, rank profile, previewing SDK alerts, and executing avatar conversion.
+- `AvatarComponentRemover` — strips blacklisted/incompatible components (dependency-aware, multi-pass) and prunes excess Animators, Lights, AudioSources, and Cloth.
+- `AvatarPhysBonePruner` — prunes PhysBone components/colliders and trims collider lists to meet component, transform, collider, and collision-check limits using the configured strategy.
+- `AvatarContactOptimizer` / `AvatarConstraintOptimizer` — prune excess VRCContact / constraint components.
+- `AvatarParticleOptimizer` — prunes particle systems and trail/line renderers, caps particle counts and mesh-particle polygons, disables forbidden trail/collision modules.
+- `AvatarMaterialSlotOptimizer` — deduplicates identical materials and consolidates duplicate submesh slots.
+- `AvatarMeshCountOptimizer` — combines same-parent static meshes when over the renderer limit (keeps GameObjects, persists combined meshes).
+- `ShaderMapping` / `ShaderPropertyMapper` — maps Poiyomi/lilToon/Standard/etc. shaders to `VRChat/Mobile/*` shaders and transfers compatible properties (mappings configurable via `Editor/Resources/ShaderPropertyMappings.json`).
+- `AvatarAnimationRewriter` — duplicates and rewrites AnimatorControllers, AnimatorOverrideControllers, AnimationClips (material-swap curves), and VRCFury component references to use the optimized materials.
+- `ConversionSummary` — before/after stats table, warnings/errors list, and console report rendered against the target profile's limits.

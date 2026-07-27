@@ -242,7 +242,6 @@ namespace Bluscream.VRCAvatarOptimizer
             // For now, we'll work with the material directly
             try
             {
-                #if UNITY_2021_2_OR_NEWER
                 // Get source shader properties
                 int sourcePropertyCount = UnityEditor.ShaderUtil.GetPropertyCount(sourceMaterial.shader);
                 for (int i = 0; i < sourcePropertyCount; i++)
@@ -276,11 +275,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         result.FailedProperties.Add($"{sourcePropertyName}: {e.Message}");
                     }
                 }
-                #else
-                // For older Unity versions, transfer common properties manually
-                TransferCommonProperties(sourceMaterial, targetMaterial, targetShader, result);
-                #endif
-                
+
                 result.Success = true;
             }
             catch (Exception e)
@@ -387,33 +382,39 @@ namespace Bluscream.VRCAvatarOptimizer
             return false;
         }
 
-        private static string GetTargetPropertyName(string sourcePropertyName, Shader targetShader)
+        // Cache of target shader property names (case-insensitive lookup -> exact shader casing)
+        // to avoid re-enumerating the shader for every transferred property
+        private static readonly Dictionary<Shader, Dictionary<string, string>> TargetShaderPropertyCache = new Dictionary<Shader, Dictionary<string, string>>();
+
+        private static Dictionary<string, string> GetShaderPropertyNames(Shader shader)
         {
-            // Check universal mappings first
-            if (UniversalPropertyMappings.TryGetValue(sourcePropertyName, out string mappedName))
+            if (!TargetShaderPropertyCache.TryGetValue(shader, out Dictionary<string, string> names))
             {
-                // Verify target shader has this property
-                #if UNITY_2021_2_OR_NEWER
-                int propertyCount = UnityEditor.ShaderUtil.GetPropertyCount(targetShader);
+                names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                int propertyCount = UnityEditor.ShaderUtil.GetPropertyCount(shader);
                 for (int i = 0; i < propertyCount; i++)
                 {
-                    if (UnityEditor.ShaderUtil.GetPropertyName(targetShader, i).Equals(mappedName, StringComparison.OrdinalIgnoreCase))
-                        return mappedName;
+                    string name = UnityEditor.ShaderUtil.GetPropertyName(shader, i);
+                    names[name] = name;
                 }
-                #endif
+                TargetShaderPropertyCache[shader] = names;
             }
-            
+            return names;
+        }
+
+        private static string GetTargetPropertyName(string sourcePropertyName, Shader targetShader)
+        {
+            Dictionary<string, string> targetProps = GetShaderPropertyNames(targetShader);
+
+            // Check universal mappings first (only valid if the target shader actually has the property).
+            // Material property access is case-sensitive, so always return the shader's exact casing.
+            if (UniversalPropertyMappings.TryGetValue(sourcePropertyName, out string mappedName) && targetProps.TryGetValue(mappedName, out string exactMapped))
+                return exactMapped;
+
             // If direct mapping doesn't exist in target, try exact match
-            #if UNITY_2021_2_OR_NEWER
-            int targetPropertyCount = UnityEditor.ShaderUtil.GetPropertyCount(targetShader);
-            for (int i = 0; i < targetPropertyCount; i++)
-            {
-                string targetPropName = UnityEditor.ShaderUtil.GetPropertyName(targetShader, i);
-                if (targetPropName.Equals(sourcePropertyName, StringComparison.OrdinalIgnoreCase))
-                    return targetPropName;
-            }
-            #endif
-            
+            if (targetProps.TryGetValue(sourcePropertyName, out string exactName))
+                return exactName;
+
             return null;
         }
 
@@ -476,49 +477,6 @@ namespace Bluscream.VRCAvatarOptimizer
                     break;
             }
         }
-
-        private static void TransferCommonProperties(
-            Material source,
-            Material target,
-            Shader targetShader,
-            PropertyTransferResult result)
-        {
-            string[] commonProperties = { "_MainTex", "_Color", "_BumpMap", "_BumpScale", "_EmissionMap", "_EmissionColor", "_Cutoff" };
-            
-            foreach (string propName in commonProperties)
-            {
-                if (source.HasProperty(propName) && target.HasProperty(propName))
-                {
-                    try
-                    {
-                        if (propName.Contains("Tex") || propName.Contains("Map"))
-                        {
-                            Texture tex = source.GetTexture(propName);
-                            if (tex != null)
-                            {
-                                target.SetTexture(propName, tex);
-                                result.PropertiesTransferred++;
-                            }
-                        }
-                        else if (propName.Contains("Color"))
-                        {
-                            target.SetColor(propName, source.GetColor(propName));
-                            result.PropertiesTransferred++;
-                        }
-                        else
-                        {
-                            target.SetFloat(propName, source.GetFloat(propName));
-                            result.PropertiesTransferred++;
-                        }
-                    }
-                    catch
-                    {
-                        result.PropertiesFailed++;
-                    }
-                }
-            }
-        }
-
 
         /// <summary>
         /// Result of property transfer operation
