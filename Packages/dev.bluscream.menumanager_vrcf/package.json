@@ -1,18 +1,20 @@
 {
   "name": "dev.bluscream.menumanager_vrcf",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "displayName": "VRCFury Menu Manager",
   "description": "A tool to mass re-organize and visually edit VRChat avatar menus using VRCFury.",
   "unity": "2019.4",
   "dependencies": {
-    "dev.bluscream.common": "1.0.1",
-    "dev.bluscream.common_vrc": "1.0.1",
+    "dev.bluscream.common": "1.2.0",
+    "dev.bluscream.common_vrc": "1.2.0",
+    "dev.bluscream.common_vrcf": "1.2.0",
     "com.vrchat.avatars": "3.0.0",
     "com.vrcfury.vrcfury": "1.0.0"
   },
   "vpmDependencies": {
-    "dev.bluscream.common": "1.0.1",
-    "dev.bluscream.common_vrc": "1.0.1",
+    "dev.bluscream.common": "1.2.0",
+    "dev.bluscream.common_vrc": "1.2.0",
+    "dev.bluscream.common_vrcf": "1.2.0",
     "com.vrchat.avatars": "3.0.0",
     "com.vrcfury.vrcfury": "1.0.0"
   },

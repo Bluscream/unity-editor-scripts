@@ -12,6 +12,7 @@ namespace Bluscream
     /// </summary>
     public static class Utils
     {
+        public const string COMMON_VERSION = "1.2.0";
         /// <summary>
         /// Gets the full path of a GameObject in the hierarchy
         /// </summary>
@@ -641,9 +642,6 @@ namespace Bluscream
         public static Dictionary<string, List<Shader>> GetShadersByPath()
         {
             Dictionary<string, List<Shader>> shadersByPath = new Dictionary<string, List<Shader>>();
-            
-            // Find all shaders in the project
-            string[] shaderGuids = UnityEditor.AssetDatabase.FindAssets("t:Shader");
             
             const string hiddenGroupName = "Hidden";
             

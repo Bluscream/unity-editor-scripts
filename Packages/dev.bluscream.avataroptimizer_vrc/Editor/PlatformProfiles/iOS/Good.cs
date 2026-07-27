@@ -7,20 +7,33 @@ namespace Bluscream.VRCAvatarOptimizer
         public override AvatarPerformanceRank Rank => AvatarPerformanceRank.Good;
         public PlatformProfile_iOS_Good()
         {
-            MaxTriangles = 15000;
-            MaxSkinnedMeshes = 2;
-            MaxMeshRenderers = 2;
-            MaxMaterialSlots = 2;
+            MaxTriangles = 10000;
+            MaxSkinnedMeshes = 1;
+            MaxMeshRenderers = 1;
+            MaxMaterialSlots = 1;
             MaxBones = 90;
             MaxAnimators = 1;
             MaxBoundsSize = new Vector3(4f, 4f, 4f);
-            MaxTextureMemoryBytes = 10 * 1024 * 1024L;
-            MaxPhysBoneComponents = 8;
+            MaxTextureMemoryBytes = 18 * 1024 * 1024L; // 18 MB
+            MaxPhysBoneComponents = 4;
             MaxPhysBoneTransforms = 16;
-            MaxPhysBoneColliders = 8;
+            MaxPhysBoneColliders = 4;
             MaxPhysBoneCollisionChecks = 16;
-            MaxMeshParticlePolyCount = 0;
+            MaxContacts = 4;
+            MaxConstraints = 60;
+            MaxConstraintDepth = 15;
             MaxParticleSystems = 0;
+            MaxActiveParticles = 0;
+            MaxMeshParticlePolyCount = 0;
+            ParticleTrailsEnabledAllowed = false;
+            ParticleCollisionEnabledAllowed = false;
+            MaxTrailRenderers = 0;
+            MaxLineRenderers = 0;
+            MaxRaycasts = 2;
+            MaxClothComponents = 0;
+            MaxClothVertices = 0;
+            MaxPhysicsColliders = 0;
+            MaxRigidbodies = 0;
             MaxLights = 0;
             MaxAudioSources = 0;
         }

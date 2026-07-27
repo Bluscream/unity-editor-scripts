@@ -1,20 +1,20 @@
 {
   "name": "dev.bluscream.avataroptimizer_vrc",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "displayName": "Avatar Optimizer (VRChat)",
   "description": "Automated tool to convert and optimize VRChat avatars across platforms (PC & Android/Quest) according to SDK performance limits and profiles.",
   "unity": "2019.4",
   "dependencies": {
-    "dev.bluscream.common": "1.0.1",
-    "dev.bluscream.common_vrc": "1.0.1",
-    "dev.bluscream.scenetools_vrc": "1.0.1",
-    "dev.bluscream.mobiledecimater_vrc": "1.0.1"
+    "dev.bluscream.common": "1.2.0",
+    "dev.bluscream.common_vrc": "1.2.0",
+    "dev.bluscream.scenetools_vrc": "1.2.0",
+    "dev.bluscream.mobiledecimater_vrc": "1.2.0"
   },
   "vpmDependencies": {
-    "dev.bluscream.common": "1.0.1",
-    "dev.bluscream.common_vrc": "1.0.1",
-    "dev.bluscream.scenetools_vrc": "1.0.1",
-    "dev.bluscream.mobiledecimater_vrc": "1.0.1"
+    "dev.bluscream.common": "1.2.0",
+    "dev.bluscream.common_vrc": "1.2.0",
+    "dev.bluscream.scenetools_vrc": "1.2.0",
+    "dev.bluscream.mobiledecimater_vrc": "1.2.0"
   },
   "author": {
     "name": "VRC-QuestPatcher"

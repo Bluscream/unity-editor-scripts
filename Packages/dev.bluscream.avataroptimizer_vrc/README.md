@@ -1,86 +1,95 @@
-# Avatar Optimizer (VRChat)
+# VRChat Avatar Optimizer (`dev.bluscream.avataroptimizer_vrc`)
 
-Automated tool to convert and optimize VRChat avatars across platforms (PC & Android/Quest) according to SDK performance limits and profiles.
+Automated, platform-aware avatar conversion and optimization pipeline targeting PC and Mobile (Android / iOS Quest) performance ranks for VRChat.
 
-## Features
+## Overview
 
-- **Component Removal**: Automatically removes Quest-incompatible components (DynamicBones, Cloth, Cameras, Lights, AudioSources, Physics components, etc.)
-- **Shader Replacement**: Replaces PC shaders with Quest-compatible VRChat/Mobile shaders using intelligent matching
-- **Texture Optimization**: Multi-stage ASTC / ETC2 texture compression with fine 5% Crunch quality steps and uncompressed/compressed headroom controls
-- **Mesh Decimation**: Automatic polygon reduction to fit target performance rank poly limits
-- **PhysBone Pruning**: Prunes PhysBone components, transforms, colliders, and collision checks to hit target rank limits
-- **VRCFury & Animation Remap**: Automatically remaps VRCFury toggles, material swaps, and animation clips for converted avatars
-- **Dry-run Build Verification**: Verifies both uncompressed texture memory and real `.vrca` AssetBundle disk size before upload
-- **Detailed Summary**: Shows before/after performance stats with clickable object references
+`dev.bluscream.avataroptimizer_vrc` automates cross-platform avatar optimization by downscaling textures, re-encoding materials to mobile-compliant toon shaders, pruning excess PhysBones, Contacts, Constraints, and particles, stripping blacklisted components, and re-writing animation clips.
 
-## Usage
+---
 
-1. Open the window: `Tools > Avatar Optimizer`
-2. Drag your avatar root GameObject (with VRC_AvatarDescriptor) into the drop area
-3. Configure options:
-   - Enable/disable component removal
-   - Enable/disable shader replacement
-   - Enable/disable texture optimization
-   - Set compression quality and texture size limits
-4. Click "Start Conversion"
-5. Review the summary and click on any errors/warnings to jump to the affected objects
+## API Reference
 
-## Shader Replacement
+### 1. `VRCAvatarOptimizerCore` (`VRCAvatarOptimizerCore.cs`)
 
-The tool uses a comprehensive lookup table and automatic pattern matching to replace shaders:
+Core pipeline driver for platform conversion and optimization.
 
-- **Poiyomi shaders** → `VRChat/Mobile/Toon Standard` or `Toon Lit`
-- **Unity Standard** → `VRChat/Mobile/Standard Lite`
-- **Unity Standard (Specular)** → `VRChat/Mobile/Bumped Mapped Specular`
-- **Unity Diffuse** → `VRChat/Mobile/Diffuse`
-- And many more patterns...
+#### Data Structures
 
-If no exact match is found, the tool attempts automatic keyword-based matching.
+##### `OptimizerConfig`
+- `TargetPlatform`: `TargetPlatform` (`PC`, `Android`, `iOS`)
+- `TargetRank`: `AvatarPerformanceRank` (`Excellent`, `Good`, `Medium`, `Poor`, `VeryPoor`)
+- `MaxTextureResolution`: `int` (128, 256, 512, 1024, 2048, 4096)
+- `UncompressedAvatarHeadroomMB`: `float` (Default: `5.0f`)
+- `RemapShaders`: `bool`
+- `RemapMaterials`: `bool`
+- `PrunePhysBones`: `bool`
+- `PruneContacts`: `bool`
+- `PruneConstraints`: `bool`
+- `StripIncompatibleComponents`: `bool`
 
-## Quest-Compatible Shaders
+#### Methods
+- `OptimizeAvatar(GameObject sourceAvatar, OptimizerConfig config, Action<string, float> progressCallback = null)`: `ConversionSummary`
+  - Runs full optimization pipeline on avatar duplicate and returns `ConversionSummary`.
+- `CreateOptimizedDuplicate(GameObject sourceAvatar, TargetPlatform platform)`: `GameObject`
+  - Creates a cleaned duplicate GameObject for platform optimization.
 
-The following shaders are Quest-compatible and will be used for replacements:
+---
 
-- `VRChat/Mobile/Toon Standard`
-- `VRChat/Mobile/Toon Lit`
-- `VRChat/Mobile/Standard Lite`
-- `VRChat/Mobile/Bumped Diffuse`
-- `VRChat/Mobile/Bumped Mapped Specular`
-- `VRChat/Mobile/Diffuse`
-- `VRChat/Mobile/Matcap Lit`
-- `VRChat/Mobile/Particles/Additive`
-- `VRChat/Mobile/Particles/Multiply`
+### 2. Platform Profiles System (`PlatformProfiles/`)
 
-## Removed Components
+Defines quantitative performance rank limits for PC and Mobile platforms.
 
-The following components are removed for Quest compatibility:
+#### Base Class: `PlatformProfile` (`PlatformProfiles/PlatformProfile.cs`)
+- `Platform`: `TargetPlatform`
+- `Rank`: `AvatarPerformanceRank`
+- `MaxTriangles`: `int`
+- `MaxSkinnedMeshes`: `int`
+- `MaxMeshRenderers`: `int`
+- `MaxMaterialSlots`: `int`
+- `MaxBones`: `int`
+- `MaxAnimators`: `int`
+- `MaxBoundsSize`: `Vector3`
+- `MaxTextureMemoryBytes`: `long` (e.g. `40 * 1024 * 1024L; // 40 MB`)
+- `MaxAssetBundleSizeBytes`: `long` (e.g. `10 * 1024 * 1024L; // 10 MB`)
+- `MaxPhysBoneComponents`: `int`
+- `MaxPhysBoneTransforms`: `int`
+- `MaxPhysBoneColliders`: `int`
+- `MaxPhysBoneCollisionChecks`: `int`
+- `MaxContacts`: `int`
+- `MaxConstraints`: `int`
+- `MaxConstraintDepth`: `int`
+- `MaxParticleSystems`: `int`
+- `MaxActiveParticles`: `int`
+- `MaxMeshParticlePolyCount`: `int`
+- `ParticleTrailsEnabledAllowed`: `bool`
+- `ParticleCollisionEnabledAllowed`: `bool`
+- `MaxTrailRenderers`: `int`
+- `MaxLineRenderers`: `int`
+- `MaxRaycasts`: `int`
+- `MaxClothComponents`: `int`
+- `MaxClothVertices`: `int`
+- `MaxPhysicsColliders`: `int`
+- `MaxRigidbodies`: `int`
+- `MaxLights`: `int`
+- `MaxAudioSources`: `int`
 
-- DynamicBone (use PhysBones instead)
-- Cloth
-- Camera (on avatars)
-- Light (on avatars)
-- AudioSource (on avatars)
-- Rigidbody, Collider, Joint (on avatars)
-- ParticleSystem (with limits)
-- Unity Constraints
-- FinalIK
-- Post-processing components
+#### Concrete Profile Classes
+- **PC Profiles**: `PC/Excellent.cs`, `PC/Good.cs`, `PC/Medium.cs`, `PC/Poor.cs`, `PC/VeryPoor.cs`
+- **Android Profiles**: `Android/Excellent.cs`, `Android/Good.cs`, `Android/Medium.cs`, `Android/Poor.cs`, `Android/VeryPoor.cs`
+- **iOS Profiles**: `iOS/Excellent.cs`, `iOS/Good.cs`, `iOS/Medium.cs`, `iOS/Poor.cs`, `iOS/VeryPoor.cs`
 
-## Backup
+---
 
-Backups are automatically created before conversion and include:
+### 3. Pipeline Processing Modules
 
-- Material shader paths and properties
-- Component inventory
-- Texture import settings
+- `AvatarComponentRemover` (`AvatarComponentRemover.cs`): Strips blacklisted components and prunes excess Contacts, Constraints, Trail/Line renderers, and Rigidbodies.
+- `AvatarPhysBonePruner` (`AvatarPhysBonePruner.cs`): Calculates PhysBone transform trees and prunes excess components/colliders to fit target profile limits.
+- `ShaderMapping` & `ShaderPropertyMapper` (`ShaderMapping.cs`, `ShaderPropertyMapper.cs`): Remaps Poiyomi/LilToon/Standard materials to VRChat Mobile Toon shaders while mapping property values.
+- `AvatarAnimationRewriter` (`AvatarAnimationRewriter.cs`): Rewrites animator controllers and animation clips when components or transform paths are modified during optimization.
 
-Backups are stored in the configured location (default: `Assets/VRCQuestPatcherBackups/`)
+---
 
-## Requirements
+## Editor Windows
 
-- Unity 2019.4 or later
-- VRChat SDK (for VRC_AvatarDescriptor component)
-
-## Compatibility
-
-The package is compatible with Unity versions 2019.4 through 2023.3+ with appropriate version-specific code paths.
+- `VRCAvatarOptimizerWindow` (`Tools/Bluscream/VRChat/Avatar Optimizer`): GUI dashboard for selecting target platform, rank profile, previewing SDK alerts, and executing avatar conversion.

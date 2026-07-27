@@ -1,9 +1,9 @@
 {
-    "name": "dev.bluscream.menumanager_vrcf.Editor",
+    "name": "dev.bluscream.common_vrcf.Editor",
+    "rootNamespace": "Bluscream.VRCFury",
     "references": [
         "dev.bluscream.common.Editor",
         "dev.bluscream.common_vrc.Editor",
-        "dev.bluscream.common_vrcf.Editor",
         "VRC.SDK3A",
         "VRC.SDK3A.Editor",
         "VRC.SDKBase",

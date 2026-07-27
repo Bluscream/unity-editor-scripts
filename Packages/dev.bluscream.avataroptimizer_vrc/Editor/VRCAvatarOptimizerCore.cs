@@ -243,8 +243,8 @@ namespace Bluscream.VRCAvatarOptimizer
                 long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
 
                 AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
-                long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024);
-                long maxUncompressedBytes = Math.Max(1024 * 1024L, profile.MaxTextureMemoryBytes - headroomBytes);
+                long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024); // Convert MB headroom to Bytes
+                long maxUncompressedBytes = Math.Max(1024 * 1024L /* 1 MB */, profile.MaxTextureMemoryBytes - headroomBytes);
                 bool bundleExceeds = (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
                 bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > maxUncompressedBytes);
 
@@ -469,6 +469,29 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Shader swap: '{originalShaderName}' → '{replacement.ReplacementShader.name}' on '{questMat.name}'");
                 Undo.RegisterCompleteObjectUndo(questMat, "Replace Shader for Quest");
+
+                // Unity throws an error/warning if questMat is a Material Variant when changing questMat.shader.
+                // If it is a variant, convert it to a standard Material asset.
+                if (questMat.isVariant)
+                {
+                    string assetPath = AssetDatabase.GetAssetPath(questMat);
+                    Debug.Log($"[VRCAvatarOptimizerCore] Material '{questMat.name}' at '{assetPath}' is a Material Variant. Converting to a standard Material asset before shader replacement.");
+                    Material nonVariantMat = new Material(questMat);
+                    nonVariantMat.name = questMat.name;
+                    if (!string.IsNullOrEmpty(assetPath))
+                    {
+                        AssetDatabase.DeleteAsset(assetPath);
+                        AssetDatabase.CreateAsset(nonVariantMat, assetPath);
+                        AssetDatabase.SaveAssets();
+                        AssetDatabase.Refresh();
+                        questMat = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
+                    }
+                    else
+                    {
+                        questMat = nonVariantMat;
+                    }
+                }
+
                 Material tempMat = new Material(questMat);
 
                 questMat.shader = replacement.ReplacementShader;

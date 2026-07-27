@@ -10,19 +10,32 @@ namespace Bluscream.VRCAvatarOptimizer
             MaxTriangles = 70000;
             MaxSkinnedMeshes = 8;
             MaxMeshRenderers = 16;
-            MaxMaterialSlots = 32;
-            MaxBones = 250;
-            MaxAnimators = 4;
+            MaxMaterialSlots = 16;
+            MaxBones = 256;
+            MaxAnimators = 16;
             MaxBoundsSize = new Vector3(5f, 6f, 5f);
-            MaxTextureMemoryBytes = 150 * 1024 * 1024L;
+            MaxTextureMemoryBytes = 110 * 1024 * 1024L; // 110 MB
             MaxPhysBoneComponents = 16;
-            MaxPhysBoneTransforms = 64;
+            MaxPhysBoneTransforms = 128;
             MaxPhysBoneColliders = 16;
-            MaxPhysBoneCollisionChecks = 64;
-            MaxMeshParticlePolyCount = 5000;
+            MaxPhysBoneCollisionChecks = 256;
+            MaxContacts = 24;
+            MaxConstraints = 300;
+            MaxConstraintDepth = 80;
             MaxParticleSystems = 8;
-            MaxLights = 1;
-            MaxAudioSources = 1;
+            MaxActiveParticles = 1000;
+            MaxMeshParticlePolyCount = 2000;
+            ParticleTrailsEnabledAllowed = true;
+            ParticleCollisionEnabledAllowed = true;
+            MaxTrailRenderers = 4;
+            MaxLineRenderers = 4;
+            MaxRaycasts = 8;
+            MaxClothComponents = 1;
+            MaxClothVertices = 100;
+            MaxPhysicsColliders = 8;
+            MaxRigidbodies = 8;
+            MaxLights = 0;
+            MaxAudioSources = 8;
         }
     }
 }

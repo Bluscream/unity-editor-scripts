@@ -11,7 +11,7 @@ namespace Bluscream.VRCAvatarOptimizer
             MaxMaterialSlots = int.MaxValue;
             MaxBones = int.MaxValue;
             MaxAnimators = int.MaxValue;
-            MaxTextureMemoryBytes = 500 * 1024 * 1024L;
+            MaxTextureMemoryBytes = 500 * 1024 * 1024L; // 500 MB
             MaxPhysBoneComponents = int.MaxValue;
             MaxPhysBoneTransforms = int.MaxValue;
             MaxPhysBoneColliders = int.MaxValue;

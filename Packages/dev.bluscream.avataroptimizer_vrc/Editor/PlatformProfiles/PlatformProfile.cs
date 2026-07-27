@@ -56,7 +56,7 @@ namespace Bluscream.VRCAvatarOptimizer
         public Vector3 MaxBoundsSize = new Vector3(5f, 6f, 5f);
 
         // Texture & Memory Limits
-        public long MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+        public long MaxTextureMemoryBytes = 40 * 1024 * 1024L; // 40 MB
 
         // PhysBone Limits
         public int MaxPhysBoneComponents = 8;
@@ -65,15 +65,31 @@ namespace Bluscream.VRCAvatarOptimizer
         public int MaxPhysBoneCollisionChecks = 64;
 
         // Particle System Limits
-        public int MaxMeshParticlePolyCount = int.MaxValue;
         public int MaxParticleSystems = int.MaxValue;
+        public int MaxActiveParticles = int.MaxValue;
+        public int MaxMeshParticlePolyCount = int.MaxValue;
+        public bool ParticleTrailsEnabledAllowed = true;
+        public bool ParticleCollisionEnabledAllowed = true;
+
+        // Renderers & Constraints
+        public int MaxTrailRenderers = int.MaxValue;
+        public int MaxLineRenderers = int.MaxValue;
+        public int MaxRaycasts = int.MaxValue;
+        public int MaxConstraints = int.MaxValue;
+        public int MaxConstraintDepth = int.MaxValue;
+
+        // Physics & Cloth
+        public int MaxClothComponents = int.MaxValue;
+        public int MaxClothVertices = int.MaxValue;
+        public int MaxPhysicsColliders = int.MaxValue;
+        public int MaxRigidbodies = int.MaxValue;
 
         // Lights & Audio
         public int MaxLights = int.MaxValue;
         public int MaxAudioSources = int.MaxValue;
 
         // Contact Limits
-        public virtual int MaxContacts => int.MaxValue;
+        public int MaxContacts = int.MaxValue;
 
         // Asset Bundle Size Limit
         public virtual long MaxAssetBundleSizeBytes => long.MaxValue;

@@ -7,8 +7,7 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile_Android : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.Android;
-        public override int MaxContacts => 16;                               // VRChat Quest VRCContact hard cap
-        public override long MaxAssetBundleSizeBytes => 10 * 1024 * 1024L;  // VRChat Quest 10 MB hard cap
+        public override long MaxAssetBundleSizeBytes => 10 * 1024 * 1024L;  // 10 MB (VRChat Quest hard cap)
 
         protected override HashSet<string> CreateBlacklist() => new HashSet<string>(new[]
         {

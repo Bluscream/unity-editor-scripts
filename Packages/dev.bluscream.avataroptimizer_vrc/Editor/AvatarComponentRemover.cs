@@ -117,6 +117,97 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
             }
 
+            // Pass: Prune excess Constraint components to profile limit
+            int maxConstraints = profile.MaxConstraints;
+            List<Component> constraintComps = avatarRoot.GetComponentsInChildren<Component>(true)
+                .Where(c => c != null && c.GetType().Name.ToLowerInvariant().Contains("constraint"))
+                .ToList();
+
+            if (constraintComps.Count > maxConstraints)
+            {
+                Debug.Log($"[AvatarComponentRemover] Constraint components: {constraintComps.Count} > {maxConstraints} limit. Pruning {constraintComps.Count - maxConstraints}.");
+                progressCallback?.Invoke($"Pruning excess Constraints ({constraintComps.Count} -> {maxConstraints})...");
+                for (int i = maxConstraints; i < constraintComps.Count; i++)
+                {
+                    Component c = constraintComps[i];
+                    if (c != null)
+                    {
+                        removed.Add(new RemovedComponent
+                        {
+                            gameObject = c.gameObject,
+                            componentType = c.GetType().FullName,
+                            gameObjectPath = GetGameObjectPath(c.gameObject)
+                        });
+                        Undo.DestroyObjectImmediate(c);
+                    }
+                }
+            }
+
+            // Pass: Prune excess TrailRenderers
+            int maxTrails = profile.MaxTrailRenderers;
+            List<TrailRenderer> trailComps = avatarRoot.GetComponentsInChildren<TrailRenderer>(true).ToList();
+            if (trailComps.Count > maxTrails)
+            {
+                for (int i = maxTrails; i < trailComps.Count; i++)
+                {
+                    if (trailComps[i] != null)
+                    {
+                        removed.Add(new RemovedComponent { gameObject = trailComps[i].gameObject, componentType = typeof(TrailRenderer).FullName, gameObjectPath = GetGameObjectPath(trailComps[i].gameObject) });
+                        Undo.DestroyObjectImmediate(trailComps[i]);
+                    }
+                }
+            }
+
+            // Pass: Prune excess LineRenderers
+            int maxLines = profile.MaxLineRenderers;
+            List<LineRenderer> lineComps = avatarRoot.GetComponentsInChildren<LineRenderer>(true).ToList();
+            if (lineComps.Count > maxLines)
+            {
+                for (int i = maxLines; i < lineComps.Count; i++)
+                {
+                    if (lineComps[i] != null)
+                    {
+                        removed.Add(new RemovedComponent { gameObject = lineComps[i].gameObject, componentType = typeof(LineRenderer).FullName, gameObjectPath = GetGameObjectPath(lineComps[i].gameObject) });
+                        Undo.DestroyObjectImmediate(lineComps[i]);
+                    }
+                }
+            }
+
+            // Pass: Prune excess ParticleSystem components & cap maxParticles
+            int maxParticleSys = profile.MaxParticleSystems;
+            List<ParticleSystem> particleComps = avatarRoot.GetComponentsInChildren<ParticleSystem>(true).ToList();
+            if (particleComps.Count > maxParticleSys)
+            {
+                for (int i = maxParticleSys; i < particleComps.Count; i++)
+                {
+                    if (particleComps[i] != null)
+                    {
+                        removed.Add(new RemovedComponent { gameObject = particleComps[i].gameObject, componentType = typeof(ParticleSystem).FullName, gameObjectPath = GetGameObjectPath(particleComps[i].gameObject) });
+                        Undo.DestroyObjectImmediate(particleComps[i]);
+                    }
+                }
+                particleComps = particleComps.Take(maxParticleSys).ToList();
+            }
+
+            if (particleComps.Count > 0 && profile.MaxActiveParticles < int.MaxValue)
+            {
+                int totalActiveParticles = particleComps.Sum(ps => ps != null ? ps.main.maxParticles : 0);
+                if (totalActiveParticles > profile.MaxActiveParticles)
+                {
+                    int budgetPerPs = Math.Max(1, profile.MaxActiveParticles / particleComps.Count);
+                    foreach (var ps in particleComps)
+                    {
+                        if (ps == null) continue;
+                        var main = ps.main;
+                        if (main.maxParticles > budgetPerPs)
+                        {
+                            Undo.RecordObject(ps, "Cap Particle System Max Particles");
+                            main.maxParticles = budgetPerPs;
+                        }
+                    }
+                }
+            }
+
             Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
         }
@@ -159,7 +250,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return true;
 
             // Cloth
-            if (comp is Cloth)
+            if (comp is Cloth && profile.MaxClothComponents <= 0)
                 return true;
 
             // Camera (avatars only)
@@ -175,7 +266,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return true;
 
             // Rigidbody
-            if (comp is Rigidbody)
+            if (comp is Rigidbody && profile.MaxRigidbodies <= 0)
                 return true;
 
             // Joints
@@ -184,6 +275,18 @@ namespace Bluscream.VRCAvatarOptimizer
 
             // Particle Systems
             if (comp is ParticleSystem && profile.MaxParticleSystems <= 0)
+                return true;
+
+            // TrailRenderer
+            if (comp is TrailRenderer && profile.MaxTrailRenderers <= 0)
+                return true;
+
+            // LineRenderer
+            if (comp is LineRenderer && profile.MaxLineRenderers <= 0)
+                return true;
+
+            // Physics Colliders (exclude PhysBoneColliders)
+            if (comp is Collider && !typeName.Contains("VRCPhysBoneCollider") && profile.MaxPhysicsColliders <= 0)
                 return true;
 
             // Constraints (non-VRChat)
