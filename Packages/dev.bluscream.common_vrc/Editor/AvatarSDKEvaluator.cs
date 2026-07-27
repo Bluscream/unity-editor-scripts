@@ -804,15 +804,15 @@ namespace Bluscream.VRC
                 bool isTestAvatar = PlatformSupportsBuildAndTest(builderInstance, builderType);
                 Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
 
-                // Register live VRC_SdkBuilder callbacks for detailed console feedback
+                // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
+                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
+
+                // Register live VRC_SdkBuilder callbacks AFTER Build() initializes (to avoid ClearCallbacks() wiping our listeners)
                 RegisterBuildCallbacks(
                     onProgress: (status) => Debug.Log($"[VRChat SDK Live] Build Progress: {status}"),
                     onError:    (err) => Debug.LogError($"[VRChat SDK Live] Build Error: {err}"),
                     onSuccess:  (path) => Debug.Log($"[VRChat SDK Live] Build Success: {path}")
                 );
-
-                // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
-                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
                 if (taskObj is Task task)
                 {
