@@ -760,7 +760,7 @@ namespace Bluscream.VRC
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
-        public const int MAX_BUNDLE_BUILD_TIMEOUT_SECONDS = 300;
+        public const int MAX_BUNDLE_BUILD_TIMEOUT_SECONDS = 120;
 
         /// <summary>
         /// Invokes a VRChat SDK dry-run build and returns the size of the resulting .vrca bundle in bytes.
@@ -803,6 +803,41 @@ namespace Bluscream.VRC
 
                 bool isTestAvatar = PlatformSupportsBuildAndTest(builderInstance, builderType);
                 Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
+
+                // Register live VRC_SdkBuilder callbacks for detailed console feedback
+                try
+                {
+                    Type sdkBuilderType = Type.GetType("VRC.SDKBase.Editor.BuildPipeline.VRC_SdkBuilder, VRC.SDKBase.Editor")
+                        ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDKBase.Editor.BuildPipeline.VRC_SdkBuilder");
+
+                    if (sdkBuilderType != null)
+                    {
+                        MethodInfo regProgress = sdkBuilderType.GetMethod("RegisterBuildProgressCallback", BindingFlags.Static | BindingFlags.Public);
+                        MethodInfo regError    = sdkBuilderType.GetMethod("RegisterBuildErrorCallback", BindingFlags.Static | BindingFlags.Public);
+                        MethodInfo regSuccess  = sdkBuilderType.GetMethod("RegisterBuildSuccessCallback", BindingFlags.Static | BindingFlags.Public);
+
+                        if (regProgress != null)
+                        {
+                            EventHandler<string> progressHandler = (s, status) => Debug.Log($"[VRChat SDK Live] Build Progress: {status}");
+                            regProgress.Invoke(null, new object[] { progressHandler });
+                        }
+                        if (regError != null)
+                        {
+                            EventHandler<string> errorHandler = (s, err) => Debug.LogError($"[VRChat SDK Live] Build Error: {err}");
+                            regError.Invoke(null, new object[] { errorHandler });
+                        }
+                        if (regSuccess != null)
+                        {
+                            Action<object, (string path, string signature)> successHandler = (s, res) => Debug.Log($"[VRChat SDK Live] Build Success: {res.path}");
+                            regSuccess.Invoke(null, new object[] { successHandler });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[AvatarSDKEvaluator] Could not register VRC_SdkBuilder callbacks: {ex.Message}");
+                }
+
                 // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
                 object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
