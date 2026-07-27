@@ -799,9 +799,10 @@ namespace Bluscream.VRC
                     }
                 }
 
-                Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}'...");
-                // Pass testAvatar: true so SDK uploader UI panels are skipped
-                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
+                bool isTestAvatar = EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64 || EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows;
+                Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}' (Target: {EditorUserBuildSettings.activeBuildTarget}, TestAvatar: {isTestAvatar})...");
+                // Pass testAvatar based on platform support (false for Android/iOS where Build & Test is unsupported)
+                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, isTestAvatar, null });
 
                 if (taskObj is Task task)
                 {
