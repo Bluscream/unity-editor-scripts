@@ -35,6 +35,8 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool DecimateMeshes = true;
             public bool PrunePhysBones = true;
             public bool RemapAnimationsAndVRCFury = true;
+            public bool DeletePlacementLocationBeforeConversion = false;
+            public AutoSwitchBuildTarget AutoSwitchBuildTarget = AutoSwitchBuildTarget.BeforeConversion;
             public string BackupLocation = "Assets/VRCAvatarOptimizerBackups";
         }
 
@@ -53,7 +55,25 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             Debug.Log($"[VRCAvatarOptimizerCore] ===== Starting Avatar Conversion for '{avatarRoot.name}' =====");
-            Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}");
+            Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, AutoSwitchTarget={config.AutoSwitchBuildTarget}");
+
+            // Auto-switch build target "Before Conversion" if configured
+            if (config.AutoSwitchBuildTarget == AutoSwitchBuildTarget.BeforeConversion)
+            {
+                SwitchBuildTargetIfNeeded(config.Platform);
+            }
+
+            // Delete placement location before starting if configured
+            if (config.DeletePlacementLocationBeforeConversion)
+            {
+                string folderPath = GetPlacementFolder(avatarRoot.name, config.PlacementLocation);
+                if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                {
+                    Debug.Log($"[VRCAvatarOptimizerCore] Deleting asset placement location before starting: '{folderPath}'");
+                    AssetDatabase.DeleteAsset(folderPath);
+                    AssetDatabase.Refresh();
+                }
+            }
 
             summary.InitialStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
             Debug.Log($"[VRCAvatarOptimizerCore] Initial stats — Tris: {summary.InitialStats.TriangleCount:N0}, TexMem: {summary.InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F1} MB, MatSlots: {summary.InitialStats.MaterialSlotCount}, PhysBones: {summary.InitialStats.PhysBoneComponentCount}, Colliders: {summary.InitialStats.PhysBoneColliderCount}, CollisionChecks: {summary.InitialStats.PhysBoneCollisionCheckCount}");
@@ -309,6 +329,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 string bundleStr = summary.CompressedAvatarSizeBytes > 0 ? $" ({summary.CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB Compressed Avatar)" : "";
                 Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
+
+                // Auto-switch build target "After Conversion" if configured
+                if (config.AutoSwitchBuildTarget == AutoSwitchBuildTarget.AfterConversion)
+                {
+                    SwitchBuildTargetIfNeeded(config.Platform);
+                }
             }
             catch (Exception e)
             {
@@ -317,6 +343,33 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             return summary;
+        }
+
+        public static string GetPlacementFolder(string avatarName, AssetPlacementLocation location)
+        {
+            if (location == AssetPlacementLocation.SeparateFolder)
+            {
+                // Clean avatar name of any platform suffixes
+                string cleanName = System.Text.RegularExpressions.Regex.Replace(
+                    avatarName,
+                    @"\s*\((?:PC|Android|iOS|Quest|Original|Optimized)\)(?:\s*\[[^\]]*\])?\s*$",
+                    ""
+                ).TrimEnd();
+                return "Assets/_AVATAROPTIMIZER/" + cleanName;
+            }
+            return null;
+        }
+
+        public static void SwitchBuildTargetIfNeeded(TargetPlatform targetPlatform)
+        {
+            BuildTargetGroup expectedGroup = targetPlatform == TargetPlatform.Android ? BuildTargetGroup.Android : BuildTargetGroup.Standalone;
+            BuildTarget expectedTarget = targetPlatform == TargetPlatform.Android ? BuildTarget.Android : BuildTarget.StandaloneWindows64;
+
+            if (EditorUserBuildSettings.activeBuildTarget != expectedTarget)
+            {
+                Debug.Log($"[VRCAvatarOptimizerCore] Switching active build target to {expectedTarget} ({expectedGroup})...");
+                EditorUserBuildSettings.SwitchActiveBuildTarget(expectedGroup, expectedTarget);
+            }
         }
 
         private static void DuplicateAndReplaceMaterials(

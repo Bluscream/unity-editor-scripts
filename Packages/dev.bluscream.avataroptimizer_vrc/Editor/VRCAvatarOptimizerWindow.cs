@@ -53,6 +53,8 @@ namespace Bluscream.VRCAvatarOptimizer
             config.PrunePhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_PrunePhysBones", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
+            config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
+            config.AutoSwitchBuildTarget = (AutoSwitchBuildTarget)EditorPrefs.GetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)AutoSwitchBuildTarget.BeforeConversion);
         }
 
         private void SavePreferences()
@@ -74,6 +76,8 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_PrunePhysBones", config.PrunePhysBones);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_AutoSwitchBuildTarget", (int)config.AutoSwitchBuildTarget);
         }
 
         private void OnGUI()
@@ -147,6 +151,21 @@ namespace Bluscream.VRCAvatarOptimizer
                     ? "Saves generated materials and animation clips into 'Assets/_AVATAROPTIMIZER/<AvatarName>/'."
                     : "Saves generated materials and animation clips in the same folder as the original assets.",
                 MessageType.None
+            );
+
+            if (config.PlacementLocation == AssetPlacementLocation.SeparateFolder)
+            {
+                EditorGUI.indentLevel++;
+                config.DeletePlacementLocationBeforeConversion = EditorGUILayout.ToggleLeft(
+                    "Delete asset placement location before starting", 
+                    config.DeletePlacementLocationBeforeConversion
+                );
+                EditorGUI.indentLevel--;
+            }
+
+            config.AutoSwitchBuildTarget = (AutoSwitchBuildTarget)EditorGUILayout.EnumPopup(
+                "Switch Build Target", 
+                config.AutoSwitchBuildTarget
             );
 
             EditorGUILayout.Space(5);
