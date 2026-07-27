@@ -30,9 +30,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
     public enum PhysBonePruningStrategy
     {
-        Disabled,
-        DeepestFirst,
-        ShallowestFirst
+        Disabled = 0,
+        DeepestFirst = 1,
+        // 2 was ShallowestFirst (removed); explicit values keep stored EditorPrefs stable
+        InteractiveChecklist = 3
     }
 
     /// <summary>
@@ -92,6 +93,44 @@ namespace Bluscream.VRCAvatarOptimizer
 
         // Asset Bundle Size Limit
         public virtual long MaxAssetBundleSizeBytes => long.MaxValue;
+
+        /// <summary>
+        /// Reads the compressed avatar bundle size limit from the VRChat SDK
+        /// (VRC.ValidationHelpers.GetAssetBundleSizeLimit) so the package follows SDK updates.
+        /// Falls back to the given value when the SDK is unavailable.
+        /// </summary>
+        private static long? _sdkMobileBundleLimit;
+        private static long? _sdkPcBundleLimit;
+
+        protected static long GetSdkAssetBundleSizeLimit(bool isMobilePlatform, long fallbackBytes)
+        {
+            long? cached = isMobilePlatform ? _sdkMobileBundleLimit : _sdkPcBundleLimit;
+            if (cached.HasValue) return cached.Value;
+
+            long result = fallbackBytes;
+            try
+            {
+                Type helpers = Type.GetType("VRC.ValidationHelpers, VRCSDKBase");
+                Type contentType = Type.GetType("VRC.ContentType, VRCSDKBase");
+                if (helpers != null && contentType != null)
+                {
+                    var method = helpers.GetMethod("GetAssetBundleSizeLimit");
+                    if (method != null)
+                    {
+                        object avatar = Enum.Parse(contentType, "Avatar");
+                        var args = method.GetParameters().Length == 3
+                            ? new object[] { avatar, isMobilePlatform, true }
+                            : new object[] { avatar, isMobilePlatform };
+                        result = Convert.ToInt64(method.Invoke(null, args));
+                    }
+                }
+            }
+            catch { /* SDK not present or API changed — use fallback */ }
+
+            if (isMobilePlatform) _sdkMobileBundleLimit = result;
+            else _sdkPcBundleLimit = result;
+            return result;
+        }
 
         // Platform suffix for duplicated avatars/materials, e.g. " (Android) [Very Poor]"
         public virtual string PlatformSuffix => $" ({Platform.GetDescription()}) [{Rank.GetDescription()}]";

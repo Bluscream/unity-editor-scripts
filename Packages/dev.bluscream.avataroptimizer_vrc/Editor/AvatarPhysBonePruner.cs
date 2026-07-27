@@ -27,12 +27,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
             int removedCount = 0;
 
-            // Order PhysBones by pruning priority: index 0 = pruned FIRST.
-            // DeepestFirst removes the deepest bones in the hierarchy first (usually accessory/detail bones),
-            // ShallowestFirst removes the shallowest first.
-            Comparison<Component> priority = strategy == PhysBonePruningStrategy.ShallowestFirst
-                ? (a, b) => a.transform.GetHierarchyDepth().CompareTo(b.transform.GetHierarchyDepth())
-                : (Comparison<Component>)((a, b) => b.transform.GetHierarchyDepth().CompareTo(a.transform.GetHierarchyDepth()));
+            // Removal priority: deepest bones in the hierarchy first (usually accessory/detail bones)
+            Comparison<Component> priority = (a, b) => b.transform.GetHierarchyDepth().CompareTo(a.transform.GetHierarchyDepth());
 
             // Pass 1: Remove excess PhysBone components if over component budget
             int targetComponents = profile.MaxPhysBoneComponents;
@@ -43,12 +39,27 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke($"PhysBones count ({pbList.Count}) exceeds profile limit ({targetComponents}). Pruning {toRemove} components...");
 
                 pbList.Sort(priority);
-                while (pbList.Count > targetComponents)
+                List<Component> selection = pbList.Take(toRemove).ToList();
+
+                // InteractiveChecklist: let the user adjust the deepest-first suggestion
+                if (strategy == PhysBonePruningStrategy.InteractiveChecklist && !Application.isBatchMode)
                 {
-                    Component pb = pbList[0];
-                    pbList.RemoveAt(0);
+                    List<Component> userSelection = PhysBonePruneChecklistWindow.ShowChecklist(pbList, toRemove, GetPhysBoneTransformCount);
+                    if (userSelection != null)
+                    {
+                        selection = userSelection;
+                    }
+                    else
+                    {
+                        Debug.Log("[AvatarPhysBonePruner] [Pass 1] Checklist cancelled — falling back to automatic deepest-first selection.");
+                    }
+                }
+
+                foreach (Component pb in selection)
+                {
                     if (pb == null) continue;
                     Debug.Log($"[AvatarPhysBonePruner] [Pass 1] Removing PhysBone on '{pb.gameObject.name}'");
+                    pbList.Remove(pb);
                     Undo.DestroyObjectImmediate(pb);
                     removedCount++;
                 }
@@ -65,7 +76,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 int totalTransforms = pbList.Sum(pb => pb != null ? GetPhysBoneTransformCount(pb) : 0);
                 if (totalTransforms > maxTransforms)
                 {
-                    Debug.Log($"[AvatarPhysBonePruner] [Pass 2] PhysBone transforms {totalTransforms} > limit {maxTransforms}. Pruning components ({strategy}) until within budget.");
+                    Debug.Log($"[AvatarPhysBonePruner] [Pass 2] PhysBone transforms {totalTransforms} > limit {maxTransforms}. Pruning components (deepest first) until within budget.");
                     progressCallback?.Invoke($"PhysBone transform count ({totalTransforms}) exceeds limit ({maxTransforms}). Pruning...");
 
                     pbList.Sort(priority);

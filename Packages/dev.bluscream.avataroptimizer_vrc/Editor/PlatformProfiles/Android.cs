@@ -7,7 +7,9 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile_Android : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.Android;
-        public override long MaxAssetBundleSizeBytes => 10 * 1024 * 1024L;  // 10 MB (VRChat Quest hard cap)
+        // 10 MB compressed mobile cap (verified against VRC.ValidationHelpers.GetAssetBundleSizeLimit);
+        // read live from the SDK when available so SDK updates are picked up automatically.
+        public override long MaxAssetBundleSizeBytes => GetSdkAssetBundleSizeLimit(isMobilePlatform: true, fallbackBytes: 10 * 1024 * 1024L);
 
         protected override HashSet<string> CreateBlacklist() => new HashSet<string>(new[]
         {

@@ -24,7 +24,7 @@ Core pipeline driver for platform conversion and optimization.
 - `Platform`: `TargetPlatform` (`PC`, `Android`, `iOS`)
 - `TargetRank`: `AvatarPerformanceRank` (`Excellent`, `Good`, `Medium`, `Poor`, `VeryPoor`)
 - `PlacementLocation`: `AssetPlacementLocation` (`SeparateFolder` → `Assets/_AVATAROPTIMIZER/<TargetAvatarName>/`, `SameFolderAsOriginal`)
-- `PruningStrategy`: `PhysBonePruningStrategy` (`Disabled`, `DeepestFirst`, `ShallowestFirst`)
+- `PruningStrategy`: `PhysBonePruningStrategy` (`Disabled`, `DeepestFirst`, `InteractiveChecklist` — a modal checklist pre-selecting the deepest-first suggestion)
 - `DuplicateAvatar`: `bool` — clone the avatar instead of editing in place
 - `AddPlatformSuffixes`: `bool` — rename clone to `<Name> (<Platform>) [<Rank>]`
 - `AvatarSuffix`: `string` — custom clone suffix when `AddPlatformSuffixes` is off (`null` = none)
@@ -48,7 +48,7 @@ Core pipeline driver for platform conversion and optimization.
 
 ### 2. Platform Profiles (`PlatformProfiles/`)
 
-`PlatformProfile.GetProfile(TargetPlatform, AvatarPerformanceRank)` returns the quantitative limits for a platform/rank combination (triangles, skinned meshes, material slots, bones, texture memory, PhysBones/colliders/collision checks, contacts, constraints, particles, renderers, cloth, physics, lights, audio, bounds, asset-bundle size).
+`PlatformProfile.GetProfile(TargetPlatform, AvatarPerformanceRank)` returns the quantitative limits for a platform/rank combination (triangles, skinned meshes, material slots, bones, texture memory, PhysBones/colliders/collision checks, contacts, constraints, particles, renderers, cloth, physics, lights, audio, bounds, asset-bundle size). All rank limits are verified against the VRChat SDK's `StatsLevels` assets; the compressed bundle size cap (10 MB mobile / 200 MB PC) is read live from `VRC.ValidationHelpers` when the SDK is present.
 
 Profiles also carry behavior:
 - `BlacklistedComponentNames` / `WhitelistedComponentNames` — per-platform component rules
