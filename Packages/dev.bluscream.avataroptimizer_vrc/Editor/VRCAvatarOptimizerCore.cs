@@ -234,10 +234,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Only check bundle size if we successfully got one (bundleSizeBytes > 0)
                 bool bundleExceeds = (bundleSizeBytes > 0 && maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
-                // Allow 5% tolerance on uncompressed budget to avoid re-downscaling for marginal overages
-                // e.g. 36.53 MB vs 36.0 MB limit won't trigger an unnecessary full re-downscale pass
-                const double uncompressedToleranceFactor = 1.05; // 5% headroom
-                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)(maxUncompressedBytes * uncompressedToleranceFactor));
+                // Apply a 5% tolerance to the uncompressed check ONLY when the user's headroom is itself
+                // at least 5% of the hard platform limit — guaranteeing the tolerance can't push us past
+                // the real ceiling. If headroom is too tight (e.g. 1 MB / 40 MB = 2.5%), no tolerance is added.
+                double headroomFraction = profile.MaxTextureMemoryBytes > 0 ? (double)headroomBytes / profile.MaxTextureMemoryBytes : 0.0;
+                const double toleranceThreshold = 0.05; // 5%
+                double uncompressedEffectiveLimit = headroomFraction >= toleranceThreshold
+                    ? maxUncompressedBytes * (1.0 + toleranceThreshold)  // safe to add 5% breathing room
+                    : maxUncompressedBytes;                                // headroom too tight, use exact budget
+                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)uncompressedEffectiveLimit);
 
 
                 if (bundleExceeds || uncompressedExceeds)
