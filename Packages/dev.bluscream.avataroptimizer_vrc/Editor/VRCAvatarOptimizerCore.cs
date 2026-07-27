@@ -251,6 +251,9 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke("Verifying compressed AssetBundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Verifying AssetBundle size for '{targetAvatar.name}'...");
 
+                // Ensure active build target matches target platform profile before dry-run bundle build
+                SwitchBuildTargetIfNeeded(config.Platform);
+
                 long bundleSizeBytes = -1;
                 string bundlePath = null;
                 try
