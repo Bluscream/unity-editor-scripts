@@ -220,7 +220,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     progressCallback?.Invoke("Pruning PhysBones to hit target rank limits...", 0.85f);
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 6] Pruning PhysBones — strategy={config.PruningStrategy}, target: ≤{profile.MaxPhysBoneComponents} PBs, ≤{profile.MaxPhysBoneColliders} colliders, ≤{profile.MaxPhysBoneCollisionChecks} collision checks.");
-                    int pruned = AvatarPhysBonePruner.PrunePhysBones(targetAvatar, profile, (msg) => progressCallback?.Invoke(msg, 0.85f));
+                    int pruned = AvatarPhysBonePruner.PrunePhysBones(targetAvatar, profile, config.PruningStrategy, (msg) => progressCallback?.Invoke(msg, 0.85f));
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 6] PhysBone pruning complete: {pruned} component(s)/collider(s) removed.");
                     summary.AddSuccess($"Pruned {pruned} PhysBone components/colliders to comply with rank '{profile.Rank}'.");
                 }
