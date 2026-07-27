@@ -785,6 +785,20 @@ namespace Bluscream.VRC
                     throw new InvalidOperationException("[AvatarSDKEvaluator] Could not find 'Build(GameObject, bool, List<Option>)' method on VRCSdkControlPanelAvatarBuilder. SDK API may have changed.");
 
                 object builderInstance = Activator.CreateInstance(builderType);
+                
+                // Initialize _builder field if it's null so VRCSdkControlPanelAvatarBuilder.Build() does not throw BuilderException
+                FieldInfo builderField = builderType.GetField("_builder", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                if (builderField != null && builderField.GetValue(builderInstance) == null)
+                {
+                    Type avatarBuilderType = Type.GetType("VRC.SDK3A.Editor.VRCAvatarBuilder, com.vrchat.avatars.Editor")
+                        ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCAvatarBuilder");
+                    if (avatarBuilderType != null)
+                    {
+                        object avatarBuilderInstance = Activator.CreateInstance(avatarBuilderType);
+                        builderField.SetValue(builderInstance, avatarBuilderInstance);
+                    }
+                }
+
                 Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}'...");
                 // Pass testAvatar: true so SDK uploader UI panels are skipped
                 object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
@@ -792,19 +806,15 @@ namespace Bluscream.VRC
                 if (taskObj is Task task)
                 {
                     double startWait = UnityEditor.EditorApplication.timeSinceStartup;
-                    UnityEditor.EditorApplication.CallbackFunction updateHandler = null;
-                    updateHandler = () =>
-                    {
-                        if (task.IsCompleted || task.IsFaulted || task.IsCanceled)
-                            UnityEditor.EditorApplication.update -= updateHandler;
-                    };
-                    UnityEditor.EditorApplication.update += updateHandler;
 
                     try
                     {
                         while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
                         {
-                            System.Threading.Thread.Sleep(10);
+                            // Pump Editor main loop ticks allowing async tasks/coroutines to execute
+                            UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
+                            System.Threading.Thread.Sleep(5);
+
                             if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 90)
                             {
                                 Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after 90 seconds for '{avatarRoot.name}'.");
@@ -817,7 +827,6 @@ namespace Bluscream.VRC
                     }
                     finally
                     {
-                        UnityEditor.EditorApplication.update -= updateHandler;
                     }
                 }
             }
