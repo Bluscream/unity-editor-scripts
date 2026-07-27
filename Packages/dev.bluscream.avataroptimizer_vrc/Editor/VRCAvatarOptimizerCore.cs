@@ -532,6 +532,25 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
+        /// <summary>
+        /// Creates a plain (non-variant) copy of a material. new Material(src) copies the variant
+        /// parent link in Unity 2022+, so variants must be flattened explicitly — otherwise any later
+        /// shader assignment fails with "Trying to set shader on a Material Variant".
+        /// </summary>
+        private static Material CreateFlattenedCopy(Material src)
+        {
+            if (!src.isVariant) return new Material(src);
+
+            Material flat = new Material(src.shader);
+            flat.CopyPropertiesFromMaterial(src); // effective values, including those inherited from the parent
+            flat.shaderKeywords = src.shaderKeywords;
+            flat.renderQueue = src.renderQueue;
+            flat.enableInstancing = src.enableInstancing;
+            flat.globalIlluminationFlags = src.globalIlluminationFlags;
+            flat.doubleSidedGI = src.doubleSidedGI;
+            return flat;
+        }
+
         private static Material DuplicateMaterial(Material srcMat, bool saveInSameFolder, string avatarName, string platformSuffix = " (Optimized)")
         {
             if (srcMat == null) return null;
@@ -568,7 +587,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     {
                         Debug.Log($"[VRCAvatarOptimizerCore] Existing material at '{destPath}' is a Material Variant — re-creating as a standard Material asset.");
                         AssetDatabase.DeleteAsset(destPath);
-                        Material freshMat = new Material(srcMat);
+                        Material freshMat = CreateFlattenedCopy(srcMat);
                         freshMat.name = Path.GetFileNameWithoutExtension(destPath);
                         AssetDatabase.CreateAsset(freshMat, destPath);
                         return AssetDatabase.LoadAssetAtPath<Material>(destPath);
@@ -581,15 +600,16 @@ namespace Bluscream.VRCAvatarOptimizer
             if (isBuiltIn)
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Duplicating built-in material '{srcMat.name}' → {destPath}");
-                Material newMat = new Material(srcMat);
+                Material newMat = CreateFlattenedCopy(srcMat);
                 AssetDatabase.CreateAsset(newMat, destPath);
                 return newMat;
             }
 
-            // Material Variants in Unity throw "Trying to set shader on a Material Variant" if copied via CopyAsset.
-            // Create a fresh independent Material asset initialized from srcMat properties instead.
+            // Material Variants throw "Trying to set shader on a Material Variant" on shader assignment,
+            // and copies (CopyAsset or new Material(src)) keep the variant parent link.
+            // Create a flattened independent Material asset instead.
             Debug.Log($"[VRCAvatarOptimizerCore] Creating material copy of '{srcMat.name}' → '{destPath}'");
-            Material duplicatedMat = new Material(srcMat);
+            Material duplicatedMat = CreateFlattenedCopy(srcMat);
             duplicatedMat.name = Path.GetFileNameWithoutExtension(destPath);
             AssetDatabase.CreateAsset(duplicatedMat, destPath);
             return AssetDatabase.LoadAssetAtPath<Material>(destPath);
@@ -625,7 +645,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     string assetPath = AssetDatabase.GetAssetPath(questMat);
                     Debug.Log($"[VRCAvatarOptimizerCore] Material '{questMat.name}' at '{assetPath}' is a Material Variant. Converting to a standard Material asset before shader replacement.");
-                    Material nonVariantMat = new Material(questMat);
+                    Material nonVariantMat = CreateFlattenedCopy(questMat);
                     nonVariantMat.name = questMat.name;
                     if (!string.IsNullOrEmpty(assetPath))
                     {
@@ -641,7 +661,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                 }
 
-                Material tempMat = new Material(questMat);
+                Material tempMat = CreateFlattenedCopy(questMat);
 
                 questMat.shader = replacement.ReplacementShader;
 

@@ -243,7 +243,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (GUILayout.Button($"Optimize Avatar for {config.Platform}", GUILayout.Height(38)))
             {
-                StartConversion();
+                // Run outside OnGUI: modal dialogs/progress bars during the layout pass corrupt
+                // IMGUI layout state ("EndLayoutGroup: BeginLayoutGroup must be called first").
+                isConverting = true;
+                EditorApplication.delayCall += StartConversion;
             }
 
             EditorGUI.EndDisabledGroup();
@@ -325,7 +328,11 @@ namespace Bluscream.VRCAvatarOptimizer
 
         private void StartConversion()
         {
-            if (avatarRoot == null) return;
+            if (avatarRoot == null)
+            {
+                isConverting = false;
+                return;
+            }
 
             isConverting = true;
             summary = new ConversionSummary();

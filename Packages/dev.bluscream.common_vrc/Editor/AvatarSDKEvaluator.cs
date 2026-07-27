@@ -794,11 +794,15 @@ namespace Bluscream.VRC
                 if (buildMethod == null)
                     throw new InvalidOperationException("[AvatarSDKEvaluator] Could not find 'Build(GameObject, bool, List<Option>)' method on VRCSdkControlPanelAvatarBuilder. SDK API may have changed.");
 
-                // Register live VRCSdkControlPanelAvatarBuilder instance events for detailed console feedback
+                // Register live VRCSdkControlPanelAvatarBuilder instance events for detailed console feedback.
+                // The SDK's error event is also the abort signal for the wait loop below: the async Build()
+                // task's fault continuation can't run while we block the main thread, so waiting for
+                // task.IsFaulted after an error would just burn the full timeout.
+                string sdkBuildError = null;
                 RegisterBuildCallbacks(
                     builderInstance,
                     onProgress: (status) => Debug.Log($"[VRChat SDK Live] Build Progress: {status}"),
-                    onError:    (err) => Debug.LogError($"[VRChat SDK Live] Build Error: {err}"),
+                    onError:    (err) => { Debug.LogError($"[VRChat SDK Live] Build Error: {err}"); sdkBuildError = err; },
                     onSuccess:  (path) => Debug.Log($"[VRChat SDK Live] Build Success: {path}")
                 );
 
@@ -814,6 +818,11 @@ namespace Bluscream.VRC
                     {
                         while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
                         {
+                            // Abort immediately when the SDK reported a build error — the task itself
+                            // will never fault while the main thread is blocked here.
+                            if (sdkBuildError != null)
+                                throw new InvalidOperationException($"[AvatarSDKEvaluator] SDK build failed: {sdkBuildError}");
+
                             double elapsed = UnityEditor.EditorApplication.timeSinceStartup - startWait;
                             int elapsedSec = (int)elapsed;
                             progressCallback?.Invoke($"Building VRChat AssetBundle dry-run... (elapsed {elapsedSec}s / up to {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS}s)");
