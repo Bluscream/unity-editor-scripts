@@ -32,7 +32,13 @@ namespace Bluscream.VRCAvatarOptimizer
             { "poiyomi/toon lit", QUEST_TOON_LIT },
             { "poiyomi/toon unlit", QUEST_TOON_LIT },
             { "poiyomi/toon standard", QUEST_TOON_STANDARD },
-            
+
+            // lilToon shaders
+            { "liltoon", QUEST_TOON_STANDARD },
+            { "liltoon/liltoon", QUEST_TOON_STANDARD },
+            { "hidden/liltoonoutline", QUEST_TOON_STANDARD },
+            { "liltoon/[optional] liltoonoutline", QUEST_TOON_STANDARD },
+
             // Unity Standard shaders
             { "standard", QUEST_STANDARD_LITE },
             { "standard (specular setup)", QUEST_BUMPED_SPECULAR },
@@ -61,60 +67,58 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         private static readonly List<(string pattern, string replacement, bool caseSensitive)> PatternRules = new List<(string, string, bool)>
         {
-            // Transparent/Glow/Light/Visor/Dome/Glass patterns -> Mobile Particles Additive or Multiply
-            (".*particles?/.*additive.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*particles?/.*unlit.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*surface.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*alpha.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*blend.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*vertex.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*particles?/.*", QUEST_PARTICLES_ADDITIVE, false),
-
-            // Smart transparency & special effect shader patterns (flashlight cone, dome, visor, HUD, glass, censor)
-            (".*flashlight.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*light.*beam.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*cone.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*dome.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*safespace.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*visor.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*hud.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*censor.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*squish.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*glass.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*transparent.*additive.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*transparent.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*transparent.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*additive.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*glow.*", QUEST_PARTICLES_ADDITIVE, false),
-
-            // Poiyomi patterns
+            // ── Brand/family-specific patterns FIRST: a 'Poiyomi Toon Transparent' must map to a
+            //    toon shader, not fall into the generic transparency → particle-shader rules below.
             (".*poiyomi.*toon.*", QUEST_TOON_STANDARD, false),
-            (".*poiyomi.*lit.*", QUEST_TOON_LIT, false),
             (".*poiyomi.*unlit.*", QUEST_TOON_LIT, false),
-            
+            (".*poiyomi.*lit.*", QUEST_TOON_LIT, false),
+            (".*liltoon.*", QUEST_TOON_STANDARD, false),
+
             // Toon shader patterns
             (".*toon.*standard.*", QUEST_TOON_STANDARD, false),
-            (".*toon.*lit.*", QUEST_TOON_LIT, false),
             (".*toon.*unlit.*", QUEST_TOON_LIT, false),
-            
-            // Standard shader patterns
+            (".*toon.*lit.*", QUEST_TOON_LIT, false),
+            (".*toon.*", QUEST_TOON_STANDARD, false),
+
+            // Matcap patterns
+            (".*matcap.*", QUEST_MATCAP_LIT, false),
+
+            // ── Actual particle shader paths ("Particles/…")
+            (".*particles?/.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*particles?/.*", QUEST_PARTICLES_ADDITIVE, false),
+
+            // ── Standard shader patterns
             (".*standard.*metallic.*", QUEST_STANDARD_LITE, false),
             (".*standard.*specular.*", QUEST_BUMPED_SPECULAR, false),
             (".*standard.*", QUEST_STANDARD_LITE, false),
-            
+
             // Diffuse patterns
             (".*diffuse.*bump.*", QUEST_BUMPED_DIFFUSE, false),
             (".*diffuse.*normal.*", QUEST_BUMPED_DIFFUSE, false),
             (".*diffuse.*", QUEST_DIFFUSE, false),
-            
+
             // Specular patterns
             (".*specular.*bump.*", QUEST_BUMPED_SPECULAR, false),
             (".*specular.*normal.*", QUEST_BUMPED_SPECULAR, false),
             (".*specular.*", QUEST_BUMPED_SPECULAR, false),
-            
-            // Matcap patterns
-            (".*matcap.*", QUEST_MATCAP_LIT, false),
+
+            // ── Special-effect / transparency patterns LAST — catch-alls for glow cones, visors,
+            //    HUDs etc. Word-boundary guards keep 'cone' from matching 'silicone' and
+            //    'glass' from matching 'sunglasses'.
+            (".*flashlight.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*light.*beam.*", QUEST_PARTICLES_ADDITIVE, false),
+            (@".*(?:^|[\W_])cone(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
+            (@".*(?:^|[\W_])dome(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*safespace.*", QUEST_PARTICLES_ADDITIVE, false),
+            (@".*(?:^|[\W_])visor(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
+            (@".*(?:^|[\W_])hud(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*censor.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*squish.*", QUEST_PARTICLES_ADDITIVE, false),
+            (@".*(?:^|[\W_])glass(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*transparent.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*transparent.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*additive.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*glow.*", QUEST_PARTICLES_ADDITIVE, false),
         };
 
         /// <summary>

@@ -492,8 +492,10 @@ namespace Bluscream.VRCAvatarOptimizer
                     questMat = DuplicateMaterial(srcMat, config.PlacementLocation == AssetPlacementLocation.SameFolderAsOriginal, avatarRoot.name, profile.PlatformSuffix);
                     if (questMat != null)
                     {
+                        // ReplaceShaderOnMaterial may re-create the asset (Material Variant conversion),
+                        // so store the material it returns — not the possibly-destroyed input reference.
+                        questMat = ReplaceShaderOnMaterial(srcMat, questMat, summary);
                         materialMap[srcMat] = questMat;
-                        ReplaceShaderOnMaterial(srcMat, questMat, summary);
                     }
                     else
                     {
@@ -571,16 +573,22 @@ namespace Bluscream.VRCAvatarOptimizer
             return AssetDatabase.LoadAssetAtPath<Material>(destPath);
         }
 
-        private static void ReplaceShaderOnMaterial(Material srcMat, Material questMat, ConversionSummary summary)
+        /// <summary>
+        /// Replaces the shader on <paramref name="questMat"/> with a mobile-compatible one.
+        /// Returns the material that ends up holding the replacement — this may be a NEW asset
+        /// if the input was a Material Variant that had to be re-created, so callers must use
+        /// the returned reference.
+        /// </summary>
+        private static Material ReplaceShaderOnMaterial(Material srcMat, Material questMat, ConversionSummary summary)
         {
-            if (questMat == null || questMat.shader == null) return;
+            if (questMat == null || questMat.shader == null) return questMat;
             string originalShaderName = srcMat != null && srcMat.shader != null ? srcMat.shader.name : questMat.shader.name;
 
             if (questMat.shader.name.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase) && originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Material '{questMat.name}' already uses mobile shader '{originalShaderName}' — skipping.");
                 summary.materialsSkipped++;
-                return;
+                return questMat;
             }
 
             var replacement = ShaderMapping.FindReplacementShader(originalShaderName);
@@ -630,6 +638,8 @@ namespace Bluscream.VRCAvatarOptimizer
                 summary.materialsFailed++;
                 summary.AddError($"Could not find Quest replacement for shader: {originalShaderName} on material {questMat.name}");
             }
+
+            return questMat;
         }
     }
 }
