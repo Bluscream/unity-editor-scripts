@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using static Bluscream.Utils;
 using static Bluscream.TransformExtensions;
 
 namespace Bluscream.VRCAvatarOptimizer
