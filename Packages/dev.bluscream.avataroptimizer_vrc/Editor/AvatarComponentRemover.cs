@@ -111,8 +111,61 @@ namespace Bluscream.VRCAvatarOptimizer
             AvatarConstraintOptimizer.PruneConstraints(avatarRoot, profile.MaxConstraints, progressCallback);
             AvatarParticleOptimizer.OptimizeParticleSystems(avatarRoot, profile, progressCallback);
 
+            // Prune components that are allowed but exceed their profile count limits
+            PruneExcessComponents<Animator>(avatarRoot, profile.MaxAnimators, removed, progressCallback, skipRoot: true);
+            PruneExcessComponents<Light>(avatarRoot, profile.MaxLights, removed, progressCallback);
+            PruneExcessComponents<AudioSource>(avatarRoot, profile.MaxAudioSources, removed, progressCallback);
+            PruneExcessComponents<Cloth>(avatarRoot, profile.MaxClothComponents, removed, progressCallback);
+
             Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
+        }
+
+        /// <summary>
+        /// Prunes components of type T exceeding the given limit, deepest in the hierarchy first.
+        /// With skipRoot, components on the avatar root itself (e.g. the main Animator) are never pruned.
+        /// </summary>
+        private static void PruneExcessComponents<T>(GameObject avatarRoot, int max, List<RemovedComponent> removed, Action<string> progressCallback, bool skipRoot = false) where T : Component
+        {
+            if (max == int.MaxValue) return;
+
+            List<T> comps = avatarRoot.GetComponentsInChildren<T>(true)
+                .Where(c => c != null && !(skipRoot && c.gameObject == avatarRoot))
+                .OrderBy(c => c.transform.GetHierarchyDepth())
+                .ToList();
+
+            int allowed = skipRoot ? Math.Max(0, max - avatarRoot.GetComponents<T>().Length) : max;
+            if (comps.Count <= allowed) return;
+
+            string label = typeof(T).Name;
+            progressCallback?.Invoke($"Pruning excess {label} components ({comps.Count} -> {allowed})...");
+            Debug.Log($"[AvatarComponentRemover] {label} count {comps.Count} > limit {allowed}. Pruning deepest-first.");
+
+            while (comps.Count > allowed)
+            {
+                T c = comps[comps.Count - 1]; // deepest first
+                comps.RemoveAt(comps.Count - 1);
+                if (c == null) continue;
+
+                // AudioSources may have dependents ([RequireComponent]) like VRCSpatialAudioSource — remove those first
+                if (c is AudioSource)
+                {
+                    foreach (Component sibling in c.GetComponents<Component>())
+                    {
+                        if (sibling != null && sibling != c && sibling.GetType().Name.Contains("AudioSource"))
+                            Undo.DestroyObjectImmediate(sibling);
+                    }
+                }
+
+                removed.Add(new RemovedComponent
+                {
+                    gameObject = c.gameObject,
+                    componentType = c.GetType().FullName,
+                    gameObjectPath = GetGameObjectPath(c.gameObject)
+                });
+                Debug.Log($"[AvatarComponentRemover] Pruning excess {label} on '{GetGameObjectPath(c.gameObject)}'");
+                Undo.DestroyObjectImmediate(c);
+            }
         }
 
         /// <summary>

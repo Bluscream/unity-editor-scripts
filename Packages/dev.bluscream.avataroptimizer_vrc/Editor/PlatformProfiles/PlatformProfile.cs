@@ -126,9 +126,32 @@ namespace Bluscream.VRCAvatarOptimizer
 
         /// <summary>
         /// Validates platform-specific requirements and reports issues or warnings.
+        /// The base implementation checks the avatar's combined render bounds against MaxBoundsSize.
         /// </summary>
         public virtual void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
         {
+            if (avatarRoot == null || summary == null) return;
+
+            Renderer[] renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+
+            Bounds combined = default;
+            bool first = true;
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                if (first) { combined = r.bounds; first = false; }
+                else combined.Encapsulate(r.bounds);
+            }
+            if (first) return;
+
+            Vector3 size = combined.size;
+            if (size.x > MaxBoundsSize.x || size.y > MaxBoundsSize.y || size.z > MaxBoundsSize.z)
+            {
+                summary.AddWarning(
+                    $"Avatar bounds {size.x:F1}x{size.y:F1}x{size.z:F1}m exceed the {Rank} rank limit of {MaxBoundsSize.x}x{MaxBoundsSize.y}x{MaxBoundsSize.z}m.",
+                    avatarRoot);
+            }
         }
 
         public static PlatformProfile GetProfile(TargetPlatform platform, AvatarPerformanceRank rank)

@@ -11,23 +11,7 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile_iOS : PlatformProfile_Android
     {
         public override TargetPlatform Platform => TargetPlatform.iOS;
-        // MaxContacts, MaxAssetBundleSizeBytes, BlacklistedComponentNames, etc. all inherited from PlatformProfile_Android
-
-        public override void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
-        {
-            progressCallback?.Invoke("Executing iOS mobile platform-specific conversions...");
-        }
-
-        public override void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
-        {
-            if (avatarRoot == null || summary == null) return;
-
-            var renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers)
-            {
-                if (r != null && r.sharedMaterials != null && r.sharedMaterials.Length > 4)
-                    summary.AddWarning($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (VRChat Mobile iOS limit is 4).", r);
-            }
-        }
+        // MaxContacts, MaxAssetBundleSizeBytes, BlacklistedComponentNames, platform conversions,
+        // and validation rules are all inherited from PlatformProfile_Android.
     }
 }

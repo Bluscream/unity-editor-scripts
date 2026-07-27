@@ -43,7 +43,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
         public override void ExecutePlatformConversions(GameObject avatarRoot, System.Action<string> progressCallback = null)
         {
-            progressCallback?.Invoke("Executing Android/Quest platform-specific conversions...");
+            progressCallback?.Invoke($"Executing {Platform} mobile platform-specific conversions...");
             
             // Enforce VRChat Mobile Quality Setting: Pixel Light Count <= 1 (prevents VRChat SDK build error)
             if (QualitySettings.pixelLightCount > 1)
@@ -56,13 +56,14 @@ namespace Bluscream.VRCAvatarOptimizer
         public override void ValidatePlatformRules(GameObject avatarRoot, ConversionSummary summary)
         {
             if (avatarRoot == null || summary == null) return;
+            base.ValidatePlatformRules(avatarRoot, summary);
 
             // Material slot limit check
             var renderers = avatarRoot.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
                 if (r != null && r.sharedMaterials != null && r.sharedMaterials.Length > 4)
-                    summary.AddWarning($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (Android Quest limit is 4).", r);
+                    summary.AddWarning($"Renderer '{r.name}' has {r.sharedMaterials.Length} material slots (VRChat Mobile limit is 4).", r);
             }
         }
     }
