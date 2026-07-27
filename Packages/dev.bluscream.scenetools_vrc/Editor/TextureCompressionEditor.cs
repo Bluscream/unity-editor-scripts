@@ -648,23 +648,11 @@ namespace Bluscream.TextureCompressor
 
             int srcWidth = maxResCap;
             int srcHeight = maxResCap;
-            try
+            if (Bluscream.Utils.GetSourceTextureWidthAndHeight(imp, out int w, out int h))
             {
-                MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                if (getSourceSizeMethod != null)
-                {
-                    object[] args = new object[] { 0, 0 };
-                    getSourceSizeMethod.Invoke(imp, args);
-                    int w = (int)args[0];
-                    int h = (int)args[1];
-                    if (w > 0 && h > 0)
-                    {
-                        srcWidth = w;
-                        srcHeight = h;
-                    }
-                }
+                srcWidth = w;
+                srcHeight = h;
             }
-            catch { }
 
             double scale = Math.Min(1.0, (double)maxResCap / Math.Max(srcWidth, srcHeight));
             int targetWidth = Math.Max(1, (int)(srcWidth * scale));

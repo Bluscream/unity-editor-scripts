@@ -86,5 +86,42 @@ namespace Bluscream.VRCFury
             if (avatarRoot == null || !Initialize() || VRCFuryComponentType == null) return new List<Component>();
             return avatarRoot.GetComponentsInChildren(VRCFuryComponentType, true).ToList();
         }
+
+        /// <summary>
+        /// Estimates VRCFury expression menu parameter cost (memory bits) for an avatar using VRCFury internal reflection.
+        /// </summary>
+        public static object EstimateMenuParameterCost(GameObject avatarRoot)
+        {
+            if (avatarRoot == null || !Initialize() || EstimateMethod == null || VFGameObjectType == null) return null;
+            try
+            {
+                object vfObj = System.Activator.CreateInstance(VFGameObjectType, avatarRoot);
+                return EstimateMethod.Invoke(null, new object[] { vfObj });
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[VRCFuryHelper] Failed to estimate VRCFury menu cost: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the raw VRCFury menu model for an avatar using VRCFury internal reflection.
+        /// </summary>
+        public static object GetRawVRCFuryMenu(GameObject avatarRoot)
+        {
+            if (avatarRoot == null || !Initialize() || MenuManagerType == null || GetRawMethod == null || VFGameObjectType == null) return null;
+            try
+            {
+                object vfObj = System.Activator.CreateInstance(VFGameObjectType, avatarRoot);
+                object menuManagerInstance = System.Activator.CreateInstance(MenuManagerType, vfObj);
+                return GetRawMethod.Invoke(menuManagerInstance, null);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[VRCFuryHelper] Failed to get raw VRCFury menu: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

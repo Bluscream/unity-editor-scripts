@@ -31,6 +31,32 @@ namespace Bluscream
         }
 
         /// <summary>
+        /// Gets the original source width and height of a TextureImporter using reflection
+        /// </summary>
+        public static bool GetSourceTextureWidthAndHeight(TextureImporter imp, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+            if (imp == null) return false;
+
+            try
+            {
+                System.Reflection.MethodInfo getSourceSizeMethod = typeof(TextureImporter).GetMethod("GetSourceTextureWidthAndHeight", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (getSourceSizeMethod != null)
+                {
+                    object[] args = new object[] { 0, 0 };
+                    getSourceSizeMethod.Invoke(imp, args);
+                    width = (int)args[0];
+                    height = (int)args[1];
+                    return width > 0 && height > 0;
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        /// <summary>
         /// Serializes a component to a list of property entries (dictionary-like structure)
         /// </summary>
         public static System.Collections.Generic.List<BackupSystem.ComponentPropertyEntry> SerializeComponentToPropertyList(SerializedObject so)
