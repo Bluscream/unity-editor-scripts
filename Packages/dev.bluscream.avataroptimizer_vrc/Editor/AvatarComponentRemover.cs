@@ -90,126 +90,14 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
             }
 
-            // Pass: Prune excess VRCContactSender and VRCContactReceiver components to profile limit
-            int maxContacts = profile.MaxContacts;
-            List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
-                .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
-                .ToList();
-
-            if (contactComps.Count > maxContacts)
-            {
-                Debug.Log($"[AvatarComponentRemover] VRCContact components: {contactComps.Count} > {maxContacts} limit. Pruning {contactComps.Count - maxContacts}.");
-                progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> {maxContacts})...");
-                for (int i = maxContacts; i < contactComps.Count; i++)
-                {
-                    Component c = contactComps[i];
-                    if (c != null)
-                    {
-                        Debug.Log($"[AvatarComponentRemover] Removing '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
-                        removed.Add(new RemovedComponent
-                        {
-                            gameObject = c.gameObject,
-                            componentType = c.GetType().FullName,
-                            gameObjectPath = GetGameObjectPath(c.gameObject)
-                        });
-                        Undo.DestroyObjectImmediate(c);
-                    }
-                }
-            }
-
-            // Pass: Prune excess Constraint components to profile limit
-            int maxConstraints = profile.MaxConstraints;
-            List<Component> constraintComps = avatarRoot.GetComponentsInChildren<Component>(true)
-                .Where(c => c != null && c.GetType().Name.ToLowerInvariant().Contains("constraint"))
-                .ToList();
-
-            if (constraintComps.Count > maxConstraints)
-            {
-                Debug.Log($"[AvatarComponentRemover] Constraint components: {constraintComps.Count} > {maxConstraints} limit. Pruning {constraintComps.Count - maxConstraints}.");
-                progressCallback?.Invoke($"Pruning excess Constraints ({constraintComps.Count} -> {maxConstraints})...");
-                for (int i = maxConstraints; i < constraintComps.Count; i++)
-                {
-                    Component c = constraintComps[i];
-                    if (c != null)
-                    {
-                        removed.Add(new RemovedComponent
-                        {
-                            gameObject = c.gameObject,
-                            componentType = c.GetType().FullName,
-                            gameObjectPath = GetGameObjectPath(c.gameObject)
-                        });
-                        Undo.DestroyObjectImmediate(c);
-                    }
-                }
-            }
-
-            // Pass: Prune excess TrailRenderers
-            int maxTrails = profile.MaxTrailRenderers;
-            List<TrailRenderer> trailComps = avatarRoot.GetComponentsInChildren<TrailRenderer>(true).ToList();
-            if (trailComps.Count > maxTrails)
-            {
-                for (int i = maxTrails; i < trailComps.Count; i++)
-                {
-                    if (trailComps[i] != null)
-                    {
-                        removed.Add(new RemovedComponent { gameObject = trailComps[i].gameObject, componentType = typeof(TrailRenderer).FullName, gameObjectPath = GetGameObjectPath(trailComps[i].gameObject) });
-                        Undo.DestroyObjectImmediate(trailComps[i]);
-                    }
-                }
-            }
-
-            // Pass: Prune excess LineRenderers
-            int maxLines = profile.MaxLineRenderers;
-            List<LineRenderer> lineComps = avatarRoot.GetComponentsInChildren<LineRenderer>(true).ToList();
-            if (lineComps.Count > maxLines)
-            {
-                for (int i = maxLines; i < lineComps.Count; i++)
-                {
-                    if (lineComps[i] != null)
-                    {
-                        removed.Add(new RemovedComponent { gameObject = lineComps[i].gameObject, componentType = typeof(LineRenderer).FullName, gameObjectPath = GetGameObjectPath(lineComps[i].gameObject) });
-                        Undo.DestroyObjectImmediate(lineComps[i]);
-                    }
-                }
-            }
-
-            // Pass: Prune excess ParticleSystem components & cap maxParticles
-            int maxParticleSys = profile.MaxParticleSystems;
-            List<ParticleSystem> particleComps = avatarRoot.GetComponentsInChildren<ParticleSystem>(true).ToList();
-            if (particleComps.Count > maxParticleSys)
-            {
-                for (int i = maxParticleSys; i < particleComps.Count; i++)
-                {
-                    if (particleComps[i] != null)
-                    {
-                        removed.Add(new RemovedComponent { gameObject = particleComps[i].gameObject, componentType = typeof(ParticleSystem).FullName, gameObjectPath = GetGameObjectPath(particleComps[i].gameObject) });
-                        Undo.DestroyObjectImmediate(particleComps[i]);
-                    }
-                }
-                particleComps = particleComps.Take(maxParticleSys).ToList();
-            }
-
-            if (particleComps.Count > 0 && profile.MaxActiveParticles < int.MaxValue)
-            {
-                int totalActiveParticles = particleComps.Sum(ps => ps != null ? ps.main.maxParticles : 0);
-                if (totalActiveParticles > profile.MaxActiveParticles)
-                {
-                    int budgetPerPs = Math.Max(1, profile.MaxActiveParticles / particleComps.Count);
-                    foreach (var ps in particleComps)
-                    {
-                        if (ps == null) continue;
-                        var main = ps.main;
-                        if (main.maxParticles > budgetPerPs)
-                        {
-                            Undo.RecordObject(ps, "Cap Particle System Max Particles");
-                            main.maxParticles = budgetPerPs;
-                        }
-                    }
-                }
-            }
+            // Delegate dedicated pruning passes to specialized optimizers
+            AvatarContactOptimizer.PruneContacts(avatarRoot, profile.MaxContacts, progressCallback);
+            AvatarConstraintOptimizer.PruneConstraints(avatarRoot, profile.MaxConstraints, progressCallback);
+            AvatarParticleOptimizer.OptimizeParticleSystems(avatarRoot, profile, progressCallback);
 
             Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
             return removed;
+        }
         }
 
         /// <summary>
