@@ -399,28 +399,39 @@ namespace Bluscream.VRC
                                 {
                                     TextureImporterPlatformSettings settings = imp.GetPlatformTextureSettings(platformName);
                                     bool isOverridden = settings != null && settings.overridden;
-                                    int maxRes = isOverridden ? settings.maxTextureSize : imp.maxTextureSize;
-                                    float bpp = isOverridden ? GetFormatBPP(settings.format, (tex is Texture2D t2d) ? t2d.format : TextureFormat.RGBA32) : 16.0f;
 
-                                    int w = Math.Min(tex.width, maxRes > 0 ? maxRes : tex.width);
-                                    int h = Math.Min(tex.height, maxRes > 0 ? maxRes : tex.height);
-
-                                    long texBytes = 0;
-                                    int mipCount = tex.mipmapCount > 0 ? tex.mipmapCount : 1;
-                                    for (int mLevel = 0; mLevel < mipCount; mLevel++)
+                                    if (isOverridden)
                                     {
-                                        int mipW = Math.Max(1, w >> mLevel);
-                                        int mipH = Math.Max(1, h >> mLevel);
-                                        texBytes += (long)Math.Max(1, (mipW * mipH * bpp) / 8.0f);
+                                        // Use importer metadata for textures that have a platform override (accurate for our compressed Android textures)
+                                        int maxRes = settings.maxTextureSize;
+                                        float bpp = GetFormatBPP(settings.format, (tex is Texture2D t2d2) ? t2d2.format : TextureFormat.RGBA32);
+
+                                        int w = Math.Min(tex.width, maxRes > 0 ? maxRes : tex.width);
+                                        int h = Math.Min(tex.height, maxRes > 0 ? maxRes : tex.height);
+
+                                        long texBytes = 0;
+                                        int mipCount = tex.mipmapCount > 0 ? tex.mipmapCount : 1;
+                                        for (int mLevel = 0; mLevel < mipCount; mLevel++)
+                                        {
+                                            int mipW = Math.Max(1, w >> mLevel);
+                                            int mipH = Math.Max(1, h >> mLevel);
+                                            texBytes += (long)Math.Max(1, (mipW * mipH * bpp) / 8.0f);
+                                        }
+
+                                        if (tex is Cubemap) texBytes *= 6;
+                                        else if (tex is Texture2DArray arr) texBytes *= arr.depth;
+
+                                        totalBytes += texBytes;
                                     }
-
-                                    if (tex is Cubemap) texBytes *= 6;
-                                    else if (tex is Texture2DArray arr) texBytes *= arr.depth;
-
-                                    totalBytes += texBytes;
+                                    else
+                                    {
+                                        // No platform override — use GPU profiler actual size (matches what VRChat SDK reports)
+                                        totalBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(tex);
+                                    }
                                 }
                                 else
                                 {
+                                    // Not an asset importer texture (e.g. render texture / proc gen) — use GPU profiler
                                     totalBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(tex);
                                 }
                             }
@@ -749,63 +760,81 @@ namespace Bluscream.VRC
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
+        /// <summary>
+        /// Invokes a VRChat SDK dry-run build and returns the size of the resulting .vrca bundle in bytes.
+        /// Throws InvalidOperationException if the bundle could not be built — callers must handle this explicitly.
+        /// </summary>
         public static long BuildAvatarAssetBundle(GameObject avatarRoot, out string bundlePath)
         {
             bundlePath = null;
-            if (avatarRoot == null) return -1;
+            if (avatarRoot == null) throw new ArgumentNullException(nameof(avatarRoot), "[AvatarSDKEvaluator] BuildAvatarAssetBundle: avatarRoot is null.");
             DateTime buildStartTime = DateTime.Now.AddSeconds(-2);
 
             try
             {
                 Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, com.vrchat.avatars.Editor")
                     ?? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } }).FirstOrDefault(t => t.FullName == "VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder");
-                if (builderType != null)
+
+                if (builderType == null)
+                    throw new InvalidOperationException("[AvatarSDKEvaluator] VRChat SDK builder type 'VRCSdkControlPanelAvatarBuilder' could not be located. Ensure the VRChat Avatars SDK package is installed.");
+
+                MethodInfo buildMethod = builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                    .FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
+
+                if (buildMethod == null)
+                    throw new InvalidOperationException("[AvatarSDKEvaluator] Could not find 'Build(GameObject, bool, List<Option>)' method on VRCSdkControlPanelAvatarBuilder. SDK API may have changed.");
+
+                object builderInstance = Activator.CreateInstance(builderType);
+                Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}'...");
+                // Pass testAvatar: true so SDK uploader UI panels are skipped
+                object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
+
+                if (taskObj is Task task)
                 {
-                    MethodInfo buildMethod = builderType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                        .FirstOrDefault(m => m.Name == "Build" && m.GetParameters().Length == 3);
-
-                    if (buildMethod != null)
+                    double startWait = UnityEditor.EditorApplication.timeSinceStartup;
+                    UnityEditor.EditorApplication.CallbackFunction updateHandler = null;
+                    updateHandler = () =>
                     {
-                        object builderInstance = Activator.CreateInstance(builderType);
-                        Debug.Log($"[AvatarSDKEvaluator] Invoking VRChat SDK dry-run build verification for '{avatarRoot.name}'...");
-                        // Pass testAvatar: true so SDK uploader UI panels are skipped and do not trigger DetachFromPanelEvent NullReferenceExceptions
-                        object taskObj = buildMethod.Invoke(builderInstance, new object[] { avatarRoot, true, null });
-                        if (taskObj is Task task)
-                        {
-                            double startWait = UnityEditor.EditorApplication.timeSinceStartup;
-                            UnityEditor.EditorApplication.CallbackFunction updateHandler = null;
-                            updateHandler = () =>
-                            {
-                                if (task.IsCompleted || task.IsFaulted || task.IsCanceled)
-                                {
-                                    UnityEditor.EditorApplication.update -= updateHandler;
-                                }
-                            };
-                            UnityEditor.EditorApplication.update += updateHandler;
+                        if (task.IsCompleted || task.IsFaulted || task.IsCanceled)
+                            UnityEditor.EditorApplication.update -= updateHandler;
+                    };
+                    UnityEditor.EditorApplication.update += updateHandler;
 
-                            try
+                    try
+                    {
+                        while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+                        {
+                            System.Threading.Thread.Sleep(10);
+                            if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 90)
                             {
-                                while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
-                                {
-                                    System.Threading.Thread.Sleep(10);
-                                    if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 60) break;
-                                }
-                            }
-                            finally
-                            {
-                                UnityEditor.EditorApplication.update -= updateHandler;
+                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after 90 seconds for '{avatarRoot.name}'.");
+                                break;
                             }
                         }
-                        return GetBuiltBundleSize(out bundlePath, buildStartTime);
+
+                        if (task.IsFaulted)
+                            throw new InvalidOperationException($"[AvatarSDKEvaluator] SDK build task faulted: {task.Exception?.GetBaseException()?.Message}");
+                    }
+                    finally
+                    {
+                        UnityEditor.EditorApplication.update -= updateHandler;
                     }
                 }
             }
+            catch (InvalidOperationException)
+            {
+                throw; // Re-throw critical setup/build failures
+            }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Dry-run AssetBundle build via VRChat SDK failed: {e.Message}");
+                throw new InvalidOperationException($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build failed unexpectedly for '{avatarRoot.name}': {e.Message}", e);
             }
 
-            return GetBuiltBundleSize(out bundlePath, buildStartTime);
+            long size = GetBuiltBundleSize(out bundlePath, buildStartTime);
+            if (size <= 0)
+                throw new InvalidOperationException($"[AvatarSDKEvaluator] ⚠️ CRITICAL: AssetBundle dry-run completed but no valid .vrca file was found in Unity's temp cache for '{avatarRoot.name}'. The SDK build may have been suppressed by VRCFury or another hook, or the output was not written to the expected location ('{Application.temporaryCachePath}').");
+
+            return size;
         }
 
         public static long GetBuiltBundleSize(out string bundlePath, DateTime minCreationTime)
@@ -827,9 +856,7 @@ namespace Bluscream.VRC
                             if (f.LastWriteTime >= minCreationTime)
                             {
                                 if (newestBundle == null || f.LastWriteTime > newestBundle.LastWriteTime)
-                                {
                                     newestBundle = f;
-                                }
                             }
                         }
 
@@ -839,12 +866,23 @@ namespace Bluscream.VRC
                             Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
                             return newestBundle.Length;
                         }
+
+                        // Bundles exist but none are newer than buildStartTime
+                        Debug.LogWarning($"[AvatarSDKEvaluator] {files.Length} .vrca file(s) found in temp cache but none were written after {minCreationTime:HH:mm:ss}. The build may have been suppressed or cached.");
                     }
+                    else
+                    {
+                        Debug.LogWarning($"[AvatarSDKEvaluator] No .vrca files found in Unity temp cache at '{cachePath}'. Build may not have produced output.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[AvatarSDKEvaluator] Unity temp cache directory does not exist: '{cachePath}'.");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Dry-run bundle build check skipped/failed: {e.Message}");
+                Debug.LogError($"[AvatarSDKEvaluator] Error reading temp cache for bundle size: {e.Message}");
             }
 
             return -1;

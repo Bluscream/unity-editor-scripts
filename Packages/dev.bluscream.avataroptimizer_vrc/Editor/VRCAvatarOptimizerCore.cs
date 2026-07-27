@@ -215,21 +215,33 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke("Verifying compressed AssetBundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Verifying AssetBundle size for '{targetAvatar.name}'...");
 
-                long bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out string bundlePath);
-                long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
+                long bundleSizeBytes = -1;
+                string bundlePath = null;
+                try
+                {
+                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Debug.LogError($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ CRITICAL: Failed to obtain compressed AssetBundle size — {ex.Message}");
+                    summary.AddError($"⚠️ CRITICAL: Could not verify compressed bundle size. SDK dry-run was suppressed or failed. Check console for details.");
+                }
 
+                long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
                 AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024);
                 long maxUncompressedBytes = Math.Max(1024 * 1024L /* 1 MB */, profile.MaxTextureMemoryBytes - headroomBytes);
-                bool bundleExceeds = (maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
+
+                // Only check bundle size if we successfully got one (bundleSizeBytes > 0)
+                bool bundleExceeds = (bundleSizeBytes > 0 && maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
                 bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > maxUncompressedBytes);
 
                 if (bundleExceeds || uncompressedExceeds)
                 {
-                    double currentBundleMB = bundleSizeBytes / (1024.0 * 1024.0);
+                    double currentBundleMB = bundleSizeBytes > 0 ? bundleSizeBytes / (1024.0 * 1024.0) : -1;
                     double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
                     double targetUncompressedMB = maxUncompressedBytes / (1024.0 * 1024.0);
-                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds budget (Compressed: {currentBundleMB:F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Re-running fast downscaler pass...");
+                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds budget (Compressed: {(currentBundleMB >= 0 ? currentBundleMB.ToString("F2") + " MB" : "unknown")}, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Re-running fast downscaler pass...");
 
                     TextureCompressionEditor.OptimizeForTextureMemoryBudget(
                         targetAvatar, 
@@ -243,7 +255,15 @@ namespace Bluscream.VRCAvatarOptimizer
                     );
 
                     progressCallback?.Invoke($"Building final dry-run AssetBundle verification...", 0.99f);
-                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                    try
+                    {
+                        bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        Debug.LogError($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ CRITICAL: Final AssetBundle verification failed — {ex.Message}");
+                        summary.AddError($"⚠️ CRITICAL: Final bundle size verification failed. See console for details.");
+                    }
                     currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 }
 
