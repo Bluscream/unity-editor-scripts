@@ -760,11 +760,13 @@ namespace Bluscream.VRC
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
+        public const int MAX_BUNDLE_BUILD_TIMEOUT_SECONDS = 300;
+
         /// <summary>
         /// Invokes a VRChat SDK dry-run build and returns the size of the resulting .vrca bundle in bytes.
         /// Throws InvalidOperationException if the bundle could not be built — callers must handle this explicitly.
         /// </summary>
-        public static long BuildAvatarAssetBundle(GameObject avatarRoot, out string bundlePath)
+        public static long BuildAvatarAssetBundle(GameObject avatarRoot, out string bundlePath, Action<string> progressCallback = null)
         {
             bundlePath = null;
             if (avatarRoot == null) throw new ArgumentNullException(nameof(avatarRoot), "[AvatarSDKEvaluator] BuildAvatarAssetBundle: avatarRoot is null.");
@@ -812,6 +814,10 @@ namespace Bluscream.VRC
                     {
                         while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
                         {
+                            double elapsed = UnityEditor.EditorApplication.timeSinceStartup - startWait;
+                            int elapsedSec = (int)elapsed;
+                            progressCallback?.Invoke($"Building VRChat AssetBundle dry-run... (elapsed {elapsedSec}s / up to {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS}s)");
+
                             // Pump Editor main loop ticks allowing async tasks/coroutines to execute
                             UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
                             System.Threading.Thread.Sleep(5);
@@ -823,9 +829,9 @@ namespace Bluscream.VRC
                                 break;
                             }
 
-                            if (UnityEditor.EditorApplication.timeSinceStartup - startWait > 300)
+                            if (elapsed > MAX_BUNDLE_BUILD_TIMEOUT_SECONDS)
                             {
-                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after 300 seconds for '{avatarRoot.name}'.");
+                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS} seconds for '{avatarRoot.name}'.");
                                 break;
                             }
                         }

@@ -255,7 +255,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 string bundlePath = null;
                 try
                 {
-                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                    bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath, (msg) => progressCallback?.Invoke(msg, 0.98f));
                 }
                 catch (InvalidOperationException ex)
                 {
