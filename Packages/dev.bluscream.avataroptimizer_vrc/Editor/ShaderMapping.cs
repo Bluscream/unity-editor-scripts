@@ -155,9 +155,9 @@ namespace Bluscream.VRCAvatarOptimizer
         };
 
         /// <summary>
-        /// Finds a Quest-compatible replacement shader for the given shader name
+        /// Finds a Quest-compatible replacement shader for the given shader name / material
         /// </summary>
-        public static ShaderReplacementResult FindReplacementShader(string originalShaderName)
+        public static ShaderReplacementResult FindReplacementShader(string originalShaderName, Material mat = null)
         {
             if (string.IsNullOrEmpty(originalShaderName))
             {
@@ -179,25 +179,90 @@ namespace Bluscream.VRCAvatarOptimizer
                 };
             }
 
-            // Try exact lookup from OptimizerConfig JSON first, then static lookup table
-            string exactMatch = null;
-            if (OptimizerConfig.ActiveConfig?.LookupDict != null &&
-                OptimizerConfig.ActiveConfig.LookupDict.TryGetValue(originalShaderName, out exactMatch))
+            // 1. Evaluate OptimizerConfig JSON ShaderMappingRules (supports Name, MatchType, Properties, CaseSensitive)
+            if (OptimizerConfig.ActiveConfig?.shaderMapping?.rules != null)
             {
-                Shader shader = Shader.Find(exactMatch);
-                if (shader != null)
+                foreach (var rule in OptimizerConfig.ActiveConfig.shaderMapping.rules)
                 {
-                    return new ShaderReplacementResult
+                    if (rule == null || string.IsNullOrWhiteSpace(rule.targetShader)) continue;
+
+                    bool nameMatches = true;
+
+                    if (!string.IsNullOrWhiteSpace(rule.pattern))
                     {
-                        Success = true,
-                        ReplacementShader = shader,
-                        ReplacementShaderName = exactMatch,
-                        MatchType = "Config JSON Exact lookup"
-                    };
+                        string strToMatch = originalShaderName;
+                        string patternToMatch = rule.pattern;
+
+                        if (!rule.caseSensitive)
+                        {
+                            strToMatch = strToMatch.ToLowerInvariant();
+                            patternToMatch = patternToMatch.ToLowerInvariant();
+                        }
+
+                        RuleMatchType type = RuleMatchType.Contains;
+                        Enum.TryParse(rule.matchType, true, out type);
+
+                        switch (type)
+                        {
+                            case RuleMatchType.Exact:
+                                nameMatches = string.Equals(strToMatch, patternToMatch, rule.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+                                break;
+                            case RuleMatchType.StartsWith:
+                                nameMatches = strToMatch.StartsWith(patternToMatch, rule.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+                                break;
+                            case RuleMatchType.EndsWith:
+                                nameMatches = strToMatch.EndsWith(patternToMatch, rule.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+                                break;
+                            case RuleMatchType.Contains:
+                                nameMatches = strToMatch.Contains(patternToMatch);
+                                break;
+                            case RuleMatchType.Regex:
+                                try
+                                {
+                                    var opts = rule.caseSensitive ? System.Text.RegularExpressions.RegexOptions.None : System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                                    nameMatches = System.Text.RegularExpressions.Regex.IsMatch(originalShaderName, rule.pattern, opts);
+                                }
+                                catch { nameMatches = false; }
+                                break;
+                        }
+                    }
+
+                    if (!nameMatches) continue;
+
+                    // Evaluate property matching if requiredProperties listed
+                    if (rule.requiredProperties != null && rule.requiredProperties.Count > 0)
+                    {
+                        if (mat == null) continue; // Property match requested but no material instance provided
+
+                        bool propsMatch = true;
+                        foreach (string prop in rule.requiredProperties)
+                        {
+                            if (string.IsNullOrWhiteSpace(prop)) continue;
+                            if (!mat.HasProperty(prop))
+                            {
+                                propsMatch = false;
+                                break;
+                            }
+                        }
+                        if (!propsMatch) continue;
+                    }
+
+                    Shader shader = Shader.Find(rule.targetShader);
+                    if (shader != null)
+                    {
+                        return new ShaderReplacementResult
+                        {
+                            Success = true,
+                            ReplacementShader = shader,
+                            ReplacementShaderName = rule.targetShader,
+                            MatchType = string.IsNullOrWhiteSpace(rule.name) ? $"Rule ({rule.matchType})" : $"Rule: {rule.name}"
+                        };
+                    }
                 }
             }
 
-            if (ShaderLookupTable.TryGetValue(originalShaderName, out exactMatch))
+            // Fast exact lookup fallback
+            if (ShaderLookupTable.TryGetValue(originalShaderName, out string exactMatch))
             {
                 Shader shader = Shader.Find(exactMatch);
                 if (shader != null)
@@ -209,34 +274,6 @@ namespace Bluscream.VRCAvatarOptimizer
                         ReplacementShaderName = exactMatch,
                         MatchType = "Exact lookup"
                     };
-                }
-            }
-
-            // Try pattern matching from OptimizerConfig JSON first, then static rules
-            string lowerName = originalShaderName.ToLowerInvariant();
-            if (OptimizerConfig.ActiveConfig?.shaderMapping?.patternRules != null)
-            {
-                foreach (var rule in OptimizerConfig.ActiveConfig.shaderMapping.patternRules)
-                {
-                    try
-                    {
-                        string nameToCheck = rule.caseSensitive ? originalShaderName : lowerName;
-                        if (System.Text.RegularExpressions.Regex.IsMatch(nameToCheck, rule.pattern))
-                        {
-                            Shader shader = Shader.Find(rule.replacement);
-                            if (shader != null)
-                            {
-                                return new ShaderReplacementResult
-                                {
-                                    Success = true,
-                                    ReplacementShader = shader,
-                                    ReplacementShaderName = rule.replacement,
-                                    MatchType = $"Config JSON Pattern: {rule.pattern}"
-                                };
-                            }
-                        }
-                    }
-                    catch { continue; }
                 }
             }
 

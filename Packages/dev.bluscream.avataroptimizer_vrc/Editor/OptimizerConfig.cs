@@ -8,26 +8,30 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    [Serializable]
-    public class PatternRuleData
+    public enum RuleMatchType
     {
-        public string pattern;
-        public string replacement;
-        public bool caseSensitive;
+        Exact,
+        StartsWith,
+        EndsWith,
+        Contains,
+        Regex
     }
 
     [Serializable]
-    public class LookupEntryData
+    public class ShaderMappingRule
     {
-        public string key;
-        public string value;
+        public string name;
+        public string matchType = "Contains"; // Exact, StartsWith, EndsWith, Contains, Regex
+        public string pattern;
+        public string targetShader;
+        public bool caseSensitive = false;
+        public List<string> requiredProperties = new List<string>();
     }
 
     [Serializable]
     public class ShaderMappingData
     {
-        public List<LookupEntryData> lookupTable = new List<LookupEntryData>();
-        public List<PatternRuleData> patternRules = new List<PatternRuleData>();
+        public List<ShaderMappingRule> rules = new List<ShaderMappingRule>();
     }
 
     [Serializable]
@@ -73,13 +77,17 @@ namespace Bluscream.VRCAvatarOptimizer
         public void BuildLookupDictionaries()
         {
             LookupDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (shaderMapping?.lookupTable != null)
+            if (shaderMapping?.rules != null)
             {
-                foreach (var entry in shaderMapping.lookupTable)
+                foreach (var rule in shaderMapping.rules)
                 {
-                    if (!string.IsNullOrWhiteSpace(entry.key) && !string.IsNullOrWhiteSpace(entry.value))
+                    if (rule == null) continue;
+                    if (string.Equals(rule.matchType, "Exact", StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrWhiteSpace(rule.pattern) &&
+                        !string.IsNullOrWhiteSpace(rule.targetShader) &&
+                        (rule.requiredProperties == null || rule.requiredProperties.Count == 0))
                     {
-                        LookupDict[entry.key] = entry.value;
+                        LookupDict[rule.pattern] = rule.targetShader;
                     }
                 }
             }
@@ -225,52 +233,46 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             int warnings = 0;
 
-            // Validate Shader Mapping Pattern Rules
-            if (data.shaderMapping?.patternRules != null)
+            // Validate Shader Mapping Rules
+            if (data.shaderMapping?.rules != null)
             {
-                for (int i = data.shaderMapping.patternRules.Count - 1; i >= 0; i--)
+                for (int i = data.shaderMapping.rules.Count - 1; i >= 0; i--)
                 {
-                    var rule = data.shaderMapping.patternRules[i];
-                    if (string.IsNullOrWhiteSpace(rule.pattern))
+                    var rule = data.shaderMapping.rules[i];
+                    if (rule == null)
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Pattern rule #{i} has an empty regex pattern — removing invalid rule.");
-                        data.shaderMapping.patternRules.RemoveAt(i);
+                        data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
                     }
-                    if (string.IsNullOrWhiteSpace(rule.replacement))
+                    if (string.IsNullOrWhiteSpace(rule.targetShader))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Pattern rule #{i} ('{rule.pattern}') has an empty replacement shader — removing invalid rule.");
-                        data.shaderMapping.patternRules.RemoveAt(i);
+                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has empty targetShader — removing invalid rule.");
+                        data.shaderMapping.rules.RemoveAt(i);
+                        warnings++;
+                        continue;
+                    }
+                    if (string.IsNullOrWhiteSpace(rule.pattern) && (rule.requiredProperties == null || rule.requiredProperties.Count == 0))
+                    {
+                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has neither pattern nor requiredProperties specified — removing invalid rule.");
+                        data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
                     }
 
-                    // Test compile regex pattern
-                    try
+                    // Test compile regex if matchType is Regex
+                    if (string.Equals(rule.matchType, "Regex", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(rule.pattern))
                     {
-                        System.Text.RegularExpressions.Regex.IsMatch("", rule.pattern);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Pattern rule #{i} has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
-                        data.shaderMapping.patternRules.RemoveAt(i);
-                        warnings++;
-                    }
-                }
-            }
-
-            // Validate Shader Mapping Lookup Table
-            if (data.shaderMapping?.lookupTable != null)
-            {
-                for (int i = data.shaderMapping.lookupTable.Count - 1; i >= 0; i--)
-                {
-                    var entry = data.shaderMapping.lookupTable[i];
-                    if (string.IsNullOrWhiteSpace(entry.key) || string.IsNullOrWhiteSpace(entry.value))
-                    {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Lookup table entry #{i} ('{entry.key}' -> '{entry.value}') has empty key or value — removing entry.");
-                        data.shaderMapping.lookupTable.RemoveAt(i);
-                        warnings++;
+                        try
+                        {
+                            System.Text.RegularExpressions.Regex.IsMatch("", rule.pattern);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
+                            data.shaderMapping.rules.RemoveAt(i);
+                            warnings++;
+                        }
                     }
                 }
             }

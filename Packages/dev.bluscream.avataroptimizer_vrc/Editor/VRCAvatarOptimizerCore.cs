@@ -795,7 +795,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return questMat;
             }
 
-            var replacement = ShaderMapping.FindReplacementShader(originalShaderName);
+            var replacement = ShaderMapping.FindReplacementShader(originalShaderName, originalMat);
             if (replacement.Success && replacement.ReplacementShader != null)
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Shader swap: '{originalShaderName}' → '{replacement.ReplacementShader.name}' on '{questMat.name}'");
