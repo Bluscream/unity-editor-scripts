@@ -772,6 +772,19 @@ namespace Bluscream.VRC
             if (avatarRoot == null) throw new ArgumentNullException(nameof(avatarRoot), "[AvatarSDKEvaluator] BuildAvatarAssetBundle: avatarRoot is null.");
             DateTime buildStartTime = DateTime.Now.AddSeconds(-2);
 
+            // Third-party build hooks (VRCFury's mobile parameter sync) raise blocking modal dialogs
+            // that are meaningful for a real upload but would stall an automated size probe. They are
+            // suppressed for the duration of this build only and restored immediately afterwards.
+            using (new ThirdPartyBuildDialogSuppressor())
+            {
+                return BuildAvatarAssetBundleInternal(avatarRoot, out bundlePath, progressCallback, buildStartTime);
+            }
+        }
+
+        private static long BuildAvatarAssetBundleInternal(GameObject avatarRoot, out string bundlePath, Action<string> progressCallback, DateTime buildStartTime)
+        {
+            bundlePath = null;
+
             // Preferred: drive the SDK's synchronous exporter directly (no SDK panel, no async
             // orchestration, no main-thread deadlock). Falls back to the panel's async Build()
             // machinery only when the exporter API can't be resolved.
