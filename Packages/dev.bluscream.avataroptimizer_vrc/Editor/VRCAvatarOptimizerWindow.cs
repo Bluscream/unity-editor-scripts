@@ -56,6 +56,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
             config.SkipDryRunBundleBuild = EditorPrefs.GetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", false);
+            config.MaxSizeConvergenceAttempts = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxSizeConvergenceAttempts", 3);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
@@ -80,6 +81,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
             EditorPrefs.SetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", config.SkipDryRunBundleBuild);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_MaxSizeConvergenceAttempts", config.MaxSizeConvergenceAttempts);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
@@ -235,6 +237,18 @@ namespace Bluscream.VRCAvatarOptimizer
                     "The compressed avatar size will NOT be verified with a real SDK build — only Step 5's fast-math texture estimate is used. Faster conversions, but the summary won't show a verified bundle size.",
                     MessageType.Warning
                 );
+            }
+            else
+            {
+                EditorGUI.indentLevel++;
+                config.MaxSizeConvergenceAttempts = EditorGUILayout.IntSlider("Max Size Convergence Retries", config.MaxSizeConvergenceAttempts, 0, 6);
+                EditorGUILayout.HelpBox(
+                    config.MaxSizeConvergenceAttempts == 0
+                        ? "Retries disabled: if the built bundle exceeds the platform cap it is reported as an error without further compression."
+                        : $"If the built bundle exceeds the platform cap, the texture budget is tightened by the measured overshoot and rebuilt, up to {config.MaxSizeConvergenceAttempts} time(s). Each retry costs one full SDK build; the loop stops early once it fits or when the bundle stops shrinking.",
+                    MessageType.None
+                );
+                EditorGUI.indentLevel--;
             }
 
             EditorGUIUtility.labelWidth = prevLabelWidth;

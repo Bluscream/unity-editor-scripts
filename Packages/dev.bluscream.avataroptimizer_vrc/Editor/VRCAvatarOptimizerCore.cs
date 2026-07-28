@@ -31,6 +31,9 @@ namespace Bluscream.VRCAvatarOptimizer
             // Skip the Step 8.5 dry-run bundle builds entirely and rely on Step 5's fast-math size
             // estimate only. Faster, but no verified compressed bundle size in the summary.
             public bool SkipDryRunBundleBuild = false;
+            // How many times Step 8.5 may tighten the texture budget and rebuild when the measured
+            // bundle exceeds the platform cap. Each attempt costs one full SDK build. 0 = never retry.
+            public int MaxSizeConvergenceAttempts = 3;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
@@ -321,16 +324,53 @@ namespace Bluscream.VRCAvatarOptimizer
                 bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)uncompressedEffectiveLimit);
 
 
-                if (bundleExceeds || uncompressedExceeds)
+                // Convergence loop: the Step 5 estimator only models TEXTURE memory, but the real bundle
+                // also carries meshes, animation clips, and controllers. When the measured bundle exceeds
+                // the platform cap we feed the measured overshoot back as a TIGHTER texture budget and
+                // rebuild, repeating until it fits, the texture ladder bottoms out, or we run out of
+                // attempts. (Re-running with the original arguments would be a deterministic no-op.)
+                long textureBudgetBytes = profile.MaxTextureMemoryBytes;
+                for (int attempt = 1; attempt <= Math.Max(0, config.MaxSizeConvergenceAttempts) && (bundleExceeds || uncompressedExceeds); attempt++)
                 {
                     double currentBundleMB = bundleSizeBytes > 0 ? bundleSizeBytes / (1024.0 * 1024.0) : -1;
                     double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
                     double targetUncompressedMB = maxUncompressedBytes / (1024.0 * 1024.0);
-                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Avatar exceeds budget (Compressed: {(currentBundleMB >= 0 ? currentBundleMB.ToString("F2") + " MB" : "unknown")}, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Re-running fast downscaler pass...");
+
+                    long previousBudget = textureBudgetBytes;
+                    if (bundleExceeds)
+                    {
+                        // Non-texture payload is (measured bundle - texture contribution) and cannot be
+                        // compressed by us, so scaling the texture budget by limit/measured under-corrects
+                        // on purpose: subtract the excess directly, then clamp to a sane floor.
+                        long excessBytes = bundleSizeBytes - maxBundleBytes;
+                        // Bundle bytes are compressed; textures must give up more raw bytes than the
+                        // compressed excess. Use the observed compression ratio to scale the correction up.
+                        double compressionRatio = bundleSizeBytes > 0 && currentStats.TotalTextureMemoryBytes > 0
+                            ? Math.Max(0.05, (double)bundleSizeBytes / currentStats.TotalTextureMemoryBytes)
+                            : 1.0;
+                        long rawReduction = (long)(excessBytes / compressionRatio);
+                        // Always make meaningful progress even if the math suggests a tiny step
+                        long minStep = (long)(textureBudgetBytes * 0.10);
+                        textureBudgetBytes -= Math.Max(rawReduction, minStep);
+                    }
+                    if (uncompressedExceeds)
+                    {
+                        textureBudgetBytes = Math.Min(textureBudgetBytes, (long)(maxUncompressedBytes * 0.95));
+                    }
+                    textureBudgetBytes = Math.Max(2 * 1024 * 1024L /* 2 MB floor */, textureBudgetBytes);
+
+                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt}/{config.MaxSizeConvergenceAttempts}: avatar exceeds budget (Compressed: {(currentBundleMB >= 0 ? currentBundleMB.ToString("F2") + " MB" : "unknown")} / {maxBundleBytes / (1024.0 * 1024.0):F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Tightening texture budget {previousBudget / (1024.0 * 1024.0):F1} MB → {textureBudgetBytes / (1024.0 * 1024.0):F1} MB and rebuilding...");
+                    progressCallback?.Invoke($"Size convergence attempt {attempt}/{config.MaxSizeConvergenceAttempts} (target texture budget {textureBudgetBytes / (1024.0 * 1024.0):F1} MB)...", 0.98f);
+
+                    if (previousBudget == textureBudgetBytes)
+                    {
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Texture budget hit its floor — further compression cannot shrink the bundle. Stopping convergence.");
+                        break;
+                    }
 
                     TextureCompressionEditor.OptimizeForTextureMemoryBudget(
-                        targetAvatar, 
-                        profile.MaxTextureMemoryBytes, 
+                        targetAvatar,
+                        textureBudgetBytes,
                         (msg) => progressCallback?.Invoke(msg, 0.98f),
                         config.MaxTextureResolution,
                         config.CrunchCompressionQuality,
@@ -339,17 +379,32 @@ namespace Bluscream.VRCAvatarOptimizer
                         config.CrunchStepPercent
                     );
 
-                    progressCallback?.Invoke($"Building final dry-run AssetBundle verification...", 0.99f);
+                    progressCallback?.Invoke($"Rebuilding dry-run AssetBundle (attempt {attempt}/{config.MaxSizeConvergenceAttempts})...", 0.99f);
+                    long previousBundleSize = bundleSizeBytes;
                     try
                     {
-                        bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath);
+                        bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath, (msg) => progressCallback?.Invoke(msg, 0.99f));
                     }
                     catch (InvalidOperationException ex)
                     {
-                        Debug.LogError($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ CRITICAL: Final AssetBundle verification failed — {ex.Message}");
-                        summary.AddError($"⚠️ CRITICAL: Final bundle size verification failed. See console for details.");
+                        Debug.LogError($"[VRCAvatarOptimizerCore] [Step 8.5] ⚠️ CRITICAL: AssetBundle verification failed on attempt {attempt} — {ex.Message}");
+                        summary.AddError($"⚠️ CRITICAL: Bundle size verification failed on attempt {attempt}. See console for details.");
+                        break;
                     }
+
                     currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+                    bundleExceeds = (bundleSizeBytes > 0 && maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
+                    uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)uncompressedEffectiveLimit);
+
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt} result: {bundleSizeBytes / (1024.0 * 1024.0):F2} MB compressed, {currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB texture VRAM.{(bundleExceeds || uncompressedExceeds ? "" : " ✓ Within budget.")}");
+
+                    // Guard against a pass that cannot shrink the bundle any further
+                    if (bundleSizeBytes > 0 && previousBundleSize > 0 && bundleSizeBytes >= previousBundleSize)
+                    {
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Bundle did not shrink ({previousBundleSize / (1024.0 * 1024.0):F2} MB → {bundleSizeBytes / (1024.0 * 1024.0):F2} MB) — remaining size is non-texture payload (meshes/animations/controllers). Stopping convergence.");
+                        summary.AddWarning("Texture compression can no longer shrink the avatar — the remaining bundle size is mesh/animation/controller payload. Reduce meshes, blendshapes, or animator content.");
+                        break;
+                    }
                 }
                 }
                 finally
