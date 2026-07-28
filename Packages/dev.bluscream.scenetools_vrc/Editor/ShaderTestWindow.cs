@@ -223,28 +223,28 @@ namespace Bluscream.ShaderTest
             string matPath = targetMaterial != null ? AssetDatabase.GetAssetPath(targetMaterial) : null;
             if (string.IsNullOrEmpty(matPath) && targetMaterial != null) matPath = targetMaterial.name;
 
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
-            Debug.Log($"<color=cyan><b>[ShaderTest] Shader Dump ({totalShaders} shaders across {shadersByPath.Count} categories):</b></color>");
+            Debug.Log($"================================================================================");
+            Debug.Log($"[ShaderTest] Shader Dump ({totalShaders} shaders across {shadersByPath.Count} categories):");
             if (!string.IsNullOrEmpty(goPath))
-                Debug.Log($"  <b>GameObject:</b> {goPath}");
+                Debug.Log($"  GameObject: {goPath}");
             if (!string.IsNullOrEmpty(matPath))
-                Debug.Log($"  <b>Material:</b> {matPath}");
+                Debug.Log($"  Material: {matPath}");
             if (targetMaterial != null)
-                Debug.Log($"  <b>Active Shader:</b> {targetMaterial.shader?.name} (Original: {originalShader?.name})");
+                Debug.Log($"  Active Shader: {targetMaterial.shader?.name} (Original: {originalShader?.name})");
 
             foreach (var kvp in shadersByPath.OrderBy(k => k.Key))
             {
-                Debug.Log($"<color=lime><b>[Category: {kvp.Key}]</b></color> ({kvp.Value.Count} shaders)");
+                Debug.Log($"[Category: {kvp.Key}] ({kvp.Value.Count} shaders)");
                 foreach (Shader s in kvp.Value.OrderBy(s => s.name))
                 {
                     string suffix = "";
-                    if (s == originalShader) suffix += " <color=yellow><b>(Original)</b></color>";
-                    if (s == currentShader) suffix += " <color=green><b>(Selected)</b></color>";
+                    if (s == originalShader) suffix += " (Original)";
+                    if (s == currentShader) suffix += " (Selected)";
 
                     Debug.Log($"  • {s.name}{suffix}");
                 }
             }
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Debug.Log($"================================================================================");
         }
 
         private void ApplyShader(Shader shader)
