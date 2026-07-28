@@ -20,15 +20,16 @@ namespace Bluscream.TextureCompressor
         public long VramBudgetBytes = 40L * 1024 * 1024;
         /// <summary>Budget for the TEXTURE portion of the AssetBundle (total cap minus non-texture payload).</summary>
         public long DiskBudgetBytes = 10L * 1024 * 1024;
-        public int MaxResolution = 2048;
+        /// <summary>Optional ceiling. 0 (default) = start each texture at its own native resolution.</summary>
+        public int MaxResolution = 0;
         /// <summary>
-        /// Preferred resolution floor: the optimizer exhausts every format/crunch combination at or above
-        /// this resolution before it will downscale past it. It is a soft floor — if the budget still
-        /// cannot be met, it keeps going down to AbsoluteMinResolution rather than giving up.
+        /// Preferred resolution floor. This only affects ORDERING, never reachability: every
+        /// format/crunch combination at or above it is tried before anything below it, but the ladder
+        /// always continues down to AbsoluteMinResolution if the budget demands it.
         /// </summary>
         public int MinResolution = 512;
-        /// <summary>Hard floor — never downscale below this under any budget pressure.</summary>
-        public int AbsoluteMinResolution = 128;
+        /// <summary>Hard floor. 32px keeps textures from ever being the reason a budget can't be met.</summary>
+        public int AbsoluteMinResolution = 32;
         /// <summary>
         /// How expensive losing resolution is, relative to losing format detail.
         /// 1.0 = proportional. Higher values (2-3) make downscaling costly, so a big body atlas keeps its
@@ -208,12 +209,13 @@ namespace Bluscream.TextureCompressor
                 : MobileTiers(request.AllowCrunch, request.CrunchQuality);
 
             // Resolution ladder, capped by the user's max and floored by MinResolution
-            int preferredMinRes = Math.Min(request.MinResolution, request.MaxResolution);
-            int hardMinRes = Math.Min(request.AbsoluteMinResolution, preferredMinRes);
-            var resolutions = new[] { 4096, 2048, 1024, 512, 256, 128, 64, 32 }
-                .Where(r => r <= request.MaxResolution && r >= hardMinRes)
-                .ToArray();
-            if (resolutions.Length == 0) resolutions = new[] { Mathf.Clamp(request.MaxResolution, 32, 8192) };
+            // No global resolution ceiling: each texture starts at its own native size (optionally capped)
+            // and the allocator decides how far down it needs to go. A hard 32px floor guarantees textures
+            // can always be shrunk far enough that they are never the reason a budget cannot be met.
+            int hardMinRes = Mathf.Clamp(request.AbsoluteMinResolution, 32, 4096);
+            int preferredMinRes = Math.Max(hardMinRes, request.MinResolution);
+            int ceiling = request.MaxResolution > 0 ? request.MaxResolution : int.MaxValue;
+            var standardResolutions = new[] { 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32 };
 
             // Global level ladder ordered best → worst.
             //   score = formatQuality × (resolution / topResolution) ^ ResolutionPriority
@@ -221,36 +223,45 @@ namespace Bluscream.TextureCompressor
             // resolution costs the same as halving format quality, so the optimizer happily downscales.
             // At 2-3 downscaling becomes expensive and big atlases keep their pixels, absorbing the
             // budget through larger ASTC blocks (blurrier, but far better than a 512px body texture).
-            int topRes = resolutions.Max();
             float resPriority = Mathf.Clamp(request.ResolutionPriority, 0.25f, 4f);
-            var levels = new List<Level>();
-            foreach (int res in resolutions)
-                foreach (Tier t in tiers)
-                    levels.Add(new Level
-                    {
-                        Resolution = res,
-                        Tier = t,
-                        Score = t.Quality * Mathf.Pow(res / (float)topRes, resPriority)
-                    });
 
-            // Two segments, hard-ordered: EVERY format/crunch combination at or above the preferred
-            // resolution floor is exhausted before any sub-floor level becomes available. Sub-floor
-            // levels are a last resort for avatars that cannot otherwise meet the platform budget.
-            var allLevels = levels.Where(l => l.Resolution >= preferredMinRes).OrderByDescending(l => l.Score)
-                .Concat(levels.Where(l => l.Resolution < preferredMinRes).OrderByDescending(l => l.Score))
-                .ToList();
+            // Builds the degradation ladder for one texture, anchored at its own native resolution.
+            // Two hard-ordered segments: every format/crunch combination at or above the preferred
+            // resolution floor is exhausted before any sub-floor level is offered — but sub-floor levels
+            // always exist, all the way down to the hard floor.
+            Func<int, List<Level>> buildLadder = nativeLongest =>
+            {
+                int top = Math.Min(nativeLongest, ceiling);
+                var usable = standardResolutions.Where(r => r <= top && r >= hardMinRes).ToList();
+                if (usable.Count == 0) usable.Add(Mathf.Clamp(top, hardMinRes, 8192));
+                int topRes = usable.Max();
+
+                var built = new List<Level>();
+                foreach (int res in usable)
+                    foreach (Tier t in tiers)
+                        built.Add(new Level
+                        {
+                            Resolution = res,
+                            Tier = t,
+                            Score = t.Quality * Mathf.Pow(res / (float)topRes, resPriority)
+                        });
+
+                return built.Where(l => l.Resolution >= preferredMinRes).OrderByDescending(l => l.Score)
+                    .Concat(built.Where(l => l.Resolution < preferredMinRes).OrderByDescending(l => l.Score))
+                    .ToList();
+            };
 
             // Build per-texture entries with a ladder filtered to what each texture supports
             var entries = new List<TexEntry>();
             foreach (TextureImporter imp in importers)
             {
                 if (imp == null) continue;
-                if (!Bluscream.Utils.GetSourceTextureWidthAndHeight(imp, out int nw, out int nh)) { nw = nh = request.MaxResolution; }
+                if (!Bluscream.Utils.GetSourceTextureWidthAndHeight(imp, out int nw, out int nh)) { nw = nh = 2048; }
 
                 bool hasAlpha = imp.DoesSourceTextureHaveAlpha();
                 bool isNormal = imp.textureType == TextureImporterType.NormalMap;
 
-                var ladder = allLevels
+                var ladder = buildLadder(Math.Max(1, Math.Max(nw, nh)))
                     .Where(l => !(l.Tier.RequiresNoAlpha && hasAlpha))
                     .Where(l => !(isNormal && !l.Tier.SafeForNormalMaps))
                     .ToList();
@@ -280,7 +291,7 @@ namespace Bluscream.TextureCompressor
 
             // ── Greedy degradation: repeatedly downgrade whichever texture gives the most budget
             //    relief per unit of quality lost, until both budgets are satisfied.
-            int guard = entries.Count * allLevels.Count + 16;
+            int guard = entries.Sum(e => e.Ladder.Count) + 16;
             while ((totalVram > result.VramBudgetBytes || totalDisk > result.DiskBudgetBytes) && guard-- > 0)
             {
                 bool vramOver = totalVram > result.VramBudgetBytes;
@@ -317,7 +328,9 @@ namespace Bluscream.TextureCompressor
                 if (best == null)
                 {
                     result.HitFloor = true;
-                    Debug.LogWarning($"[TextureBudget] Every texture is at its lowest tier — cannot compress further. " +
+                    // With a 32px floor this means textures are now negligible: anything still over
+                    // budget is non-texture payload (meshes, animations, controllers).
+                    Debug.LogWarning($"[TextureBudget] Every texture is at the {hardMinRes}px floor and its most aggressive format — textures cannot account for any remaining overage. " +
                                      $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
                     break;
                 }

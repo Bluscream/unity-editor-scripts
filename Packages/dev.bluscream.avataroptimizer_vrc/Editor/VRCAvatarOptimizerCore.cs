@@ -61,11 +61,12 @@ namespace Bluscream.VRCAvatarOptimizer
             /// before a real build exists to measure it. Replaced by the measured value from then on.
             /// </summary>
             public const double InitialNonTextureShare = 0.45;
-            /// <summary>Resolution ceiling. Mobile GPUs gain nothing above 2K for avatar atlases.</summary>
-            public const int MobileMaxResolution = 2048;
-            public const int PCMaxResolution = 4096;
-            /// <summary>Preferred resolution floor — sub-floor levels are only used as a last resort.</summary>
+            /// <summary>
+            /// Preferred resolution floor. Ordering only — every format/crunch option above it is tried
+            /// first, but textures can always go below it (down to 32px) rather than miss a budget.
+            /// </summary>
             public const int PreferredMinResolution = 512;
+            public const int AbsoluteMinResolution = 32;
             /// <summary>Downscaling costs more than format detail: keep pixels, grow the block instead.</summary>
             public const float ResolutionPriority = 2.0f;
             /// <summary>Crunch is always offered as a parallel axis; the allocator picks it only when it wins.</summary>
@@ -76,13 +77,13 @@ namespace Bluscream.VRCAvatarOptimizer
         private static Bluscream.TextureCompressor.TextureBudgetRequest BuildTextureRequest(
             ConversionConfig config, PlatformProfile profile, long vramBudget, long diskBudget)
         {
-            bool mobile = config.Platform != TargetPlatform.PC;
             return new Bluscream.TextureCompressor.TextureBudgetRequest
             {
                 VramBudgetBytes = vramBudget,
                 DiskBudgetBytes = diskBudget,
-                MaxResolution = mobile ? TextureAutoTuning.MobileMaxResolution : TextureAutoTuning.PCMaxResolution,
+                MaxResolution = 0, // start every texture at its native resolution; the allocator decides
                 MinResolution = TextureAutoTuning.PreferredMinResolution,
+                AbsoluteMinResolution = TextureAutoTuning.AbsoluteMinResolution,
                 ResolutionPriority = TextureAutoTuning.ResolutionPriority,
                 AllowCrunch = TextureAutoTuning.AllowCrunch,
                 CrunchQuality = TextureAutoTuning.CrunchQuality,
