@@ -132,49 +132,61 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         /// <summary>
-        /// Copies EVERY limit field from <paramref name="overlay"/> onto this instance in-place —
-        /// including fields still at their int.MaxValue/long.MaxValue "unlimited" default. It does not
-        /// merge, so passing a sparse overlay here will wipe existing limits to unlimited.
+        /// Merges <paramref name="overlay"/> onto this instance in-place: every field is guarded by its
+        /// "unspecified" sentinel (int.MaxValue / long.MaxValue), so an omitted field leaves the current
+        /// value untouched rather than wiping it to unlimited. Safe to call directly with a sparse
+        /// overlay — no <see cref="MergeWith"/> round-trip required.
         /// <para>
-        /// Always feed it a <see cref="MergeWith"/> result, which is what resolves the sentinels:
-        /// <c>profile.ApplyFrom(profile.MergeWith(overlay))</c>. That is the only pattern
-        /// PlatformProfile.ApplyConfigLimits uses.
+        /// Exceptions, which have no sentinel to test:
+        /// component blacklists/whitelists apply only when the overlay actually provides entries
+        /// (blacklists union, whitelist replaces), and the Particle*Allowed bools are restrictive-wins
+        /// (an overlay may forbid, never re-allow).
         /// </para>
-        /// Component blacklists/whitelists are the exception: they are only touched when the overlay
-        /// actually provides entries (blacklists union, whitelist replaces).
         /// </summary>
         public void ApplyFrom(ProfileLimitData overlay)
         {
             if (overlay == null) return;
-            MaxTriangles               = overlay.MaxTriangles;
-            MaxSkinnedMeshes           = overlay.MaxSkinnedMeshes;
-            MaxMeshRenderers           = overlay.MaxMeshRenderers;
-            MaxMaterialSlots           = overlay.MaxMaterialSlots;
-            MaxBones                   = overlay.MaxBones;
-            MaxAnimators               = overlay.MaxAnimators;
-            MaxTextureMemoryBytes      = overlay.MaxTextureMemoryBytes;
-            MaxAssetBundleSizeBytes    = overlay.MaxAssetBundleSizeBytes;
-            MaxPhysBoneComponents      = overlay.MaxPhysBoneComponents;
-            MaxPhysBoneTransforms      = overlay.MaxPhysBoneTransforms;
-            MaxPhysBoneColliders       = overlay.MaxPhysBoneColliders;
-            MaxPhysBoneCollisionChecks = overlay.MaxPhysBoneCollisionChecks;
-            MaxContacts                = overlay.MaxContacts;
-            MaxParticleSystems         = overlay.MaxParticleSystems;
-            MaxActiveParticles         = overlay.MaxActiveParticles;
-            MaxMeshParticlePolyCount   = overlay.MaxMeshParticlePolyCount;
-            ParticleTrailsEnabledAllowed    = overlay.ParticleTrailsEnabledAllowed;
-            ParticleCollisionEnabledAllowed = overlay.ParticleCollisionEnabledAllowed;
-            MaxTrailRenderers          = overlay.MaxTrailRenderers;
-            MaxLineRenderers           = overlay.MaxLineRenderers;
-            MaxRaycasts                = overlay.MaxRaycasts;
-            MaxConstraints             = overlay.MaxConstraints;
-            MaxConstraintDepth         = overlay.MaxConstraintDepth;
-            MaxClothComponents         = overlay.MaxClothComponents;
-            MaxClothVertices           = overlay.MaxClothVertices;
-            MaxPhysicsColliders        = overlay.MaxPhysicsColliders;
-            MaxRigidbodies             = overlay.MaxRigidbodies;
-            MaxLights                  = overlay.MaxLights;
-            MaxAudioSources            = overlay.MaxAudioSources;
+
+            // Every field is guarded by its "unspecified" sentinel, exactly like the blacklist/whitelist
+            // Count > 0 checks. An omitted field therefore leaves the existing value alone instead of
+            // wiping it to unlimited, which makes this a true in-place merge and safe to call directly.
+            void ApplyInt(ref int target, int value) { if (value != int.MaxValue) target = value; }
+            void ApplyLong(ref long target, long value) { if (value != long.MaxValue) target = value; }
+
+            ApplyInt(ref MaxTriangles,               overlay.MaxTriangles);
+            ApplyInt(ref MaxSkinnedMeshes,           overlay.MaxSkinnedMeshes);
+            ApplyInt(ref MaxMeshRenderers,           overlay.MaxMeshRenderers);
+            ApplyInt(ref MaxMaterialSlots,           overlay.MaxMaterialSlots);
+            ApplyInt(ref MaxBones,                   overlay.MaxBones);
+            ApplyInt(ref MaxAnimators,               overlay.MaxAnimators);
+            ApplyLong(ref MaxTextureMemoryBytes,     overlay.MaxTextureMemoryBytes);
+            ApplyLong(ref MaxAssetBundleSizeBytes,   overlay.MaxAssetBundleSizeBytes);
+            ApplyInt(ref MaxPhysBoneComponents,      overlay.MaxPhysBoneComponents);
+            ApplyInt(ref MaxPhysBoneTransforms,      overlay.MaxPhysBoneTransforms);
+            ApplyInt(ref MaxPhysBoneColliders,       overlay.MaxPhysBoneColliders);
+            ApplyInt(ref MaxPhysBoneCollisionChecks, overlay.MaxPhysBoneCollisionChecks);
+            ApplyInt(ref MaxContacts,                overlay.MaxContacts);
+            ApplyInt(ref MaxParticleSystems,         overlay.MaxParticleSystems);
+            ApplyInt(ref MaxActiveParticles,         overlay.MaxActiveParticles);
+            ApplyInt(ref MaxMeshParticlePolyCount,   overlay.MaxMeshParticlePolyCount);
+            ApplyInt(ref MaxTrailRenderers,          overlay.MaxTrailRenderers);
+            ApplyInt(ref MaxLineRenderers,           overlay.MaxLineRenderers);
+            ApplyInt(ref MaxRaycasts,                overlay.MaxRaycasts);
+            ApplyInt(ref MaxConstraints,             overlay.MaxConstraints);
+            ApplyInt(ref MaxConstraintDepth,         overlay.MaxConstraintDepth);
+            ApplyInt(ref MaxClothComponents,         overlay.MaxClothComponents);
+            ApplyInt(ref MaxClothVertices,           overlay.MaxClothVertices);
+            ApplyInt(ref MaxPhysicsColliders,        overlay.MaxPhysicsColliders);
+            ApplyInt(ref MaxRigidbodies,             overlay.MaxRigidbodies);
+            ApplyInt(ref MaxLights,                  overlay.MaxLights);
+            ApplyInt(ref MaxAudioSources,            overlay.MaxAudioSources);
+
+            // bool has no "unspecified" value, so restrictive-wins: an overlay can forbid something the
+            // base allowed, but an omitted field (C# default true) can never re-allow it. Per-rank
+            // re-allowance comes from the SDK, which is applied last and is authoritative.
+            ParticleTrailsEnabledAllowed    &= overlay.ParticleTrailsEnabledAllowed;
+            ParticleCollisionEnabledAllowed &= overlay.ParticleCollisionEnabledAllowed;
+
             if (overlay.ComponentBlacklist?.Count > 0)
                 ComponentBlacklist = new List<string>(ComponentBlacklist ?? new List<string>()).Union(overlay.ComponentBlacklist, StringComparer.OrdinalIgnoreCase).ToList();
             if (overlay.ComponentWhitelist?.Count > 0)

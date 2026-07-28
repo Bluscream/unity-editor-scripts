@@ -325,35 +325,29 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             if (profile == null) return profile;
 
-            // Automatically query and apply live VRChat SDK limits if SDK is present
-            if (TryGetLimitsFromSDK(profile.Platform, profile.Rank, out ProfileLimitData sdkLimits))
-            {
-                LogSdkOverrides(profile, sdkLimits);
-                profile.ApplyFrom(profile.MergeWith(sdkLimits));
-            }
+            // Precedence, weakest to strongest: hardcoded defaults -> config.json -> live VRChat SDK.
+            //
+            // The SDK is applied LAST because it is what VRChat actually enforces at upload. A config
+            // value that exceeds an SDK limit would only produce an avatar that passes our checks and
+            // is then rejected, and a stale remote config could silently reintroduce old limits.
+            // config.json still governs everything the SDK does not report (component blacklists,
+            // bundle size on SDKs that lack it, ...) because ApplyFrom leaves unspecified fields alone.
 
             if (OptimizerConfig.ActiveConfig?.ProfileDict != null &&
                 OptimizerConfig.ActiveConfig.ProfileDict.TryGetValue(profile.Platform.ToString(), out var ranks) &&
                 ranks.TryGetValue(profile.Rank.ToString(), out ProfileLimitData data))
             {
-                long originalBundleLimit = profile.MaxAssetBundleSizeBytes;
-                // MergeWith uses profile's hardcoded defaults as base; data non-unlimited values override.
-                // ApplyFrom writes the merged result back in-place onto the profile.
-                profile.ApplyFrom(profile.MergeWith(data));
-
-                // If config specified a specific MaxAssetBundleSizeBytes (not long.MaxValue), use it over the SDK lookup
-                if (data.MaxAssetBundleSizeBytes != long.MaxValue)
-                {
-                    profile.MaxAssetBundleSizeBytes = data.MaxAssetBundleSizeBytes;
-                }
-                else
-                {
-                    profile.MaxAssetBundleSizeBytes = originalBundleLimit;
-                }
-
-                profile._blacklistSet = null; // invalidate cached set so it rebuilds with new ComponentBlacklist
-                profile._whitelistSet = null;
+                profile.ApplyFrom(data);
             }
+
+            if (TryGetLimitsFromSDK(profile.Platform, profile.Rank, out ProfileLimitData sdkLimits))
+            {
+                LogSdkOverrides(profile, sdkLimits);
+                profile.ApplyFrom(sdkLimits);
+            }
+
+            profile._blacklistSet = null; // invalidate cached sets so they rebuild with the merged lists
+            profile._whitelistSet = null;
 
             return profile;
         }

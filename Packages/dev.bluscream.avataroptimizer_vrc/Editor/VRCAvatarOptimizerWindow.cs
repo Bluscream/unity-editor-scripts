@@ -243,7 +243,9 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 // Run outside OnGUI: modal dialogs/progress bars during the layout pass corrupt
                 // IMGUI layout state ("EndLayoutGroup: BeginLayoutGroup must be called first").
-                isConverting = true;
+                // isConverting is NOT set here: a domain reload between queuing and running would drop
+                // the callback and leave the flag stuck on, disabling the button and forcing this
+                // window to Repaint() every frame forever. StartConversion sets it instead.
                 EditorApplication.delayCall += StartConversion;
             }
 
@@ -287,26 +289,42 @@ namespace Bluscream.VRCAvatarOptimizer
         private void HandleDragAndDrop(Rect dropArea)
         {
             Event currentEvent = Event.current;
-            if (currentEvent.type == EventType.DragUpdated || currentEvent.type == EventType.DragPerform)
+
+            switch (currentEvent.type)
             {
-                if (dropArea.Contains(currentEvent.mousePosition))
+                case EventType.DragUpdated:
+                case EventType.DragPerform:
                 {
-                    DragAndDrop.visualMode = DragAndDrop.objectReferences.Length > 0 ? DragAndDropVisualMode.Copy : DragAndDropVisualMode.Rejected;
+                    if (!dropArea.Contains(currentEvent.mousePosition)) return;
+
+                    // Only advertise Copy for something we can actually accept, otherwise the cursor
+                    // promises a drop that then silently does nothing.
+                    GameObject candidate = DragAndDrop.objectReferences.OfType<GameObject>().FirstOrDefault();
+                    DragAndDrop.visualMode = candidate != null ? DragAndDropVisualMode.Copy : DragAndDropVisualMode.Rejected;
+
                     if (currentEvent.type == EventType.DragPerform)
                     {
                         DragAndDrop.AcceptDrag();
-                        if (DragAndDrop.objectReferences.Length > 0)
+                        if (candidate != null)
                         {
-                            GameObject draggedObject = DragAndDrop.objectReferences[0] as GameObject;
-                            if (draggedObject != null)
-                            {
-                                avatarRoot = draggedObject;
-                                UpdateStats();
-                            }
+                            avatarRoot = candidate;
+                            UpdateStats();
                         }
-                        currentEvent.Use();
                     }
+
+                    // Consume BOTH events. Previously only DragPerform was consumed, so the DragUpdated
+                    // event kept bubbling: the drag was never registered as handled by this area, drops
+                    // could be dropped on the floor, and the unmatched drag left UIElements' pointer
+                    // state inconsistent — which is what raises the bare
+                    // "Assertion failed ... PointerDeviceState:ReleaseButton" on DragExited.
+                    currentEvent.Use();
+                    break;
                 }
+
+                case EventType.DragExited:
+                    // Acknowledge the drag ending over this window so the pointer state is released cleanly.
+                    if (dropArea.Contains(currentEvent.mousePosition)) currentEvent.Use();
+                    break;
             }
         }
 
