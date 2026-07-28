@@ -2,11 +2,6 @@ using UnityEngine;
 using UnityMeshDecimation.Internal;
 using System;
 
-#if UNITY_EDITOR
-using UnityEditor;
-using UnityMeshDecimation.UI;
-#endif
-
 namespace UnityMeshDecimation {
 	[CreateAssetMenu(menuName = "MeshDecimation/GBVSMeshDecimation")]
 	public class GBVSMeshDecimation : MeshDecimationProfile {
@@ -108,26 +103,4 @@ namespace UnityMeshDecimation {
 #endif
 		}
 	}
-
-#if UNITY_EDITOR
-	[CustomEditor(typeof(GBVSMeshDecimation))]
-	public class GBVSMeshDecimationInspector : Editor {
-
-		private GBVSMeshDecimation _mTarget;
-
-		void OnEnable() {
-			this._mTarget = this.target as GBVSMeshDecimation;
-		}
-
-		public override void OnInspectorGUI() {
-			EditorGUILayout.BeginHorizontal();
-			EasyGUILayout.ObjectField("Base Texture", ref this._mTarget.baseTexture, this._mTarget);
-			EasyGUILayout.ObjectField("ILM Texture", ref this._mTarget.ilmTexture, this._mTarget);
-			EditorGUILayout.EndHorizontal();
-
-			EasyGUILayout.BoolField("Preserve Blend Shapes", ref this._mTarget.parameter.PreserveBlendShapes, this._mTarget);
-			EasyGUILayout.FloatField("UV Weight", ref this._mTarget.parameter.GetPropertySetting(VertexProperty.UV0).ExtraWeight, this._mTarget);
-		}
-	}
-#endif
 }
