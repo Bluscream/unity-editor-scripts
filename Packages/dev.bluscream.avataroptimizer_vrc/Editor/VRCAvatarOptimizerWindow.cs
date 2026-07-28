@@ -49,10 +49,10 @@ namespace Bluscream.VRCAvatarOptimizer
             config.ReplaceShaders = EditorPrefs.GetBool("VRCAvatarOptimizer_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.MaxTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxTextureResolution", 2048);
-            config.CrunchCompressionQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchCompressionQuality", 75);
+            config.AllowCrunchCompression = EditorPrefs.GetBool("VRCAvatarOptimizer_AllowCrunchCompression", false);
+            config.CrunchQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchQuality", 50);
             config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 4.0f);
             config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 1.5f);
-            config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
             config.SkipDryRunBundleBuild = EditorPrefs.GetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", false);
@@ -74,10 +74,10 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetInt("VRCAvatarOptimizer_MaxTextureResolution", config.MaxTextureResolution);
-            EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchCompressionQuality", config.CrunchCompressionQuality);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_AllowCrunchCompression", config.AllowCrunchCompression);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchQuality", config.CrunchQuality);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", config.UncompressedAvatarHeadroomMB);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", config.CompressedAvatarHeadroomMB);
-            EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchStepPercent", config.CrunchStepPercent);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
             EditorPrefs.SetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", config.SkipDryRunBundleBuild);
@@ -190,31 +190,45 @@ namespace Bluscream.VRCAvatarOptimizer
                 string[] resLabels = new string[] { "4096 px", "2048 px (Recommended)", "1024 px", "512 px", "256 px", "128 px" };
                 config.MaxTextureResolution = EditorGUILayout.IntPopup("Max Texture Resolution", config.MaxTextureResolution, resLabels, resValues);
 
-                config.CrunchCompressionQuality = EditorGUILayout.IntSlider("Crunch Compression Ratio", config.CrunchCompressionQuality, 0, 100);
+                float vramCapMB = currentProfile.MaxTextureMemoryBytes / (1024f * 1024f);
+                float bundleCapMB = currentProfile.MaxAssetBundleSizeBytes == long.MaxValue ? 0f : currentProfile.MaxAssetBundleSizeBytes / (1024f * 1024f);
+
+                config.UncompressedAvatarHeadroomMB = EditorGUILayout.Slider("VRAM Headroom (MB)", config.UncompressedAvatarHeadroomMB, 0.0f, 15.0f);
                 EditorGUILayout.HelpBox(
-                    config.CrunchCompressionQuality == 0 
-                        ? "Crunching Disabled (Raw ASTC): Higher disk bundle size, maximum visual quality."
-                        : $"Crunch Ratio: {config.CrunchCompressionQuality}% — Higher ratio = smaller AssetBundle size on disk.",
+                    $"Reserved out of the {vramCapMB:F0} MB texture memory cap → textures are allocated to ≤ {Math.Max(1.0f, vramCapMB - config.UncompressedAvatarHeadroomMB):F1} MB VRAM. " +
+                    "VRAM is driven by resolution and block size — crunch does NOT reduce it.",
                     MessageType.None
                 );
 
-                config.UncompressedAvatarHeadroomMB = EditorGUILayout.Slider("Uncompressed Headroom (MB)", config.UncompressedAvatarHeadroomMB, 0.0f, 15.0f);
-                EditorGUILayout.HelpBox(
-                    $"Uncompressed Headroom: {config.UncompressedAvatarHeadroomMB:F1} MB — Reserves space for mesh/animation payload out of the 40.00 MB limit (Texture VRAM target: {Math.Max(1.0f, 40.0f - config.UncompressedAvatarHeadroomMB):F1} MB).",
-                    MessageType.None
-                );
+                if (bundleCapMB > 0f)
+                {
+                    config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Bundle Headroom (MB)", config.CompressedAvatarHeadroomMB, 0.0f, Math.Max(0.5f, bundleCapMB - 0.5f));
+                    EditorGUILayout.HelpBox(
+                        $"Initial guess for the mesh/animation/controller share of the {bundleCapMB:F0} MB bundle cap → textures start with a ≤ {Math.Max(0.5f, bundleCapMB - config.CompressedAvatarHeadroomMB):F1} MB disk budget. " +
+                        "After the first dry-run build this is replaced by the MEASURED non-texture payload, so the initial value only affects the first pass.",
+                        MessageType.None
+                    );
+                }
 
-                config.CompressedAvatarHeadroomMB = EditorGUILayout.Slider("Compressed Headroom (MB)", config.CompressedAvatarHeadroomMB, 0.0f, 9.0f);
-                EditorGUILayout.HelpBox(
-                    $"Compressed Headroom: {config.CompressedAvatarHeadroomMB:F1} MB — Reserves space for non-texture bundle payload out of the 10.00 MB limit (Compressed texture bundle target: {Math.Max(0.5f, 10.0f - config.CompressedAvatarHeadroomMB):F1} MB).",
-                    MessageType.None
-                );
-
-                config.CrunchStepPercent = EditorGUILayout.IntSlider("Crunch Step % (Quality Ladder)", config.CrunchStepPercent, 1, 50);
-                EditorGUILayout.HelpBox(
-                    $"Crunch Step: {config.CrunchStepPercent}% — Controls granularity of the quality ladder in Step 5 estimator and Step 8.5 build verification. Smaller = finer steps but more builds (slower). E.g. 10% = 10 Crunch levels, 25% = 4 levels.",
-                    MessageType.None
-                );
+                config.AllowCrunchCompression = EditorGUILayout.ToggleLeft("Allow Crunch Compression", config.AllowCrunchCompression);
+                if (config.AllowCrunchCompression)
+                {
+                    EditorGUI.indentLevel++;
+                    config.CrunchQuality = EditorGUILayout.IntSlider("Crunch Quality", config.CrunchQuality, 0, 100);
+                    EditorGUILayout.HelpBox(
+                        $"Crunch Quality {config.CrunchQuality}% — crunched formats shrink the bundle a lot but are fixed at 8 bits/pixel in VRAM (worse than every ASTC tier) and are skipped for normal maps. " +
+                        "Only useful when bundle size is the binding constraint and VRAM has room to spare.",
+                        MessageType.Warning
+                    );
+                    EditorGUI.indentLevel--;
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "Off (recommended for Quest): ASTC block compression is used, which shrinks VRAM and bundle size together. Textures are degraded individually — the largest ones first — until both budgets fit.",
+                        MessageType.None
+                    );
+                }
                 EditorGUI.indentLevel--;
             }
 

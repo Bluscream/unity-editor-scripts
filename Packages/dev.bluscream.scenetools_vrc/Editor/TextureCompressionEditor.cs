@@ -294,11 +294,12 @@ namespace Bluscream.TextureCompressor
         }
 
         /// <summary>
-        /// Public API to optimize all avatar textures to fit within a target texture memory budget (in bytes)
-        /// crunchCompressionRatio: 0 = No Crunching (Raw ASTC), 100 = Max Crunching (lowest file size)
+        /// Legacy entry point kept for compatibility — forwards to TextureBudgetOptimizer, which
+        /// allocates a per-texture resolution/format against BOTH the VRAM and disk budgets.
+        /// Returns the number of textures processed.
         /// </summary>
         public static int OptimizeForTextureMemoryBudget(
-            GameObject avatarRoot, 
+            GameObject avatarRoot,
             long uncompressedAvatarBudgetBytes,
             System.Action<string> progressCallback = null,
             int maxResolutionCap = 2048,
@@ -307,126 +308,19 @@ namespace Bluscream.TextureCompressor
             float compressedHeadroomMB = 5.0f,
             int crunchStepPercent = 10)
         {
-            if (avatarRoot == null) return 0;
+            long vramBudget = Math.Max(1024 * 1024L, uncompressedAvatarBudgetBytes - (long)(uncompressedHeadroomMB * 1024 * 1024));
+            long diskBudget = Math.Max(512 * 1024L, (10L * 1024 * 1024) - (long)(compressedHeadroomMB * 1024 * 1024));
 
-            HashSet<TextureImporter> importersSet = GetUniqueTextureImporters(avatarRoot);
-            if (importersSet.Count == 0) return 0;
-
-            // VRChat hard limits for Quest/Android: 40 MB total uncompressed limit & 10 MB compressed bundle limit
-            long uncompressedHeadroomBytes = (long)(uncompressedHeadroomMB * 1024 * 1024);
-            long effectiveUncompressedAvatarBudget = Math.Max(1024 * 1024L, Math.Min(uncompressedAvatarBudgetBytes, (40L * 1024 * 1024) - uncompressedHeadroomBytes));
-            long compressedHeadroomBytes = (long)(compressedHeadroomMB * 1024 * 1024);
-            long effectiveCompressedAvatarBudget = Math.Max(512 * 1024L, (10L * 1024 * 1024) - compressedHeadroomBytes);
-
-            int unityCrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio));
-
-            // Pre-Filter Textures by Contribution (Sort descending by estimated raw memory)
-            var importerList = importersSet.Select(imp => {
-                long estimatedMemory = EstimateSingleTextureMemory(imp, maxResolutionCap, TextureImporterFormat.ASTC_4x4);
-                return new { Importer = imp, InitialMemory = estimatedMemory };
-            })
-            .OrderByDescending(x => x.InitialMemory)
-            .ToList();
-
-            long totalInitialMemory = importerList.Sum(x => x.InitialMemory);
-            
-            // Only compress the textures that make up 95% of total memory to avoid touching small icons/utility maps
-            long accum = 0;
-            var targetImportersList = new List<TextureImporter>();
-            foreach (var item in importerList)
+            var result = TextureBudgetOptimizer.Optimize(avatarRoot, new TextureBudgetRequest
             {
-                targetImportersList.Add(item.Importer);
-                accum += item.InitialMemory;
-                if (totalInitialMemory > 0 && ((double)accum / totalInitialMemory) >= 0.95)
-                    break;
-            }
-            HashSet<TextureImporter> targetImporters = new HashSet<TextureImporter>(targetImportersList);
+                VramBudgetBytes = vramBudget,
+                DiskBudgetBytes = diskBudget,
+                MaxResolution = maxResolutionCap,
+                AllowCrunch = crunchCompressionRatio > 0,
+                CrunchQuality = Math.Max(0, Math.Min(100, 100 - crunchCompressionRatio))
+            }, progressCallback);
 
-            Debug.Log($"[TextureCompressor] Budgets — Uncompressed: {effectiveUncompressedAvatarBudget / (1024.0 * 1024.0):F1} MB, Compressed: {effectiveCompressedAvatarBudget / (1024.0 * 1024.0):F2} MB. Pre-filtered {targetImporters.Count}/{importersSet.Count} top contributing textures.");
-
-            // Define ASTC Compression Profiles
-            var stepsList = new List<(TextureImporterFormat format, int quality, string name, double crunchRatio)>();
-            var astcFormats = new (TextureImporterFormat format, string name, double baseRatio)[]
-            {
-                (TextureImporterFormat.ASTC_4x4,   "ASTC 4x4",   1.00),
-                (TextureImporterFormat.ASTC_5x5,   "ASTC 5x5",   0.85),
-                (TextureImporterFormat.ASTC_6x6,   "ASTC 6x6",   0.70),
-                (TextureImporterFormat.ASTC_8x8,   "ASTC 8x8",   0.25),
-                (TextureImporterFormat.ASTC_10x10, "ASTC 10x10", 0.16),
-                (TextureImporterFormat.ASTC_12x12, "ASTC 12x12", 0.125),
-            };
-
-            foreach (var fmt in astcFormats)
-            {
-                stepsList.Add((fmt.format, 100, $"{fmt.name} (Uncrunched)", fmt.baseRatio));
-                int crunchStep = Math.Max(1, Math.Min(50, crunchStepPercent));
-                for (int q = 100 - crunchStep; q >= 0; q -= crunchStep)
-                {
-                    int crunchPercent = 100 - q;
-                    double crunchRatio = fmt.baseRatio * (q / 100.0);
-                    stepsList.Add((fmt.format, q, $"{fmt.name} (Crunch {crunchPercent}%)", crunchRatio));
-                }
-            }
-            var compressionSteps = stepsList.ToArray();
-
-            int[] allResolutionLimits = new int[] { 4096, 2048, 1024, 512, 256, 128 };
-            var resolutionLimits = allResolutionLimits.Where(r => r <= maxResolutionCap).ToArray();
-            if (resolutionLimits.Length == 0) resolutionLimits = new int[] { maxResolutionCap };
-
-            // Binary Search on Resolution Tier
-            int bestResolutionCap = resolutionLimits[resolutionLimits.Length - 1];
-            TextureImporterFormat bestFormat = TextureImporterFormat.ASTC_12x12;
-            int bestQuality = unityCrunchQuality;
-            bool budgetAchieved = false;
-
-            int lowResIdx = 0;
-            int highResIdx = resolutionLimits.Length - 1;
-
-            while (lowResIdx <= highResIdx)
-            {
-                int midResIdx = lowResIdx + (highResIdx - lowResIdx) / 2;
-                int candidateRes = resolutionLimits[midResIdx];
-                bool foundFitForRes = false;
-
-                foreach (var step in compressionSteps)
-                {
-                    long uncompressedAvatarEstimate = EstimateTotalTextureMemory(importersSet, candidateRes, step.format);
-                    long compressedAvatarEstimate   = (long)(uncompressedAvatarEstimate * step.crunchRatio);
-
-                    bool uncompressedAvatarOk = uncompressedAvatarEstimate <= effectiveUncompressedAvatarBudget;
-                    bool compressedAvatarOk   = compressedAvatarEstimate   <= effectiveCompressedAvatarBudget;
-
-                    if (uncompressedAvatarOk && compressedAvatarOk)
-                    {
-                        bestResolutionCap = candidateRes;
-                        bestFormat        = step.format;
-                        bestQuality       = step.quality;
-                        foundFitForRes    = true;
-                        budgetAchieved    = true;
-                        break;
-                    }
-                }
-
-                if (foundFitForRes)
-                {
-                    // Try to see if higher resolution can also fit
-                    highResIdx = midResIdx - 1;
-                }
-                else
-                {
-                    // Need lower resolution
-                    lowResIdx = midResIdx + 1;
-                }
-            }
-
-            if (!budgetAchieved)
-            {
-                Debug.LogWarning($"[TextureCompressor] Could not meet dual budget within any resolution/format — applying minimum: 128px ASTC_12x12.");
-            }
-
-            Debug.Log($"[TextureCompressor] Fast math selection: {bestResolutionCap}px {bestFormat} (Quality: {bestQuality}%). Reimporting batch...");
-            ApplyTextureSettings(targetImporters, bestResolutionCap, bestFormat, bestQuality, progressCallback);
-            return targetImporters.Count;
+            return result.TexturesProcessed;
         }
 
         public static void ApplyTextureSettings(
@@ -662,15 +556,6 @@ namespace Bluscream.TextureCompressor
             return (long)(targetWidth * targetHeight * bytesPerPixel * mipMapMultiplier);
         }
 
-        private static long EstimateTotalTextureMemory(HashSet<TextureImporter> importers, int maxResCap, TextureImporterFormat format)
-        {
-            long total = 0;
-            foreach (var imp in importers)
-            {
-                total += EstimateSingleTextureMemory(imp, maxResCap, format);
-            }
-            return total;
-        }
     }
 
     /// <summary>

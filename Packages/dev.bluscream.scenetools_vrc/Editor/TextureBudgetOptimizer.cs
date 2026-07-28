@@ -1,0 +1,368 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+namespace Bluscream.TextureCompressor
+{
+    public enum TexturePlatform { Android, iOS, Standalone }
+
+    /// <summary>
+    /// Inputs for a texture budget optimization pass.
+    /// VRAM and disk are SEPARATE budgets driven by different levers:
+    ///   • VRAM  = resolution × format bits-per-pixel (+ mips). Crunch does NOT reduce it.
+    ///   • Disk  = bytes stored in the AssetBundle. Crunch reduces it a lot; block size also matters.
+    /// </summary>
+    public class TextureBudgetRequest
+    {
+        /// <summary>Hard uncompressed texture memory budget (VRChat mobile hard cap is 40 MB).</summary>
+        public long VramBudgetBytes = 40L * 1024 * 1024;
+        /// <summary>Budget for the TEXTURE portion of the AssetBundle (total cap minus non-texture payload).</summary>
+        public long DiskBudgetBytes = 10L * 1024 * 1024;
+        public int MaxResolution = 2048;
+        public int MinResolution = 128;
+        /// <summary>Allow crunched formats. Crunch trades VRAM (fixed 8bpp) and quality for much smaller disk size.</summary>
+        public bool AllowCrunch = true;
+        /// <summary>Unity crunch quality 0-100 (higher = better looking, larger on disk).</summary>
+        public int CrunchQuality = 50;
+        /// <summary>Target platform. Null = derive from the active build target.</summary>
+        public TexturePlatform? Platform = null;
+    }
+
+    public class TextureBudgetResult
+    {
+        public int TexturesProcessed;
+        public long EstimatedVramBytes;
+        public long EstimatedDiskBytes;
+        public long VramBudgetBytes;
+        public long DiskBudgetBytes;
+        public bool HitFloor;
+        public Dictionary<string, int> TierHistogram = new Dictionary<string, int>();
+
+        public bool VramBudgetMet => EstimatedVramBytes <= VramBudgetBytes;
+        public bool DiskBudgetMet => EstimatedDiskBytes <= DiskBudgetBytes;
+
+        public string Describe()
+        {
+            string tiers = string.Join(", ", TierHistogram.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Value}× {kv.Key}"));
+            return $"VRAM {EstimatedVramBytes / (1024.0 * 1024.0):F1}/{VramBudgetBytes / (1024.0 * 1024.0):F1} MB " +
+                   $"({(VramBudgetMet ? "OK" : "OVER")}), Texture disk ~{EstimatedDiskBytes / (1024.0 * 1024.0):F2}/{DiskBudgetBytes / (1024.0 * 1024.0):F2} MB " +
+                   $"({(DiskBudgetMet ? "OK" : "OVER")}){(string.IsNullOrEmpty(tiers) ? "" : $" — {tiers}")}";
+        }
+    }
+
+    /// <summary>
+    /// Allocates a per-texture resolution/format so an avatar fits BOTH the uncompressed VRAM budget
+    /// and the compressed AssetBundle budget, degrading the largest contributors first instead of
+    /// applying one blunt setting to every texture.
+    /// </summary>
+    public static class TextureBudgetOptimizer
+    {
+        private class Tier
+        {
+            public string Name;
+            public TextureImporterFormat Format;
+            public float Bpp;          // VRAM bits per pixel
+            public float DiskFactor;   // stored bytes ≈ VRAM bytes × this
+            public float Quality;      // perceptual rank, 0-100
+            public bool IsCrunched;
+            public int CrunchQuality;
+            public bool RequiresNoAlpha;
+            public bool SafeForNormalMaps = true;
+        }
+
+        private class Level
+        {
+            public int Resolution;
+            public Tier Tier;
+            public float Score;        // higher = better looking
+        }
+
+        private class TexEntry
+        {
+            public TextureImporter Importer;
+            public int NativeW, NativeH;
+            public bool Mipmaps;
+            public List<Level> Ladder;
+            public int LevelIndex;
+            public long Vram, Disk;
+        }
+
+        // ── Mobile (Quest / iOS). ASTC is the only sane choice for VRAM; crunch is ETC2-only in Unity,
+        //    so an "ASTC + crunch" combination does not exist — that mistake is why tightening a budget
+        //    used to change nothing.
+        private static List<Tier> MobileTiers(bool allowCrunch, int crunchQuality)
+        {
+            var tiers = new List<Tier>
+            {
+                new Tier { Name = "ASTC 4x4",   Format = TextureImporterFormat.ASTC_4x4,   Bpp = 8.00f, DiskFactor = 0.90f, Quality = 100f },
+                new Tier { Name = "ASTC 5x5",   Format = TextureImporterFormat.ASTC_5x5,   Bpp = 5.12f, DiskFactor = 0.90f, Quality = 92f  },
+                new Tier { Name = "ASTC 6x6",   Format = TextureImporterFormat.ASTC_6x6,   Bpp = 3.55f, DiskFactor = 0.90f, Quality = 84f  },
+                new Tier { Name = "ASTC 8x8",   Format = TextureImporterFormat.ASTC_8x8,   Bpp = 2.00f, DiskFactor = 0.90f, Quality = 70f  },
+                new Tier { Name = "ASTC 10x10", Format = TextureImporterFormat.ASTC_10x10, Bpp = 1.28f, DiskFactor = 0.90f, Quality = 58f  },
+                new Tier { Name = "ASTC 12x12", Format = TextureImporterFormat.ASTC_12x12, Bpp = 1.00f, DiskFactor = 0.90f, Quality = 50f  },
+            };
+
+            if (allowCrunch)
+            {
+                // Crunched ETC2 keeps 8bpp in VRAM but stores far fewer bytes — only worth it when the
+                // DISK budget is the binding constraint and VRAM has room to spare.
+                int q = Mathf.Clamp(crunchQuality, 0, 100);
+                tiers.Add(new Tier
+                {
+                    Name = $"ETC2 RGBA8 Crunched {q}%",
+                    Format = TextureImporterFormat.ETC2_RGBA8Crunched,
+                    Bpp = 8.00f,
+                    DiskFactor = 0.10f + 0.30f * (q / 100f),
+                    Quality = 46f + 0.30f * q,   // sits between ASTC 12x12 and ASTC 6x6 depending on quality
+                    IsCrunched = true,
+                    CrunchQuality = q,
+                    SafeForNormalMaps = false     // crunch mangles normal maps
+                });
+            }
+            return tiers;
+        }
+
+        // ── PC / Standalone
+        private static List<Tier> StandaloneTiers(bool allowCrunch, int crunchQuality)
+        {
+            var tiers = new List<Tier>
+            {
+                new Tier { Name = "BC7",  Format = TextureImporterFormat.BC7,   Bpp = 8.00f, DiskFactor = 0.90f, Quality = 100f },
+                new Tier { Name = "DXT5", Format = TextureImporterFormat.DXT5,  Bpp = 8.00f, DiskFactor = 0.90f, Quality = 82f  },
+                new Tier { Name = "DXT1", Format = TextureImporterFormat.DXT1,  Bpp = 4.00f, DiskFactor = 0.90f, Quality = 64f, RequiresNoAlpha = true },
+            };
+            if (allowCrunch)
+            {
+                int q = Mathf.Clamp(crunchQuality, 0, 100);
+                tiers.Add(new Tier
+                {
+                    Name = $"DXT5 Crunched {q}%",
+                    Format = TextureImporterFormat.DXT5Crunched,
+                    Bpp = 8.00f,
+                    DiskFactor = 0.10f + 0.30f * (q / 100f),
+                    Quality = 40f + 0.30f * q,
+                    IsCrunched = true,
+                    CrunchQuality = q,
+                    SafeForNormalMaps = false
+                });
+            }
+            return tiers;
+        }
+
+        public static string PlatformName(TexturePlatform p)
+            => p == TexturePlatform.Android ? "Android" : (p == TexturePlatform.iOS ? "iPhone" : "Standalone");
+
+        private static TexturePlatform ActivePlatform()
+        {
+            switch (EditorUserBuildSettings.activeBuildTarget)
+            {
+                case BuildTarget.Android: return TexturePlatform.Android;
+                case BuildTarget.iOS: return TexturePlatform.iOS;
+                default: return TexturePlatform.Standalone;
+            }
+        }
+
+        public static TextureBudgetResult Optimize(GameObject avatarRoot, TextureBudgetRequest request, Action<string> progressCallback = null)
+        {
+            var result = new TextureBudgetResult
+            {
+                VramBudgetBytes = Math.Max(1024 * 1024L, request.VramBudgetBytes),
+                DiskBudgetBytes = Math.Max(256 * 1024L, request.DiskBudgetBytes)
+            };
+            if (avatarRoot == null) return result;
+
+            TexturePlatform platform = request.Platform ?? ActivePlatform();
+            string platformName = PlatformName(platform);
+
+            HashSet<TextureImporter> importers = TextureCompressionEditor.GetUniqueTextureImporters(avatarRoot);
+            if (importers.Count == 0) return result;
+
+            List<Tier> tiers = platform == TexturePlatform.Standalone
+                ? StandaloneTiers(request.AllowCrunch, request.CrunchQuality)
+                : MobileTiers(request.AllowCrunch, request.CrunchQuality);
+
+            // Resolution ladder, capped by the user's max and floored by MinResolution
+            var resolutions = new[] { 4096, 2048, 1024, 512, 256, 128 }
+                .Where(r => r <= request.MaxResolution && r >= request.MinResolution)
+                .ToArray();
+            if (resolutions.Length == 0) resolutions = new[] { Mathf.Clamp(request.MaxResolution, 32, 8192) };
+
+            // Global level ladder ordered best → worst. Quality is modelled as
+            // (format quality × linear resolution factor): halving resolution costs about as much as
+            // dropping two ASTC block tiers, which matches how avatars actually look in-headset.
+            var allLevels = new List<Level>();
+            foreach (int res in resolutions)
+                foreach (Tier t in tiers)
+                    allLevels.Add(new Level { Resolution = res, Tier = t, Score = t.Quality * (res / 4096f) });
+            allLevels = allLevels.OrderByDescending(l => l.Score).ToList();
+
+            // Build per-texture entries with a ladder filtered to what each texture supports
+            var entries = new List<TexEntry>();
+            foreach (TextureImporter imp in importers)
+            {
+                if (imp == null) continue;
+                if (!Bluscream.Utils.GetSourceTextureWidthAndHeight(imp, out int nw, out int nh)) { nw = nh = request.MaxResolution; }
+
+                bool hasAlpha = imp.DoesSourceTextureHaveAlpha();
+                bool isNormal = imp.textureType == TextureImporterType.NormalMap;
+
+                var ladder = allLevels
+                    .Where(l => !(l.Tier.RequiresNoAlpha && hasAlpha))
+                    .Where(l => !(isNormal && !l.Tier.SafeForNormalMaps))
+                    .ToList();
+                if (ladder.Count == 0) continue;
+
+                var e = new TexEntry
+                {
+                    Importer = imp,
+                    NativeW = Math.Max(1, nw),
+                    NativeH = Math.Max(1, nh),
+                    Mipmaps = imp.mipmapEnabled,
+                    Ladder = ladder,
+                    LevelIndex = 0
+                };
+                Measure(e);
+                entries.Add(e);
+            }
+
+            if (entries.Count == 0) return result;
+
+            long totalVram = entries.Sum(e => e.Vram);
+            long totalDisk = entries.Sum(e => e.Disk);
+
+            Debug.Log($"[TextureBudget] {entries.Count} texture(s) on {platformName}. Starting at best tier: " +
+                      $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB (budget {result.VramBudgetBytes / (1024.0 * 1024.0):F1} MB), " +
+                      $"disk ~{totalDisk / (1024.0 * 1024.0):F2} MB (budget {result.DiskBudgetBytes / (1024.0 * 1024.0):F2} MB).");
+
+            // ── Greedy degradation: repeatedly downgrade whichever texture gives the most budget
+            //    relief per unit of quality lost, until both budgets are satisfied.
+            int guard = entries.Count * allLevels.Count + 16;
+            while ((totalVram > result.VramBudgetBytes || totalDisk > result.DiskBudgetBytes) && guard-- > 0)
+            {
+                bool vramOver = totalVram > result.VramBudgetBytes;
+                bool diskOver = totalDisk > result.DiskBudgetBytes;
+
+                TexEntry best = null;
+                double bestScore = double.NegativeInfinity;
+                long bestVram = 0, bestDisk = 0;
+
+                foreach (TexEntry e in entries)
+                {
+                    if (e.LevelIndex + 1 >= e.Ladder.Count) continue;
+
+                    Measure(e, e.LevelIndex + 1, out long nextVram, out long nextDisk);
+                    long vramSaved = e.Vram - nextVram;
+                    long diskSaved = e.Disk - nextDisk;
+                    if (vramSaved <= 0 && diskSaved <= 0) continue; // no relief (e.g. texture already below this resolution)
+
+                    // Only count savings against budgets that are actually exceeded
+                    double relief = 0;
+                    if (vramOver) relief += (double)vramSaved / result.VramBudgetBytes;
+                    if (diskOver) relief += (double)diskSaved / result.DiskBudgetBytes;
+                    if (relief <= 0) continue;
+
+                    float qualityLost = Math.Max(0.01f, e.Ladder[e.LevelIndex].Score - e.Ladder[e.LevelIndex + 1].Score);
+                    double score = relief / qualityLost;
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score; best = e; bestVram = nextVram; bestDisk = nextDisk;
+                    }
+                }
+
+                if (best == null)
+                {
+                    result.HitFloor = true;
+                    Debug.LogWarning($"[TextureBudget] Every texture is at its lowest tier — cannot compress further. " +
+                                     $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
+                    break;
+                }
+
+                totalVram += bestVram - best.Vram;
+                totalDisk += bestDisk - best.Disk;
+                best.LevelIndex++;
+                best.Vram = bestVram;
+                best.Disk = bestDisk;
+            }
+
+            // ── Apply
+            int index = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (TexEntry e in entries)
+                {
+                    index++;
+                    Level lvl = e.Ladder[e.LevelIndex];
+                    progressCallback?.Invoke($"Applying texture settings ({index}/{entries.Count}): {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
+
+                    TextureImporterPlatformSettings s = e.Importer.GetPlatformTextureSettings(platformName);
+                    s.overridden = true;
+                    s.name = platformName;
+                    s.maxTextureSize = lvl.Resolution;
+                    s.format = lvl.Tier.Format;
+                    s.textureCompression = TextureImporterCompression.Compressed;
+                    s.crunchedCompression = lvl.Tier.IsCrunched;
+                    // For crunched formats this is the crunch ratio; for block formats it is encoder effort.
+                    s.compressionQuality = lvl.Tier.IsCrunched ? lvl.Tier.CrunchQuality : 100;
+
+                    Undo.RecordObject(e.Importer, "Optimize Texture Budget");
+                    e.Importer.SetPlatformTextureSettings(s);
+                    e.Importer.SaveAndReimport();
+
+                    string key = $"{lvl.Resolution}px {lvl.Tier.Name}";
+                    result.TierHistogram[key] = result.TierHistogram.TryGetValue(key, out int n) ? n + 1 : 1;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.Refresh();
+            }
+
+            result.TexturesProcessed = entries.Count;
+            result.EstimatedVramBytes = totalVram;
+            result.EstimatedDiskBytes = totalDisk;
+
+            Debug.Log($"[TextureBudget] Done — {result.Describe()}");
+            return result;
+        }
+
+        private static void Measure(TexEntry e) => Measure(e, e.LevelIndex, out e.Vram, out e.Disk);
+
+        /// <summary>
+        /// VRAM is summed over the real mip chain to match how AvatarSDKEvaluator reports texture memory,
+        /// so the optimizer's numbers and the SDK report agree.
+        /// </summary>
+        private static void Measure(TexEntry e, int levelIndex, out long vram, out long disk)
+        {
+            Level lvl = e.Ladder[levelIndex];
+            int longest = Math.Max(e.NativeW, e.NativeH);
+            double scale = Math.Min(1.0, (double)lvl.Resolution / Math.Max(1, longest));
+            int w = Math.Max(1, (int)Math.Round(e.NativeW * scale));
+            int h = Math.Max(1, (int)Math.Round(e.NativeH * scale));
+
+            long bytes = 0;
+            if (e.Mipmaps)
+            {
+                int mw = w, mh = h;
+                while (true)
+                {
+                    bytes += (long)Math.Max(1, (mw * (long)mh * lvl.Tier.Bpp) / 8.0);
+                    if (mw == 1 && mh == 1) break;
+                    mw = Math.Max(1, mw >> 1);
+                    mh = Math.Max(1, mh >> 1);
+                }
+            }
+            else
+            {
+                bytes = (long)Math.Max(1, (w * (long)h * lvl.Tier.Bpp) / 8.0);
+            }
+
+            vram = bytes;
+            disk = (long)(bytes * lvl.Tier.DiskFactor);
+        }
+    }
+}

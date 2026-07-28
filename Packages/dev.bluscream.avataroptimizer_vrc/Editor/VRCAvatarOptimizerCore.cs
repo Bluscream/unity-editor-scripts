@@ -37,10 +37,13 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
-            public int CrunchCompressionQuality = 75; // 0 = No Crunching (ASTC raw), 100 = Max Crunch (lowest file size)
-            public float UncompressedAvatarHeadroomMB = 4.0f; // Headroom in MB reserved for mesh & animation payload from 40.0 MB limit
-            public float CompressedAvatarHeadroomMB = 1.5f;   // Headroom in MB reserved for compressed avatar AssetBundle from 10.0 MB limit
-            public int CrunchStepPercent = 10;                 // Step size for Crunch quality ladder in Step 5 estimator and Step 8.5 real build verification (1-50)
+            // Crunch trades VRAM (crunched formats are a fixed 8bpp) and quality for a much smaller
+            // bundle. Only enable when disk size is the binding constraint — on Quest, ASTC block
+            // compression is usually the better trade because it shrinks VRAM *and* disk.
+            public bool AllowCrunchCompression = false;
+            public int CrunchQuality = 50;                     // Unity crunch quality 0-100 (higher = better looking, bigger)
+            public float UncompressedAvatarHeadroomMB = 4.0f;  // VRAM reserved for non-texture GPU cost, out of the profile's texture budget
+            public float CompressedAvatarHeadroomMB = 1.5f;    // Bundle bytes reserved for meshes/animations, out of the platform bundle cap
             public bool DecimateMeshes = true;
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
@@ -205,23 +208,38 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
                 }
 
-                // Step 5: Fast Texture Optimization & Memory Budget Estimate
+                // Step 5: Texture budget allocation (VRAM + estimated bundle share)
+                Bluscream.TextureCompressor.TextureBudgetResult textureResult = null;
+                long textureDiskBudget = Math.Max(512 * 1024L, profile.MaxAssetBundleSizeBytes == long.MaxValue
+                    ? 200L * 1024 * 1024
+                    : profile.MaxAssetBundleSizeBytes - (long)(config.CompressedAvatarHeadroomMB * 1024 * 1024));
+                long textureVramBudget = Math.Max(1024 * 1024L, profile.MaxTextureMemoryBytes - (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024));
+
                 if (config.OptimizeTextures)
                 {
-                    progressCallback?.Invoke("Optimizing texture memory budget...", 0.70f);
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Optimizing textures — VRAM budget: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB");
-                    int texCount = TextureCompressionEditor.OptimizeForTextureMemoryBudget(
-                        targetAvatar, 
-                        profile.MaxTextureMemoryBytes, 
-                        (msg) => progressCallback?.Invoke(msg, 0.70f),
-                        config.MaxTextureResolution,
-                        config.CrunchCompressionQuality,
-                        config.UncompressedAvatarHeadroomMB,
-                        config.CompressedAvatarHeadroomMB,
-                        config.CrunchStepPercent
+                    progressCallback?.Invoke("Allocating texture budget...", 0.70f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Allocating texture budget — VRAM ≤ {textureVramBudget / (1024.0 * 1024.0):F1} MB (profile {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB − {config.UncompressedAvatarHeadroomMB:F1} MB headroom), texture disk ≤ {textureDiskBudget / (1024.0 * 1024.0):F2} MB.");
+
+                    textureResult = Bluscream.TextureCompressor.TextureBudgetOptimizer.Optimize(
+                        targetAvatar,
+                        new Bluscream.TextureCompressor.TextureBudgetRequest
+                        {
+                            VramBudgetBytes = textureVramBudget,
+                            DiskBudgetBytes = textureDiskBudget,
+                            MaxResolution = config.MaxTextureResolution,
+                            AllowCrunch = config.AllowCrunchCompression,
+                            CrunchQuality = config.CrunchQuality,
+                            Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
+                                     : config.Platform == TargetPlatform.iOS ? Bluscream.TextureCompressor.TexturePlatform.iOS
+                                     : Bluscream.TextureCompressor.TexturePlatform.Standalone
+                        },
+                        (msg) => progressCallback?.Invoke(msg, 0.70f)
                     );
-                    summary.texturesOptimized = texCount;
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Initial texture optimization complete: {texCount} texture(s) reimported.");
+
+                    summary.texturesOptimized = textureResult.TexturesProcessed;
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Texture budget allocated: {textureResult.Describe()}");
+                    if (!textureResult.VramBudgetMet)
+                        summary.AddWarning($"Texture VRAM ({textureResult.EstimatedVramBytes / (1024.0 * 1024.0):F1} MB) still exceeds the budget after maximum compression — reduce texture count or resolution.");
                 }
 
                 // Step 6: PhysBone Budget Pruner
@@ -324,60 +342,69 @@ namespace Bluscream.VRCAvatarOptimizer
                 bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)uncompressedEffectiveLimit);
 
 
-                // Convergence loop: the Step 5 estimator only models TEXTURE memory, but the real bundle
-                // also carries meshes, animation clips, and controllers. When the measured bundle exceeds
-                // the platform cap we feed the measured overshoot back as a TIGHTER texture budget and
-                // rebuild, repeating until it fits, the texture ladder bottoms out, or we run out of
-                // attempts. (Re-running with the original arguments would be a deterministic no-op.)
-                long textureBudgetBytes = profile.MaxTextureMemoryBytes;
+                // Convergence loop. Key insight: the bundle is (texture bytes + non-texture payload), and
+                // the non-texture payload (meshes, clips, controllers) is CONSTANT across attempts — we
+                // never touch it. So we can solve for the texture budget directly instead of guessing:
+                //     nonTexture      = measuredBundle − estimatedTextureDisk
+                //     newTextureDisk  = bundleLimit − nonTexture − safetyMargin
+                // Each attempt re-derives nonTexture from the fresh measurement, so modelling errors in
+                // the texture disk estimate self-correct within a couple of iterations.
                 for (int attempt = 1; attempt <= Math.Max(0, config.MaxSizeConvergenceAttempts) && (bundleExceeds || uncompressedExceeds); attempt++)
                 {
-                    double currentBundleMB = bundleSizeBytes > 0 ? bundleSizeBytes / (1024.0 * 1024.0) : -1;
-                    double currentUncompressedMB = currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0);
-                    double targetUncompressedMB = maxUncompressedBytes / (1024.0 * 1024.0);
-
-                    long previousBudget = textureBudgetBytes;
-                    if (bundleExceeds)
+                    if (textureResult == null)
                     {
-                        // Non-texture payload is (measured bundle - texture contribution) and cannot be
-                        // compressed by us, so scaling the texture budget by limit/measured under-corrects
-                        // on purpose: subtract the excess directly, then clamp to a sane floor.
-                        long excessBytes = bundleSizeBytes - maxBundleBytes;
-                        // Bundle bytes are compressed; textures must give up more raw bytes than the
-                        // compressed excess. Use the observed compression ratio to scale the correction up.
-                        double compressionRatio = bundleSizeBytes > 0 && currentStats.TotalTextureMemoryBytes > 0
-                            ? Math.Max(0.05, (double)bundleSizeBytes / currentStats.TotalTextureMemoryBytes)
-                            : 1.0;
-                        long rawReduction = (long)(excessBytes / compressionRatio);
-                        // Always make meaningful progress even if the math suggests a tiny step
-                        long minStep = (long)(textureBudgetBytes * 0.10);
-                        textureBudgetBytes -= Math.Max(rawReduction, minStep);
-                    }
-                    if (uncompressedExceeds)
-                    {
-                        textureBudgetBytes = Math.Min(textureBudgetBytes, (long)(maxUncompressedBytes * 0.95));
-                    }
-                    textureBudgetBytes = Math.Max(2 * 1024 * 1024L /* 2 MB floor */, textureBudgetBytes);
-
-                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt}/{config.MaxSizeConvergenceAttempts}: avatar exceeds budget (Compressed: {(currentBundleMB >= 0 ? currentBundleMB.ToString("F2") + " MB" : "unknown")} / {maxBundleBytes / (1024.0 * 1024.0):F2} MB, Uncompressed TexMem: {currentUncompressedMB:F2} MB > {targetUncompressedMB:F1} MB). Tightening texture budget {previousBudget / (1024.0 * 1024.0):F1} MB → {textureBudgetBytes / (1024.0 * 1024.0):F1} MB and rebuilding...");
-                    progressCallback?.Invoke($"Size convergence attempt {attempt}/{config.MaxSizeConvergenceAttempts} (target texture budget {textureBudgetBytes / (1024.0 * 1024.0):F1} MB)...", 0.98f);
-
-                    if (previousBudget == textureBudgetBytes)
-                    {
-                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Texture budget hit its floor — further compression cannot shrink the bundle. Stopping convergence.");
+                        Debug.LogWarning("[VRCAvatarOptimizerCore] [Step 8.5] Texture optimization is disabled — cannot shrink the bundle further.");
                         break;
                     }
 
-                    TextureCompressionEditor.OptimizeForTextureMemoryBudget(
+                    long estimatedTextureDisk = textureResult.EstimatedDiskBytes;
+                    long nonTextureBytes = Math.Max(0, bundleSizeBytes - estimatedTextureDisk);
+                    long safetyMargin = (long)(maxBundleBytes * 0.03); // 3% cushion for bundle overhead/variance
+                    long newTextureDiskBudget = maxBundleBytes - nonTextureBytes - safetyMargin;
+
+                    Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt}/{config.MaxSizeConvergenceAttempts}: bundle {bundleSizeBytes / (1024.0 * 1024.0):F2} MB / {maxBundleBytes / (1024.0 * 1024.0):F2} MB cap, VRAM {currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / {maxUncompressedBytes / (1024.0 * 1024.0):F1} MB. " +
+                                     $"Estimated split: ~{estimatedTextureDisk / (1024.0 * 1024.0):F2} MB textures + ~{nonTextureBytes / (1024.0 * 1024.0):F2} MB meshes/animations/controllers.");
+
+                    if (newTextureDiskBudget < 256 * 1024L)
+                    {
+                        Debug.LogError($"[VRCAvatarOptimizerCore] [Step 8.5] Non-texture payload alone (~{nonTextureBytes / (1024.0 * 1024.0):F2} MB) meets or exceeds the {maxBundleBytes / (1024.0 * 1024.0):F2} MB limit — no amount of texture compression can fix this.");
+                        summary.AddError($"Meshes/animations/controllers alone are ~{nonTextureBytes / (1024.0 * 1024.0):F2} MB of the {maxBundleBytes / (1024.0 * 1024.0):F2} MB budget. Reduce mesh count, blendshapes, or animator/VRCFury content — texture compression cannot help.");
+                        break;
+                    }
+
+                    // Tighten VRAM too when it is over its own budget
+                    long newVramBudget = uncompressedExceeds
+                        ? Math.Min(textureVramBudget, (long)(maxUncompressedBytes * 0.95))
+                        : textureVramBudget;
+
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Re-allocating textures to ≤ {newTextureDiskBudget / (1024.0 * 1024.0):F2} MB on disk / ≤ {newVramBudget / (1024.0 * 1024.0):F1} MB VRAM and rebuilding...");
+                    progressCallback?.Invoke($"Size convergence attempt {attempt}/{config.MaxSizeConvergenceAttempts} (texture disk target {newTextureDiskBudget / (1024.0 * 1024.0):F2} MB)...", 0.98f);
+
+                    var previousResult = textureResult;
+                    textureVramBudget = newVramBudget;
+                    textureResult = Bluscream.TextureCompressor.TextureBudgetOptimizer.Optimize(
                         targetAvatar,
-                        textureBudgetBytes,
-                        (msg) => progressCallback?.Invoke(msg, 0.98f),
-                        config.MaxTextureResolution,
-                        config.CrunchCompressionQuality,
-                        config.UncompressedAvatarHeadroomMB,
-                        config.CompressedAvatarHeadroomMB,
-                        config.CrunchStepPercent
+                        new Bluscream.TextureCompressor.TextureBudgetRequest
+                        {
+                            VramBudgetBytes = newVramBudget,
+                            DiskBudgetBytes = newTextureDiskBudget,
+                            MaxResolution = config.MaxTextureResolution,
+                            AllowCrunch = config.AllowCrunchCompression,
+                            CrunchQuality = config.CrunchQuality,
+                            Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
+                                     : config.Platform == TargetPlatform.iOS ? Bluscream.TextureCompressor.TexturePlatform.iOS
+                                     : Bluscream.TextureCompressor.TexturePlatform.Standalone
+                        },
+                        (msg) => progressCallback?.Invoke(msg, 0.98f)
                     );
+                    summary.texturesOptimized = textureResult.TexturesProcessed;
+
+                    if (textureResult.HitFloor && previousResult != null && textureResult.EstimatedDiskBytes >= previousResult.EstimatedDiskBytes)
+                    {
+                        Debug.LogWarning("[VRCAvatarOptimizerCore] [Step 8.5] Textures are already at their lowest tier — stopping convergence.");
+                        summary.AddWarning("Textures are compressed to their minimum tier; the remaining bundle size is mesh/animation/controller payload.");
+                        break;
+                    }
 
                     progressCallback?.Invoke($"Rebuilding dry-run AssetBundle (attempt {attempt}/{config.MaxSizeConvergenceAttempts})...", 0.99f);
                     long previousBundleSize = bundleSizeBytes;
@@ -398,11 +425,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt} result: {bundleSizeBytes / (1024.0 * 1024.0):F2} MB compressed, {currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB texture VRAM.{(bundleExceeds || uncompressedExceeds ? "" : " ✓ Within budget.")}");
 
-                    // Guard against a pass that cannot shrink the bundle any further
-                    if (bundleSizeBytes > 0 && previousBundleSize > 0 && bundleSizeBytes >= previousBundleSize)
+                    if (bundleSizeBytes > 0 && previousBundleSize > 0 && bundleSizeBytes >= previousBundleSize && (bundleExceeds || uncompressedExceeds))
                     {
-                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Bundle did not shrink ({previousBundleSize / (1024.0 * 1024.0):F2} MB → {bundleSizeBytes / (1024.0 * 1024.0):F2} MB) — remaining size is non-texture payload (meshes/animations/controllers). Stopping convergence.");
-                        summary.AddWarning("Texture compression can no longer shrink the avatar — the remaining bundle size is mesh/animation/controller payload. Reduce meshes, blendshapes, or animator content.");
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Bundle did not shrink ({previousBundleSize / (1024.0 * 1024.0):F2} MB → {bundleSizeBytes / (1024.0 * 1024.0):F2} MB) — the remaining size is non-texture payload. Stopping convergence.");
+                        summary.AddWarning("Texture compression can no longer shrink the avatar — the remaining bundle size is mesh/animation/controller payload. Reduce meshes, blendshapes, or animator/VRCFury content.");
                         break;
                     }
                 }
