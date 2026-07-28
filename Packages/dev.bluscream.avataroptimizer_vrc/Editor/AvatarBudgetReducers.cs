@@ -176,7 +176,17 @@ namespace Bluscream.VRCAvatarOptimizer
 
             int before = _currentTriangles;
             _currentTriangles = achieved;
-            return $"decimated {before:N0} → {achieved:N0} triangles ({(1.0 - (double)achieved / _originalTriangles) * 100:F0}% below original)";
+
+            // The decimation engine preserves blendshapes, boundaries and non-intersection, so on
+            // blendshape-heavy meshes it often cannot reach the requested ratio. Say so rather than
+            // letting the caller assume the target was met.
+            double requestedCut = 1.0 - (double)targetTris / before;
+            double achievedCut = 1.0 - (double)achieved / before;
+            string shortfall = achievedCut < requestedCut * 0.5
+                ? $" — decimator reached only {achievedCut * 100:F0}% of the {requestedCut * 100:F0}% requested (blendshape/boundary preservation limits how far these meshes can collapse)"
+                : "";
+
+            return $"decimated {before:N0} → {achieved:N0} triangles ({(1.0 - (double)achieved / _originalTriangles) * 100:F0}% below original){shortfall}";
         }
 
         private static int CountTriangles(GameObject root)

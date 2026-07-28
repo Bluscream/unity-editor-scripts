@@ -305,18 +305,32 @@ namespace Bluscream.TextureCompressor
 
                 foreach (TexEntry e in entries)
                 {
-                    // The ladder is ordered by QUALITY, which is not monotonic in bytes: with a high
-                    // ResolutionPriority, "2048 ASTC 12x12" outranks "1024 ASTC 4x4" yet the latter is
-                    // larger. So scan forward for the nearest level that actually reduces a binding
-                    // budget instead of only considering LevelIndex + 1 (which would leave textures
-                    // stuck forever and falsely report the floor).
+                    // The ladder is ordered by QUALITY, which is not monotonic in EITHER cost: with a
+                    // high ResolutionPriority "2048 ASTC 12x12" outranks "1024 ASTC 4x4" (larger), and
+                    // a crunch tier can undercut an ASTC tier on disk while costing 4x the VRAM.
+                    // So a candidate must be a Pareto improvement: it may never worsen a budget that is
+                    // already over, nor push a satisfied budget over, and must strictly improve at
+                    // least one budget that is over. Scanning forward until such a level is found —
+                    // rather than stopping at the first level that helps *anything* — is what keeps
+                    // textures from getting trapped one step below a tier they can never leave.
                     int candidate = -1;
                     long candVram = 0, candDisk = 0;
                     for (int k = e.LevelIndex + 1; k < e.Ladder.Count; k++)
                     {
                         Measure(e, k, out long kv, out long kd);
-                        bool helps = (vramOver && kv < e.Vram) || (diskOver && kd < e.Disk);
-                        if (helps) { candidate = k; candVram = kv; candDisk = kd; break; }
+
+                        bool vramAcceptable = vramOver
+                            ? kv <= e.Vram
+                            : totalVram - e.Vram + kv <= result.VramBudgetBytes;
+                        bool diskAcceptable = diskOver
+                            ? kd <= e.Disk
+                            : totalDisk - e.Disk + kd <= result.DiskBudgetBytes;
+                        bool improvesBinding = (vramOver && kv < e.Vram) || (diskOver && kd < e.Disk);
+
+                        if (vramAcceptable && diskAcceptable && improvesBinding)
+                        {
+                            candidate = k; candVram = kv; candDisk = kd; break;
+                        }
                     }
                     if (candidate < 0) continue;
 
