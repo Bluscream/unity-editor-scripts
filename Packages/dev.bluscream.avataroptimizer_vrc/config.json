@@ -166,7 +166,6 @@
   },
   "platformProfiles": [
     {
-      "platform": "Android",
       "limits": {
         "MaxPhysBoneComponents": 8,
         "MaxPhysBoneTransforms": 64,
@@ -275,10 +274,10 @@
             "MaxTextureMemoryBytes": 41943040
           }
         }
-      ]
+      ],
+      "name": "Android"
     },
     {
-      "platform": "iOS",
       "limits": {
         "MaxPhysBoneComponents": 8,
         "MaxPhysBoneTransforms": 64,
@@ -387,10 +386,10 @@
             "MaxTextureMemoryBytes": 41943040
           }
         }
-      ]
+      ],
+      "name": "iOS"
     },
     {
-      "platform": "PC",
       "limits": {
         "ComponentBlacklist": [
           "DynamicBone",
@@ -499,7 +498,8 @@
           "name": "VeryPoor",
           "limits": {}
         }
-      ]
+      ],
+      "name": "PC"
     }
   ]
 }

@@ -65,9 +65,10 @@ namespace Bluscream.VRCAvatarOptimizer
         public bool ParticleTrailsEnabledAllowed = true;
         public bool ParticleCollisionEnabledAllowed = true;
 
-        // Renderers & Constraints
+        // Renderers, Constraints & Raycasts
         public int MaxTrailRenderers = int.MaxValue;
         public int MaxLineRenderers = int.MaxValue;
+        public int MaxRaycasts = int.MaxValue;
         public int MaxConstraints = int.MaxValue;
         public int MaxConstraintDepth = int.MaxValue;
 
@@ -119,6 +120,7 @@ namespace Bluscream.VRCAvatarOptimizer
             r.MaxRigidbodies            = overlay.MaxRigidbodies            != int.MaxValue  ? overlay.MaxRigidbodies            : MaxRigidbodies;
             r.MaxLights                 = overlay.MaxLights                 != int.MaxValue  ? overlay.MaxLights                 : MaxLights;
             r.MaxAudioSources           = overlay.MaxAudioSources           != int.MaxValue  ? overlay.MaxAudioSources           : MaxAudioSources;
+            r.MaxRaycasts               = overlay.MaxRaycasts               != int.MaxValue  ? overlay.MaxRaycasts               : MaxRaycasts;
             // Union blacklists, prefer overlay whitelist if non-empty
             r.ComponentBlacklist = overlay.ComponentBlacklist?.Count > 0
                 ? new List<string>(ComponentBlacklist ?? new List<string>()).Union(overlay.ComponentBlacklist, StringComparer.OrdinalIgnoreCase).ToList()
@@ -127,6 +129,45 @@ namespace Bluscream.VRCAvatarOptimizer
                 ? new List<string>(overlay.ComponentWhitelist)
                 : new List<string>(ComponentWhitelist ?? new List<string>());
             return r;
+        }
+
+        /// <summary>Applies non-default fields from <paramref name="overlay"/> onto this instance in-place. Used by PlatformProfile.ApplyConfigLimits.</summary>
+        public void ApplyFrom(ProfileLimitData overlay)
+        {
+            if (overlay == null) return;
+            MaxTriangles               = overlay.MaxTriangles;
+            MaxSkinnedMeshes           = overlay.MaxSkinnedMeshes;
+            MaxMeshRenderers           = overlay.MaxMeshRenderers;
+            MaxMaterialSlots           = overlay.MaxMaterialSlots;
+            MaxBones                   = overlay.MaxBones;
+            MaxAnimators               = overlay.MaxAnimators;
+            MaxTextureMemoryBytes      = overlay.MaxTextureMemoryBytes;
+            MaxAssetBundleSizeBytes    = overlay.MaxAssetBundleSizeBytes;
+            MaxPhysBoneComponents      = overlay.MaxPhysBoneComponents;
+            MaxPhysBoneTransforms      = overlay.MaxPhysBoneTransforms;
+            MaxPhysBoneColliders       = overlay.MaxPhysBoneColliders;
+            MaxPhysBoneCollisionChecks = overlay.MaxPhysBoneCollisionChecks;
+            MaxContacts                = overlay.MaxContacts;
+            MaxParticleSystems         = overlay.MaxParticleSystems;
+            MaxActiveParticles         = overlay.MaxActiveParticles;
+            MaxMeshParticlePolyCount   = overlay.MaxMeshParticlePolyCount;
+            ParticleTrailsEnabledAllowed    = overlay.ParticleTrailsEnabledAllowed;
+            ParticleCollisionEnabledAllowed = overlay.ParticleCollisionEnabledAllowed;
+            MaxTrailRenderers          = overlay.MaxTrailRenderers;
+            MaxLineRenderers           = overlay.MaxLineRenderers;
+            MaxRaycasts                = overlay.MaxRaycasts;
+            MaxConstraints             = overlay.MaxConstraints;
+            MaxConstraintDepth         = overlay.MaxConstraintDepth;
+            MaxClothComponents         = overlay.MaxClothComponents;
+            MaxClothVertices           = overlay.MaxClothVertices;
+            MaxPhysicsColliders        = overlay.MaxPhysicsColliders;
+            MaxRigidbodies             = overlay.MaxRigidbodies;
+            MaxLights                  = overlay.MaxLights;
+            MaxAudioSources            = overlay.MaxAudioSources;
+            if (overlay.ComponentBlacklist?.Count > 0)
+                ComponentBlacklist = new List<string>(ComponentBlacklist ?? new List<string>()).Union(overlay.ComponentBlacklist, StringComparer.OrdinalIgnoreCase).ToList();
+            if (overlay.ComponentWhitelist?.Count > 0)
+                ComponentWhitelist = new List<string>(overlay.ComponentWhitelist);
         }
     }
 
@@ -140,7 +181,7 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class PlatformProfileData
     {
-        public string platform;
+        public string name;
         /// <summary>Base limits for this platform applied to all ranks. Rank-specific limits override these.</summary>
         public ProfileLimitData limits = new ProfileLimitData();
         public List<RankProfileData> ranks = new List<RankProfileData>();
@@ -186,7 +227,7 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 foreach (var platData in platformProfiles)
                 {
-                    if (string.IsNullOrWhiteSpace(platData.platform) || platData.ranks == null) continue;
+                    if (string.IsNullOrWhiteSpace(platData.name) || platData.ranks == null) continue;
                     var baseLimits = platData.limits ?? new ProfileLimitData();
                     var rankDict = new Dictionary<string, ProfileLimitData>(StringComparer.OrdinalIgnoreCase);
                     foreach (var rankData in platData.ranks)
@@ -197,7 +238,7 @@ namespace Bluscream.VRCAvatarOptimizer
                             rankDict[rankData.name] = baseLimits.MergeWith(rankData.limits);
                         }
                     }
-                    ProfileDict[platData.platform] = rankDict;
+                    ProfileDict[platData.name] = rankDict;
                 }
             }
         }

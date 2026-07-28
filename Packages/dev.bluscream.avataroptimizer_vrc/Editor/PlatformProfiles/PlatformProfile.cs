@@ -39,60 +39,20 @@ namespace Bluscream.VRCAvatarOptimizer
     /// <summary>
     /// Base abstract class for platform performance profiles defining resource and component limits
     /// according to official VRChat SDK Performance Rank specifications.
+    /// Extends ProfileLimitData so all limit fields are defined once and shared with the JSON config system.
     /// </summary>
     [Serializable]
-    public abstract class PlatformProfile
+    public abstract class PlatformProfile : ProfileLimitData
     {
         public abstract TargetPlatform Platform { get; }
         public abstract AvatarPerformanceRank Rank { get; }
 
-        // Geometry & Mesh Limits
-        public int MaxTriangles = int.MaxValue;
-        public int MaxSkinnedMeshes = int.MaxValue;
-        public int MaxMeshRenderers = int.MaxValue;
-        public int MaxMaterialSlots = int.MaxValue;
-        public int MaxBones = int.MaxValue;
-        public int MaxAnimators = int.MaxValue;
+        // MaxBoundsSize is not in ProfileLimitData because it's a Vector3 (no clean unlimited sentinel)
         public Vector3 MaxBoundsSize = new Vector3(5f, 6f, 5f);
 
-        // Texture & Memory Limits
-        public long MaxTextureMemoryBytes = 40 * 1024 * 1024L; // 40 MB
-
-        // PhysBone Limits
-        public int MaxPhysBoneComponents = 8;
-        public int MaxPhysBoneTransforms = 64;
-        public int MaxPhysBoneColliders = 16;
-        public int MaxPhysBoneCollisionChecks = 64;
-
-        // Particle System Limits
-        public int MaxParticleSystems = int.MaxValue;
-        public int MaxActiveParticles = int.MaxValue;
-        public int MaxMeshParticlePolyCount = int.MaxValue;
-        public bool ParticleTrailsEnabledAllowed = true;
-        public bool ParticleCollisionEnabledAllowed = true;
-
-        // Renderers & Constraints
-        public int MaxTrailRenderers = int.MaxValue;
-        public int MaxLineRenderers = int.MaxValue;
-        public int MaxRaycasts = int.MaxValue;
-        public int MaxConstraints = int.MaxValue;
-        public int MaxConstraintDepth = int.MaxValue;
-
-        // Physics & Cloth
-        public int MaxClothComponents = int.MaxValue;
-        public int MaxClothVertices = int.MaxValue;
-        public int MaxPhysicsColliders = int.MaxValue;
-        public int MaxRigidbodies = int.MaxValue;
-
-        // Lights & Audio
-        public int MaxLights = int.MaxValue;
-        public int MaxAudioSources = int.MaxValue;
-
-        // Contact Limits
-        public int MaxContacts = int.MaxValue;
-
-        // Asset Bundle Size Limit
-        public virtual long MaxAssetBundleSizeBytes => long.MaxValue;
+        // NOTE: MaxAssetBundleSizeBytes is inherited as a long field from ProfileLimitData.
+        //       Platform subclasses (Android, PC) set it in their constructors via GetSdkAssetBundleSizeLimit()
+        //       so SDK updates are picked up automatically at runtime.
 
         /// <summary>
         /// Reads the compressed avatar bundle size limit from the VRChat SDK
@@ -135,16 +95,24 @@ namespace Bluscream.VRCAvatarOptimizer
         // Platform suffix for duplicated avatars/materials, e.g. " (Android) [Very Poor]"
         public virtual string PlatformSuffix => $" ({Platform.GetDescription()}) [{Rank.GetDescription()}]";
 
-        // Component Whitelists & Blacklists — lazy-cached, override CreateBlacklist/CreateWhitelist per platform
-        private HashSet<string> _blacklist;
-        public HashSet<string> BlacklistedComponentNames => _blacklist ??= CreateBlacklist();
+        // Component Whitelists & Blacklists — lazy-cached HashSets built from ProfileLimitData.ComponentBlacklist/Whitelist
+        // plus any extra runtime type checks added by virtual CreateBlacklist/CreateWhitelist overrides.
+        private HashSet<string> _blacklistSet;
+        public HashSet<string> BlacklistedComponentNames => _blacklistSet ??= BuildComponentSet(ComponentBlacklist, CreateBlacklist());
         protected virtual HashSet<string> CreateBlacklist()
             => new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private HashSet<string> _whitelist;
-        public HashSet<string> WhitelistedComponentNames => _whitelist ??= CreateWhitelist();
+        private HashSet<string> _whitelistSet;
+        public HashSet<string> WhitelistedComponentNames => _whitelistSet ??= BuildComponentSet(ComponentWhitelist, CreateWhitelist());
         protected virtual HashSet<string> CreateWhitelist()
             => new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private static HashSet<string> BuildComponentSet(List<string> configList, HashSet<string> runtimeSet)
+        {
+            if (configList?.Count > 0)
+                foreach (var n in configList) runtimeSet.Add(n);
+            return runtimeSet;
+        }
 
         /// <summary>
         /// Performs custom, platform-specific component compatibility check.
@@ -196,19 +164,14 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             if (profile == null || OptimizerConfig.ActiveConfig?.ProfileDict == null) return profile;
 
-            string platStr = profile.Platform.ToString();
-            string rankStr = profile.Rank.ToString();
-
-            if (OptimizerConfig.ActiveConfig.ProfileDict.TryGetValue(platStr, out var ranks) &&
-                ranks.TryGetValue(rankStr, out ProfileLimitData data))
+            if (OptimizerConfig.ActiveConfig.ProfileDict.TryGetValue(profile.Platform.ToString(), out var ranks) &&
+                ranks.TryGetValue(profile.Rank.ToString(), out ProfileLimitData data))
             {
-                if (data.MaxTriangles > 0) profile.MaxTriangles = data.MaxTriangles;
-                if (data.MaxMaterialSlots > 0) profile.MaxMaterialSlots = data.MaxMaterialSlots;
-                if (data.MaxPhysBoneComponents >= 0) profile.MaxPhysBoneComponents = data.MaxPhysBoneComponents;
-                if (data.MaxPhysBoneTransforms >= 0) profile.MaxPhysBoneTransforms = data.MaxPhysBoneTransforms;
-                if (data.MaxPhysBoneColliders >= 0) profile.MaxPhysBoneColliders = data.MaxPhysBoneColliders;
-                if (data.MaxPhysBoneCollisionChecks >= 0) profile.MaxPhysBoneCollisionChecks = data.MaxPhysBoneCollisionChecks;
-                if (data.MaxTextureMemoryBytes > 0) profile.MaxTextureMemoryBytes = data.MaxTextureMemoryBytes;
+                // MergeWith uses profile's hardcoded defaults as base; data non-unlimited values override.
+                // ApplyFrom writes the merged result back in-place onto the profile.
+                profile.ApplyFrom(profile.MergeWith(data));
+                profile._blacklistSet = null; // invalidate cached set so it rebuilds with new ComponentBlacklist
+                profile._whitelistSet = null;
             }
 
             return profile;

@@ -82,14 +82,13 @@
       "title": "PlatformProfile",
       "description": "Performance limits for a target platform. 'limits' defines the platform-wide baseline; each rank's 'limits' overrides fields on top of it.",
       "type": "object",
-      "required": ["platform"],
+      "required": ["name"],
       "additionalProperties": false,
       "properties": {
-        "platform": {
+        "name": {
           "type": "string",
-          "description": "Target build platform identifier.",
-          "enum": ["Android", "iOS", "PC"]
-        },
+          "description": "Target platform name identifier.",
+          "enum": ["Android", "iOS", "PC"]        },
         "limits": {
           "$ref": "#/$defs/ProfileLimitData",
           "description": "Base limits that apply to ALL ranks on this platform. Rank-specific limits override individual fields. Fields absent here default to unlimited."

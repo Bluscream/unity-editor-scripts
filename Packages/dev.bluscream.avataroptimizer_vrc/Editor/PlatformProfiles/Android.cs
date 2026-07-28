@@ -7,18 +7,16 @@ namespace Bluscream.VRCAvatarOptimizer
     public abstract class PlatformProfile_Android : PlatformProfile
     {
         public override TargetPlatform Platform => TargetPlatform.Android;
-        // 10 MB compressed mobile cap (verified against VRC.ValidationHelpers.GetAssetBundleSizeLimit);
-        // read live from the SDK when available so SDK updates are picked up automatically.
-        public override long MaxAssetBundleSizeBytes => GetSdkAssetBundleSizeLimit(isMobilePlatform: true, fallbackBytes: 10 * 1024 * 1024L);
 
-        protected override HashSet<string> CreateBlacklist() => new HashSet<string>(new[]
+        protected PlatformProfile_Android()
         {
-            "Cloth", "Camera", "Light", "AudioSource", "Rigidbody",
-            "Collider", "BoxCollider", "SphereCollider", "CapsuleCollider", "MeshCollider",
-            "Joint", "SpringJoint", "HingeJoint", "FixedJoint", "CharacterJoint", "ConfigurableJoint",
-            "ParticleSystem", "DynamicBone", "DynamicBoneCollider",
-            "VRCSpatialAudioSource", "FinalIK", "PostProcessLayer", "PostProcessVolume"
-        }, StringComparer.OrdinalIgnoreCase);
+            // 10 MB compressed mobile cap (verified against VRC.ValidationHelpers.GetAssetBundleSizeLimit);
+            // read live from the SDK when available so SDK updates are picked up automatically.
+            MaxAssetBundleSizeBytes = GetSdkAssetBundleSizeLimit(isMobilePlatform: true, fallbackBytes: 10 * 1024 * 1024L); // 10 MB
+        }
+
+        // Note: ComponentBlacklist is now config-driven (config.json platformProfiles[Android].limits.ComponentBlacklist).
+        // ShouldRemoveComponentCustom handles runtime type-based checks that can't be expressed as strings.
 
         public override bool ShouldRemoveComponentCustom(Component comp)
         {
