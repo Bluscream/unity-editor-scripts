@@ -26,19 +26,27 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         private static readonly Dictionary<string, string> ShaderLookupTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            // lilToon shaders & variants
+            { "liltoon", QUEST_TOON_STANDARD },
+            { "liltoon/liltoon", QUEST_TOON_STANDARD },
+            { "hidden/liltoonoutline", QUEST_TOON_STANDARD },
+            { "hidden/liltooncutout", QUEST_TOON_STANDARD },
+            { "hidden/liltoongem", QUEST_PARTICLES_MULTIPLY },
+            { "hidden/liltoonrefraction", QUEST_PARTICLES_MULTIPLY },
+            { "hidden/liltoonrefractionblur", QUEST_PARTICLES_MULTIPLY },
+            { "hidden/liltoonlite", QUEST_TOON_STANDARD },
+            { "hidden/liltoonlitetransparent", QUEST_PARTICLES_ADDITIVE },
+            { "hidden/liltoontransparent", QUEST_PARTICLES_ADDITIVE },
+            { "hidden/liltoonfur", QUEST_TOON_STANDARD },
+            
             // Poiyomi shaders
             { "poiyomi/toon", QUEST_TOON_STANDARD },
             { "poiyomi/toon lite", QUEST_TOON_STANDARD },
             { "poiyomi/toon lit", QUEST_TOON_LIT },
             { "poiyomi/toon unlit", QUEST_TOON_LIT },
             { "poiyomi/toon standard", QUEST_TOON_STANDARD },
-
-            // lilToon shaders
-            { "liltoon", QUEST_TOON_STANDARD },
-            { "liltoon/liltoon", QUEST_TOON_STANDARD },
-            { "hidden/liltoonoutline", QUEST_TOON_STANDARD },
-            { "liltoon/[optional] liltoonoutline", QUEST_TOON_STANDARD },
-
+            { "poiyomi/pro", QUEST_TOON_STANDARD },
+            
             // Unity Standard shaders
             { "standard", QUEST_STANDARD_LITE },
             { "standard (specular setup)", QUEST_BUMPED_SPECULAR },
@@ -67,13 +75,32 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         private static readonly List<(string pattern, string replacement, bool caseSensitive)> PatternRules = new List<(string, string, bool)>
         {
-            // ── Brand/family-specific patterns FIRST: a 'Poiyomi Toon Transparent' must map to a
-            //    toon shader, not fall into the generic transparency → particle-shader rules below.
+            // ── Brand/family-specific patterns FIRST:
+            // 1. Particle / Transparency variants within Poiyomi & lilToon
+            (".*poiyomi.*particle.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*poiyomi.*outline.*", QUEST_TOON_STANDARD, false),
+            (".*poiyomi.*wireframe.*", QUEST_TOON_LIT, false),
+            (".*poiyomi.*grab.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*poiyomi.*dissolve.*", QUEST_TOON_STANDARD, false),
             (".*poiyomi.*toon.*", QUEST_TOON_STANDARD, false),
             (".*poiyomi.*unlit.*", QUEST_TOON_LIT, false),
             (".*poiyomi.*lit.*", QUEST_TOON_LIT, false),
             (".*poiyomi.*", QUEST_TOON_STANDARD, false),
+
+            (".*liltoon.*gem.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*liltoon.*refraction.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*liltoon.*transparent.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*liltoon.*cutout.*", QUEST_TOON_STANDARD, false),
+            (".*liltoon.*outline.*", QUEST_TOON_STANDARD, false),
+            (".*liltoon.*fur.*", QUEST_TOON_STANDARD, false),
             (".*liltoon.*", QUEST_TOON_STANDARD, false),
+
+            // Custom HUD & Special Effect Brand Shaders (Ikeiwa IkeHUD, Hologram, Scanner)
+            (".*ikehud.*visor.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*ikehud.*overlay.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*ikehud.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*hologram.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*scanner.*", QUEST_PARTICLES_MULTIPLY, false),
 
             // Toon shader patterns
             (".*toon.*standard.*", QUEST_TOON_STANDARD, false),
