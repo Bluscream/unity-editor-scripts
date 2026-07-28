@@ -131,7 +131,18 @@ namespace Bluscream.VRCAvatarOptimizer
             return r;
         }
 
-        /// <summary>Applies non-default fields from <paramref name="overlay"/> onto this instance in-place. Used by PlatformProfile.ApplyConfigLimits.</summary>
+        /// <summary>
+        /// Copies EVERY limit field from <paramref name="overlay"/> onto this instance in-place —
+        /// including fields still at their int.MaxValue/long.MaxValue "unlimited" default. It does not
+        /// merge, so passing a sparse overlay here will wipe existing limits to unlimited.
+        /// <para>
+        /// Always feed it a <see cref="MergeWith"/> result, which is what resolves the sentinels:
+        /// <c>profile.ApplyFrom(profile.MergeWith(overlay))</c>. That is the only pattern
+        /// PlatformProfile.ApplyConfigLimits uses.
+        /// </para>
+        /// Component blacklists/whitelists are the exception: they are only touched when the overlay
+        /// actually provides entries (blacklists union, whitelist replaces).
+        /// </summary>
         public void ApplyFrom(ProfileLimitData overlay)
         {
             if (overlay == null) return;
