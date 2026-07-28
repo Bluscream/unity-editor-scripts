@@ -196,7 +196,11 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 int[] minResValues = new int[] { 1024, 512, 256, 128 };
                 string[] minResLabels = new string[] { "1024 px", "512 px (Recommended)", "256 px", "128 px" };
-                config.MinTextureResolution = EditorGUILayout.IntPopup("Min Texture Resolution", config.MinTextureResolution, minResLabels, minResValues);
+                config.MinTextureResolution = EditorGUILayout.IntPopup("Preferred Min Resolution", config.MinTextureResolution, minResLabels, minResValues);
+                EditorGUILayout.HelpBox(
+                    $"Soft floor: every format/crunch combination at {config.MinTextureResolution}px and above is exhausted before any texture is downscaled further. If the avatar still cannot meet the platform budget, textures may go below it (down to 128px) — this is reported in the summary.",
+                    MessageType.None
+                );
 
                 config.ResolutionPriority = EditorGUILayout.Slider("Preserve Resolution", config.ResolutionPriority, 0.5f, 3.0f);
                 EditorGUILayout.HelpBox(

@@ -21,8 +21,14 @@ namespace Bluscream.TextureCompressor
         /// <summary>Budget for the TEXTURE portion of the AssetBundle (total cap minus non-texture payload).</summary>
         public long DiskBudgetBytes = 10L * 1024 * 1024;
         public int MaxResolution = 2048;
-        /// <summary>Textures are never downscaled below this — the optimizer compresses the format harder instead.</summary>
+        /// <summary>
+        /// Preferred resolution floor: the optimizer exhausts every format/crunch combination at or above
+        /// this resolution before it will downscale past it. It is a soft floor — if the budget still
+        /// cannot be met, it keeps going down to AbsoluteMinResolution rather than giving up.
+        /// </summary>
         public int MinResolution = 512;
+        /// <summary>Hard floor — never downscale below this under any budget pressure.</summary>
+        public int AbsoluteMinResolution = 128;
         /// <summary>
         /// How expensive losing resolution is, relative to losing format detail.
         /// 1.0 = proportional. Higher values (2-3) make downscaling costly, so a big body atlas keeps its
@@ -45,6 +51,9 @@ namespace Bluscream.TextureCompressor
         public long VramBudgetBytes;
         public long DiskBudgetBytes;
         public bool HitFloor;
+        /// <summary>True when the budget forced textures below the preferred resolution floor.</summary>
+        public bool WentBelowPreferredResolution;
+        public int TexturesBelowPreferredResolution;
         public Dictionary<string, int> TierHistogram = new Dictionary<string, int>();
 
         public bool VramBudgetMet => EstimatedVramBytes <= VramBudgetBytes;
@@ -199,9 +208,10 @@ namespace Bluscream.TextureCompressor
                 : MobileTiers(request.AllowCrunch, request.CrunchQuality);
 
             // Resolution ladder, capped by the user's max and floored by MinResolution
-            int minRes = Math.Min(request.MinResolution, request.MaxResolution);
-            var resolutions = new[] { 4096, 2048, 1024, 512, 256, 128 }
-                .Where(r => r <= request.MaxResolution && r >= minRes)
+            int preferredMinRes = Math.Min(request.MinResolution, request.MaxResolution);
+            int hardMinRes = Math.Min(request.AbsoluteMinResolution, preferredMinRes);
+            var resolutions = new[] { 4096, 2048, 1024, 512, 256, 128, 64, 32 }
+                .Where(r => r <= request.MaxResolution && r >= hardMinRes)
                 .ToArray();
             if (resolutions.Length == 0) resolutions = new[] { Mathf.Clamp(request.MaxResolution, 32, 8192) };
 
@@ -213,16 +223,22 @@ namespace Bluscream.TextureCompressor
             // budget through larger ASTC blocks (blurrier, but far better than a 512px body texture).
             int topRes = resolutions.Max();
             float resPriority = Mathf.Clamp(request.ResolutionPriority, 0.25f, 4f);
-            var allLevels = new List<Level>();
+            var levels = new List<Level>();
             foreach (int res in resolutions)
                 foreach (Tier t in tiers)
-                    allLevels.Add(new Level
+                    levels.Add(new Level
                     {
                         Resolution = res,
                         Tier = t,
                         Score = t.Quality * Mathf.Pow(res / (float)topRes, resPriority)
                     });
-            allLevels = allLevels.OrderByDescending(l => l.Score).ToList();
+
+            // Two segments, hard-ordered: EVERY format/crunch combination at or above the preferred
+            // resolution floor is exhausted before any sub-floor level becomes available. Sub-floor
+            // levels are a last resort for avatars that cannot otherwise meet the platform budget.
+            var allLevels = levels.Where(l => l.Resolution >= preferredMinRes).OrderByDescending(l => l.Score)
+                .Concat(levels.Where(l => l.Resolution < preferredMinRes).OrderByDescending(l => l.Score))
+                .ToList();
 
             // Build per-texture entries with a ladder filtered to what each texture supports
             var entries = new List<TexEntry>();
@@ -351,8 +367,14 @@ namespace Bluscream.TextureCompressor
             result.TexturesProcessed = entries.Count;
             result.EstimatedVramBytes = totalVram;
             result.EstimatedDiskBytes = totalDisk;
+            result.TexturesBelowPreferredResolution = entries.Count(e => e.Ladder[e.LevelIndex].Resolution < preferredMinRes);
+            result.WentBelowPreferredResolution = result.TexturesBelowPreferredResolution > 0;
 
             Debug.Log($"[TextureBudget] Done — {result.Describe()}");
+            if (result.WentBelowPreferredResolution)
+            {
+                Debug.LogWarning($"[TextureBudget] {result.TexturesBelowPreferredResolution} texture(s) had to go below the preferred {preferredMinRes}px floor — every format/crunch combination above it was exhausted before downscaling further.");
+            }
             return result;
         }
 

@@ -246,6 +246,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     summary.texturesOptimized = textureResult.TexturesProcessed;
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Texture budget allocated: {textureResult.Describe()}");
+                    if (textureResult.WentBelowPreferredResolution)
+                        summary.AddWarning($"{textureResult.TexturesBelowPreferredResolution} texture(s) had to be downscaled below the preferred {config.MinTextureResolution}px floor to meet the budget.");
                     if (!textureResult.VramBudgetMet)
                         summary.AddWarning($"Texture VRAM ({textureResult.EstimatedVramBytes / (1024.0 * 1024.0):F1} MB) still exceeds the budget after maximum compression — reduce texture count or resolution.");
                 }
