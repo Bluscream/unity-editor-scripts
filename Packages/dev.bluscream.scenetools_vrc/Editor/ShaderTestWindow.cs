@@ -13,6 +13,7 @@ namespace Bluscream.ShaderTest
     public class ShaderTestWindow : EditorWindow
     {
         private Material targetMaterial;
+        private GameObject targetGameObject;
         private Shader originalShader;
         private Shader currentShader;
         private Vector2 scrollPosition;
@@ -40,17 +41,51 @@ namespace Bluscream.ShaderTest
             EditorGUILayout.LabelField("Shader Test", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
 
-            // Material drag and drop field with inline reset button
+            // Material/GameObject drag and drop field with inline reset & reload buttons
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Material", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Material / GameObject", EditorStyles.boldLabel);
             
             EditorGUILayout.BeginHorizontal();
-            Material newMaterial = (Material)EditorGUILayout.ObjectField(
-                targetMaterial,
-                typeof(Material),
-                false,
+            
+            // Accept either Material or GameObject (or any UnityEngine.Object with a Renderer/Material)
+            UnityEngine.Object droppedObj = EditorGUILayout.ObjectField(
+                (UnityEngine.Object)targetMaterial ?? targetGameObject,
+                typeof(UnityEngine.Object),
+                true,
                 GUILayout.Height(20)
             );
+
+            Material resolvedMat = null;
+            GameObject resolvedGO = null;
+
+            if (droppedObj is Material mat)
+            {
+                resolvedMat = mat;
+            }
+            else if (droppedObj is GameObject go)
+            {
+                resolvedGO = go;
+                Renderer r = go.GetComponentInChildren<Renderer>(true);
+                if (r != null && r.sharedMaterial != null)
+                {
+                    resolvedMat = r.sharedMaterial;
+                }
+            }
+            else if (droppedObj is Component comp)
+            {
+                resolvedGO = comp.gameObject;
+                Renderer r = comp.GetComponentInChildren<Renderer>(true);
+                if (r != null && r.sharedMaterial != null)
+                {
+                    resolvedMat = r.sharedMaterial;
+                }
+            }
+
+            // Reload Shaders button inline
+            if (GUILayout.Button("Reload Shaders", GUILayout.Width(110), GUILayout.Height(20)))
+            {
+                LoadShaders();
+            }
 
             // Reset button inline
             EditorGUI.BeginDisabledGroup(targetMaterial == null || currentShader == originalShader);
@@ -61,7 +96,7 @@ namespace Bluscream.ShaderTest
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndHorizontal();
 
-            if (newMaterial != targetMaterial)
+            if (resolvedMat != targetMaterial)
             {
                 if (targetMaterial != null && originalShader != null)
                 {
@@ -69,7 +104,8 @@ namespace Bluscream.ShaderTest
                     targetMaterial.shader = originalShader;
                 }
 
-                targetMaterial = newMaterial;
+                targetMaterial = resolvedMat;
+                targetGameObject = resolvedGO;
                 if (targetMaterial != null)
                 {
                     originalShader = targetMaterial.shader;
@@ -89,16 +125,19 @@ namespace Bluscream.ShaderTest
             // Shader buttons
             if (targetMaterial == null)
             {
-                EditorGUILayout.HelpBox("Drag a material into the field above to start testing shaders.", MessageType.Info);
+                EditorGUILayout.HelpBox("Drag a Material or GameObject into the field above to start testing shaders.", MessageType.Info);
                 return;
             }
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Available Shaders", EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
 
-            if (shadersByPath.Count == 0)
+            // Auto-reload shaders if list became empty (e.g. after domain reload / package recompile)
+            if (shadersByPath == null || shadersByPath.Count == 0)
             {
-                EditorGUILayout.HelpBox("No shaders found in the project.", MessageType.Warning);
+                LoadShaders();
             }
             else
             {
