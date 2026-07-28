@@ -105,9 +105,10 @@ namespace Bluscream.VRCAvatarOptimizer
             // ── Special-effect / transparency patterns LAST — catch-alls for glow cones, visors,
             //    HUDs etc. Word-boundary guards keep 'cone' from matching 'silicone' and
             //    'glass' from matching 'sunglasses'.
-            (".*flashlight.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*light.*beam.*", QUEST_PARTICLES_ADDITIVE, false),
-            (@".*(?:^|[\W_])cone(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*flashlight.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*light.*beam.*", QUEST_PARTICLES_MULTIPLY, false),
+            (@".*(?:^|[\W_])volume(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
+            (@".*(?:^|[\W_])cone(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
             (@".*(?:^|[\W_])dome(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
             (".*safespace.*", QUEST_PARTICLES_ADDITIVE, false),
             (@".*(?:^|[\W_])visor(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
