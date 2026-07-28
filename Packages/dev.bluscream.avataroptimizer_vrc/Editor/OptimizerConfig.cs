@@ -50,7 +50,7 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class RankProfileData
     {
-        public string rank;
+        public string name;
         public ProfileLimitData limits = new ProfileLimitData();
     }
 
@@ -105,9 +105,9 @@ namespace Bluscream.VRCAvatarOptimizer
                     var rankDict = new Dictionary<string, ProfileLimitData>(StringComparer.OrdinalIgnoreCase);
                     foreach (var rankData in platData.ranks)
                     {
-                        if (!string.IsNullOrWhiteSpace(rankData.rank) && rankData.limits != null)
+                        if (!string.IsNullOrWhiteSpace(rankData.name) && rankData.limits != null)
                         {
-                            rankDict[rankData.rank] = rankData.limits;
+                            rankDict[rankData.name] = rankData.limits;
                         }
                     }
                     ProfileDict[platData.platform] = rankDict;
@@ -294,25 +294,25 @@ namespace Bluscream.VRCAvatarOptimizer
 
                         if (p.MaxTriangles < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
                             p.MaxTriangles = 0;
                             warnings++;
                         }
                         if (p.MaxMaterialSlots < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
                             p.MaxMaterialSlots = 0;
                             warnings++;
                         }
                         if (p.MaxTextureMemoryBytes < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
                             p.MaxTextureMemoryBytes = 0;
                             warnings++;
                         }
                         if (p.MaxPhysBoneComponents < 0 || p.MaxPhysBoneComponents > 256)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
                             p.MaxPhysBoneComponents = Mathf.Clamp(p.MaxPhysBoneComponents, 0, 256);
                             warnings++;
                         }
