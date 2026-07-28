@@ -291,6 +291,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 long bundleSizeBytes = -1;
                 string bundlePath = null;
+                long maxBundleBytes = profile.MaxAssetBundleSizeBytes; // also used by the reporting block below
                 try // ensure temp-removed components are ALWAYS restored, even on exception/cancel
                 {
                 try
@@ -303,7 +304,6 @@ namespace Bluscream.VRCAvatarOptimizer
                     summary.AddError($"⚠️ CRITICAL: Could not verify compressed bundle size. SDK dry-run was suppressed or failed. Check console for details.");
                 }
 
-                long maxBundleBytes = profile.MaxAssetBundleSizeBytes;
                 AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024);
                 long maxUncompressedBytes = Math.Max(1024 * 1024L /* 1 MB */, profile.MaxTextureMemoryBytes - headroomBytes);
