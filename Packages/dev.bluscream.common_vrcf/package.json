@@ -1,6 +1,6 @@
 {
   "name": "dev.bluscream.common_vrcf",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "displayName": "Bluscream Common (VRCFury)",
   "description": "Common VRCFury reflection helpers, expression menu mapping, and feature management utilities.",
   "unity": "2019.4",
