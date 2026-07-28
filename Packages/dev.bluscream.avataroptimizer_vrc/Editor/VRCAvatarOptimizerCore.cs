@@ -28,10 +28,9 @@ namespace Bluscream.VRCAvatarOptimizer
             // DynamicBones -> PhysBones, and converts Unity constraints -> VRC constraints (conversion
             // preserves behavior where our pass just deletes), so the destructive local pass is off by default.
             public bool RemoveIncompatibleComponents = false;
-            // When RemoveIncompatibleComponents is off, still remove the components TEMPORARILY around the
-            // Step 8.5 dry-run builds (restored via Undo afterwards) so the measured bundle size doesn't
-            // include audio clips / particle textures etc. that the SDK will strip or convert at upload.
-            public bool TempRemoveIncompatibleForSizeCheck = true;
+            // Skip the Step 8.5 dry-run bundle builds entirely and rely on Step 5's fast-math size
+            // estimate only. Faster, but no verified compressed bundle size in the summary.
+            public bool SkipDryRunBundleBuild = false;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
@@ -259,18 +258,26 @@ namespace Bluscream.VRCAvatarOptimizer
                 profile.ValidatePlatformRules(targetAvatar, summary);
 
                 // Step 8.5: Fast Math Iterative AssetBundle Verification & Smart Quality Ladder
+                if (config.SkipDryRunBundleBuild)
+                {
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Skipped dry-run bundle build (disabled in config) — using Step 5's texture memory estimate only.");
+                    summary.AddWarning("Dry-run bundle build skipped — compressed avatar size was not verified (Step 5 estimate only).");
+                }
+                else
+                {
                 progressCallback?.Invoke("Verifying compressed AssetBundle size...", 0.98f);
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Verifying AssetBundle size for '{targetAvatar.name}'...");
 
                 // Ensure active build target matches target platform profile before dry-run bundle build
                 SwitchBuildTargetIfNeeded(config.Platform);
 
-                // Temporarily strip SDK-incompatible components around the dry-run builds so the measured
-                // size matches what an SDK-auto-fixed upload would weigh (audio clips, particle textures
-                // etc. referenced by doomed components would otherwise inflate the bundle). The removals
-                // are recorded in their own Undo group and reverted right after the builds, leaving them
-                // in place for the SDK panel's Auto Fix (which converts instead of deleting).
-                bool tempRemove = !config.RemoveIncompatibleComponents && config.TempRemoveIncompatibleForSizeCheck;
+                // ALWAYS temporarily strip SDK-incompatible components around the dry-run builds (unless
+                // they were already permanently removed in Step 2): the measured size must match what an
+                // SDK-auto-fixed upload would weigh — audio clips, particle textures etc. referenced by
+                // doomed components would otherwise inflate the bundle. The removals are recorded in their
+                // own Undo group and reverted right after the builds, leaving the components in place for
+                // the SDK panel's Auto Fix (which converts instead of deleting).
+                bool tempRemove = !config.RemoveIncompatibleComponents;
                 int tempRemoveUndoGroup = -1;
                 if (tempRemove)
                 {
@@ -371,6 +378,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         summary.AddSuccess($"Verified compressed avatar size: {bundleMB:F2} MB.");
                     }
                 }
+                } // end Step 8.5 (dry-run bundle verification)
 
                 AvatarSDKEvaluator.AvatarStats stats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 summary.FinalStats = stats;

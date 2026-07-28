@@ -55,7 +55,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
-            config.TempRemoveIncompatibleForSizeCheck = EditorPrefs.GetBool("VRCAvatarOptimizer_TempRemoveIncompatibleForSizeCheck", true);
+            config.SkipDryRunBundleBuild = EditorPrefs.GetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", false);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
@@ -79,7 +79,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchStepPercent", config.CrunchStepPercent);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
-            EditorPrefs.SetBool("VRCAvatarOptimizer_TempRemoveIncompatibleForSizeCheck", config.TempRemoveIncompatibleForSizeCheck);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", config.SkipDryRunBundleBuild);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
@@ -223,22 +223,18 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 EditorGUILayout.HelpBox(
                     "Off (recommended): the VRC SDK panel's Auto Fix removes illegal components, converts DynamicBones → PhysBones, and converts Unity constraints → VRC constraints (conversion preserves behavior — this pass would just delete them). " +
-                    "Enable only if you want everything stripped locally before upload.",
+                    "Note: during the dry-run size verification the incompatible components are always removed temporarily (and restored afterwards via Undo) so the measured bundle size matches an SDK-auto-fixed upload.",
                     MessageType.None
                 );
-                EditorGUI.indentLevel++;
-                config.TempRemoveIncompatibleForSizeCheck = EditorGUILayout.ToggleLeft(
-                    "Temporarily remove during size verification (restored afterwards)",
-                    config.TempRemoveIncompatibleForSizeCheck
+            }
+
+            config.SkipDryRunBundleBuild = EditorGUILayout.ToggleLeft("Skip Dry-Run Bundle Build (Step 8.5)", config.SkipDryRunBundleBuild);
+            if (config.SkipDryRunBundleBuild)
+            {
+                EditorGUILayout.HelpBox(
+                    "The compressed avatar size will NOT be verified with a real SDK build — only Step 5's fast-math texture estimate is used. Faster conversions, but the summary won't show a verified bundle size.",
+                    MessageType.Warning
                 );
-                if (config.TempRemoveIncompatibleForSizeCheck)
-                {
-                    EditorGUILayout.HelpBox(
-                        "The dry-run size builds run with incompatible components (and their audio clips / textures) removed, then everything is restored via Undo — so the measured size matches an SDK-auto-fixed upload while leaving the components for the SDK to convert.",
-                        MessageType.None
-                    );
-                }
-                EditorGUI.indentLevel--;
             }
 
             EditorGUIUtility.labelWidth = prevLabelWidth;
