@@ -115,8 +115,10 @@ namespace Bluscream.VRCAvatarOptimizer
             (@".*(?:^|[\W_])hud(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
             (".*censor.*", QUEST_PARTICLES_MULTIPLY, false),
             (".*pixelate.*", QUEST_PARTICLES_MULTIPLY, false),
-            (".*blocker.*", QUEST_PARTICLES_MULTIPLY, false),
+            (".*blocker.*", QUEST_PARTICLES_ADDITIVE, false), // disabled due to being "Delete on upload" anyway
             (".*squish.*", QUEST_PARTICLES_MULTIPLY, false),
+            (@".*(?:^|[\W_])lens(?:es)?(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
+            (@".*(?:^|[\W_])eye(?:s)?(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
             (@".*(?:^|[\W_])glass(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
             (".*transparent.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
             (".*transparent.*", QUEST_PARTICLES_ADDITIVE, false),
