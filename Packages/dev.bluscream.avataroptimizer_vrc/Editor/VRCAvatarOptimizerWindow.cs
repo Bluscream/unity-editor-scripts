@@ -129,9 +129,6 @@ namespace Bluscream.VRCAvatarOptimizer
             config.TargetRank = (AvatarPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
 
             PlatformProfile currentProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
-            string triStr = currentProfile.MaxTriangles == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxTriangles:N0}";
-            string matStr = currentProfile.MaxMaterialSlots == int.MaxValue ? "Unlimited" : $"{currentProfile.MaxMaterialSlots}";
-            EditorGUILayout.HelpBox($"Profile Limits ({currentProfile.Platform} - {currentProfile.Rank}): {triStr} Tris, {matStr} Mat Slots, {currentProfile.MaxPhysBoneComponents} PhysBones, Bounds: {currentProfile.MaxBoundsSize.x}x{currentProfile.MaxBoundsSize.y}x{currentProfile.MaxBoundsSize.z}m.", MessageType.None);
 
             EditorGUILayout.Space(5);
             config.DuplicateAvatar = EditorGUILayout.ToggleLeft("Duplicate Avatar GameObject", config.DuplicateAvatar);
@@ -251,6 +248,11 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space(10);
+
+            // Active Profile Limits Display Box (placed below button for clean layout)
+            DrawProfileLimitsBox(currentProfile);
             EditorGUILayout.Space(10);
 
             // Current Avatar Rating Estimate

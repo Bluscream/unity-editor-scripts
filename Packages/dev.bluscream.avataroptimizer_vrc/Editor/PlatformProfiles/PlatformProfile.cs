@@ -167,9 +167,21 @@ namespace Bluscream.VRCAvatarOptimizer
             if (OptimizerConfig.ActiveConfig.ProfileDict.TryGetValue(profile.Platform.ToString(), out var ranks) &&
                 ranks.TryGetValue(profile.Rank.ToString(), out ProfileLimitData data))
             {
+                long originalBundleLimit = profile.MaxAssetBundleSizeBytes;
                 // MergeWith uses profile's hardcoded defaults as base; data non-unlimited values override.
                 // ApplyFrom writes the merged result back in-place onto the profile.
                 profile.ApplyFrom(profile.MergeWith(data));
+
+                // If config specified a specific MaxAssetBundleSizeBytes (not long.MaxValue), use it over the SDK lookup
+                if (data.MaxAssetBundleSizeBytes != long.MaxValue)
+                {
+                    profile.MaxAssetBundleSizeBytes = data.MaxAssetBundleSizeBytes;
+                }
+                else
+                {
+                    profile.MaxAssetBundleSizeBytes = originalBundleLimit;
+                }
+
                 profile._blacklistSet = null; // invalidate cached set so it rebuilds with new ComponentBlacklist
                 profile._whitelistSet = null;
             }
