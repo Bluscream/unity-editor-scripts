@@ -76,14 +76,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
                         try
                         {
-                            Undo.RegisterCompleteObjectUndo(go, "Remove platform-incompatible component");
-
+                            // Undo.DestroyObjectImmediate records the destruction properly so it can be
+                            // reverted (RegisterCompleteObjectUndo + DestroyImmediate does not reliably
+                            // restore destroyed components).
                             if (Application.isPlaying)
                                 UnityEngine.Object.Destroy(comp);
                             else
-                                UnityEngine.Object.DestroyImmediate(comp, true);
+                                Undo.DestroyObjectImmediate(comp);
 
-                            // DestroyImmediate does not throw on dependency failures — it logs an error
+                            // Destruction does not throw on dependency failures — it logs an error
                             // and leaves the component alive. Only count it if it is actually gone.
                             if (comp == null)
                             {

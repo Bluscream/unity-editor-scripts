@@ -55,6 +55,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
             config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
+            config.TempRemoveIncompatibleForSizeCheck = EditorPrefs.GetBool("VRCAvatarOptimizer_TempRemoveIncompatibleForSizeCheck", true);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
@@ -78,6 +79,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchStepPercent", config.CrunchStepPercent);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", config.RemoveIncompatibleComponents);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_TempRemoveIncompatibleForSizeCheck", config.TempRemoveIncompatibleForSizeCheck);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
@@ -224,6 +226,19 @@ namespace Bluscream.VRCAvatarOptimizer
                     "Enable only if you want everything stripped locally before upload.",
                     MessageType.None
                 );
+                EditorGUI.indentLevel++;
+                config.TempRemoveIncompatibleForSizeCheck = EditorGUILayout.ToggleLeft(
+                    "Temporarily remove during size verification (restored afterwards)",
+                    config.TempRemoveIncompatibleForSizeCheck
+                );
+                if (config.TempRemoveIncompatibleForSizeCheck)
+                {
+                    EditorGUILayout.HelpBox(
+                        "The dry-run size builds run with incompatible components (and their audio clips / textures) removed, then everything is restored via Undo — so the measured size matches an SDK-auto-fixed upload while leaving the components for the SDK to convert.",
+                        MessageType.None
+                    );
+                }
+                EditorGUI.indentLevel--;
             }
 
             EditorGUIUtility.labelWidth = prevLabelWidth;

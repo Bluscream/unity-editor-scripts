@@ -28,6 +28,10 @@ namespace Bluscream.VRCAvatarOptimizer
             // DynamicBones -> PhysBones, and converts Unity constraints -> VRC constraints (conversion
             // preserves behavior where our pass just deletes), so the destructive local pass is off by default.
             public bool RemoveIncompatibleComponents = false;
+            // When RemoveIncompatibleComponents is off, still remove the components TEMPORARILY around the
+            // Step 8.5 dry-run builds (restored via Undo afterwards) so the measured bundle size doesn't
+            // include audio clips / particle textures etc. that the SDK will strip or convert at upload.
+            public bool TempRemoveIncompatibleForSizeCheck = true;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
@@ -261,8 +265,27 @@ namespace Bluscream.VRCAvatarOptimizer
                 // Ensure active build target matches target platform profile before dry-run bundle build
                 SwitchBuildTargetIfNeeded(config.Platform);
 
+                // Temporarily strip SDK-incompatible components around the dry-run builds so the measured
+                // size matches what an SDK-auto-fixed upload would weigh (audio clips, particle textures
+                // etc. referenced by doomed components would otherwise inflate the bundle). The removals
+                // are recorded in their own Undo group and reverted right after the builds, leaving them
+                // in place for the SDK panel's Auto Fix (which converts instead of deleting).
+                bool tempRemove = !config.RemoveIncompatibleComponents && config.TempRemoveIncompatibleForSizeCheck;
+                int tempRemoveUndoGroup = -1;
+                if (tempRemove)
+                {
+                    Undo.IncrementCurrentGroup();
+                    tempRemoveUndoGroup = Undo.GetCurrentGroup();
+                    Undo.SetCurrentGroupName("Temp Component Removal (size check)");
+                    progressCallback?.Invoke("Temporarily removing incompatible components for size measurement...", 0.975f);
+                    var tempRemoved = AvatarComponentRemover.RemoveIncompatibleComponents(targetAvatar, profile, (msg) => progressCallback?.Invoke(msg, 0.975f));
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Temporarily removed {tempRemoved.Count} incompatible component(s) for size measurement (will be restored after the dry-run builds).");
+                }
+
                 long bundleSizeBytes = -1;
                 string bundlePath = null;
+                try // ensure temp-removed components are ALWAYS restored, even on exception/cancel
+                {
                 try
                 {
                     bundleSizeBytes = AvatarSDKEvaluator.BuildAvatarAssetBundle(targetAvatar, out bundlePath, (msg) => progressCallback?.Invoke(msg, 0.98f));
@@ -320,6 +343,16 @@ namespace Bluscream.VRCAvatarOptimizer
                         summary.AddError($"⚠️ CRITICAL: Final bundle size verification failed. See console for details.");
                     }
                     currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+                }
+                }
+                finally
+                {
+                    if (tempRemove)
+                    {
+                        Undo.RevertAllDownToGroup(tempRemoveUndoGroup);
+                        Debug.Log("[VRCAvatarOptimizerCore] [Step 8.5] Restored temporarily removed components — use the SDK panel's Auto Fix to convert/remove them at upload time.");
+                        summary.AddSuccess("Measured bundle size with incompatible components temporarily removed; components were restored afterwards (SDK Auto Fix will handle them at upload).");
+                    }
                 }
 
                 summary.CompressedAvatarSizeBytes = bundleSizeBytes;
