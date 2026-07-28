@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/json-schema.json",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "shaderMapping": {
     "rules": [
       {
-        "description": "Exact match for base lilToon shader to standard Quest toon shader",
+        "description": "lilToon base shader — added in commit 6514f13 as part of the first comprehensive shader dump mapping pass; exact match avoids catching unrelated shaders that contain 'liltoon' in path.",
         "matchType": "Exact",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -12,7 +12,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for lilToon/lilToon category path to standard Quest toon shader",
+        "description": "lilToon/lilToon category path — same pass as above; Unity stores the shader with a full category prefix path so both 'lilToon' and 'lilToon/lilToon' must be mapped independently.",
         "matchType": "Exact",
         "pattern": "lilToon/lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -20,7 +20,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Cutout pass to Quest Toon Standard",
+        "description": "Hidden/lilToonCutout — cutout alpha mode hidden variant used by lilToon for alphatest materials. Added in 6514f13; maps to Toon Standard (no translucency needed on Quest).",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonCutout",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -28,7 +28,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Gem transparent shader to Quest Mobile Particles Multiply",
+        "description": "Hidden/lilToonGem — lilToon's gem/crystal transparency shader uses refraction. Maps to Particles/Multiply for transparent glass-like appearance on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonGem",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -36,7 +36,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Refraction shader to Quest Mobile Particles Multiply",
+        "description": "Hidden/lilToonRefraction — lilToon refraction shader (glass, water, distortion). Maps to Particles/Multiply for transparency on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefraction",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -44,7 +44,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Refraction Blur shader to Quest Mobile Particles Multiply",
+        "description": "Hidden/lilToonRefractionBlur — lilToon refraction with blur pass. Same reasoning as lilToonRefraction. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefractionBlur",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -52,7 +52,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Lite to Quest Toon Standard",
+        "description": "Hidden/lilToonLite — lightweight lilToon variant used for secondary/background meshes. Maps to Toon Standard. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLite",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -60,7 +60,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Lite Transparent pass to Quest Particles Additive",
+        "description": "Hidden/lilToonLiteTransparent — transparent pass of lilToon Lite. Maps to Particles/Additive for see-through rendering on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLiteTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -68,7 +68,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Exact match for Hidden lilToon Transparent pass to Quest Particles Additive",
+        "description": "Hidden/lilToonTransparent — lilToon's transparent mode hidden pass. Maps to Particles/Additive for alpha transparency on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -76,7 +76,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Property match for materials using _RefractionMap property to Quest Mobile Particles Multiply",
+        "description": "Property match on _RefractionMap — detects refraction/glass materials regardless of shader name (e.g. locked Poiyomi refraction with hashed name). Added when requiredProperties support was introduced in dfaee12 to survive shader locking obfuscation.",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -84,7 +84,7 @@
         "requiredProperties": ["_RefractionMap"]
       },
       {
-        "description": "Property match for materials using _DissolveTex property to Quest Mobile Toon Standard",
+        "description": "Property match on _DissolveTex — detects dissolve-effect materials regardless of shader name (locked Poiyomi dissolve variants). Added in dfaee12 alongside _RefractionMap to handle name-obfuscated locked shader variants.",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -92,7 +92,7 @@
         "requiredProperties": ["_DissolveTex"]
       },
       {
-        "description": "Poiyomi materials with _Particle property swap to Quest Mobile Particles Additive",
+        "description": "Poiyomi particle subshaders — catches Poiyomi shaders that also expose _Particle property, e.g. Poiyomi particle/additive variants used for wings, sparkles, and glow effects. Added in 6514f13.",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -100,7 +100,7 @@
         "requiredProperties": ["_Particle"]
       },
       {
-        "description": "General Poiyomi toon and pro shader catch-all to Quest Mobile Toon Standard",
+        "description": "Poiyomi catch-all — maps all remaining Poiyomi Pro/Toon/Locked variants to Toon Standard. Added as a fallback in commit 71f2580 specifically to handle Hidden/Locked/.poiyomi/... hashed variants that can't be matched by name. Must come after property-based Poiyomi rules.",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -108,7 +108,7 @@
         "requiredProperties": []
       },
       {
-        "description": "General lilToon shader catch-all to Quest Mobile Toon Standard",
+        "description": "lilToon catch-all — catches any remaining lilToon variant paths not covered by exact rules above (e.g. Hidden/lilToonFur, Hidden/lilToonOutline). Added in 6514f13 as a safety net after the specific exact rules.",
         "matchType": "Contains",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -116,7 +116,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Eye, lens, and glass mesh materials to transparent Quest Mobile Particles Multiply",
+        "description": "Eye and lens materials — fixed in commit 2d88f38 after user reported 'Mayu Lenses (Android) [Very Poor]' was incorrectly mapped to Diffuse instead of Multiply. Lens/eye meshes need transparency for the iris/pupil overlay effect to look correct on Quest.",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -124,7 +124,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Special effect volumes, light cones, visors, and censors to Quest Mobile Particles Multiply",
+        "description": "Transparent special-effect volumes — fixed across commits eb280a1/fc92cad/c67db47/3af5df5 after user tested each material: 'Fake_Volume 2' (flashlight cone needs transparency), visor/astral material, squishglass ('Dummy (Android) [Very Poor]'), and PixelatePlane ('UnlitPixel') and camera blocker visualizer all need Multiply for correct see-through rendering.",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -132,7 +132,7 @@
         "requiredProperties": []
       },
       {
-        "description": "Generic transparent shaders to Quest Mobile Particles Additive",
+        "description": "Generic transparent shaders — catch-all from commit 760849e for any shader whose name contains 'transparent' and hasn't matched an earlier specific rule. Maps to Additive as a safe default for unknown transparent modes.",
         "matchType": "Contains",
         "pattern": "transparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
