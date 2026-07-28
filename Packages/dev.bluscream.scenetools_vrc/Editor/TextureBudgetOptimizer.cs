@@ -49,9 +49,21 @@ namespace Bluscream.TextureCompressor
         /// so they must be budgeted, but they are displayed as small menu thumbnails and so are cheap
         /// to compress hard.
         /// </summary>
-        public List<TextureImporter> ExtraTextures = new List<TextureImporter>();
-        public float ExtraTextureImportance = 0.3f;
-        public int ExtraTextureMaxResolution = 256;
+        public List<ExtraTextureSpec> ExtraTextures = new List<ExtraTextureSpec>();
+    }
+
+    /// <summary>
+    /// A texture that ships with the avatar but is reachable through no Renderer, with the treatment
+    /// it should receive. Menu thumbnails can be capped hard; references we cannot classify are
+    /// budgeted at neutral importance and left uncapped so nothing important is silently crushed.
+    /// </summary>
+    public class ExtraTextureSpec
+    {
+        public TextureImporter Importer;
+        public string Role = "extra";
+        public float Importance = 1.0f;
+        /// <summary>0 = no additional ceiling beyond the texture's native resolution.</summary>
+        public int MaxResolution = 0;
     }
 
     public class TextureBudgetResult
@@ -347,11 +359,15 @@ namespace Bluscream.TextureCompressor
 
             // Renderer-less textures (menu icons) are invisible to material walking but still ship in
             // the bundle, so fold them in and remember which ones they are.
-            var extraSet = new HashSet<TextureImporter>();
-            foreach (TextureImporter extra in request.ExtraTextures ?? new List<TextureImporter>())
+            var extraSpecs = new Dictionary<TextureImporter, ExtraTextureSpec>();
+            foreach (ExtraTextureSpec extra in request.ExtraTextures ?? new List<ExtraTextureSpec>())
             {
-                if (extra == null || importers.Contains(extra)) continue;
-                if (extraSet.Add(extra)) importers.Add(extra);
+                if (extra?.Importer == null || importers.Contains(extra.Importer)) continue;
+                if (!extraSpecs.ContainsKey(extra.Importer))
+                {
+                    extraSpecs[extra.Importer] = extra;
+                    importers.Add(extra.Importer);
+                }
             }
             if (importers.Count == 0) return result;
 
@@ -413,8 +429,8 @@ namespace Bluscream.TextureCompressor
                 bool hasAlpha = imp.DoesSourceTextureHaveAlpha();
                 bool isNormal = imp.textureType == TextureImporterType.NormalMap;
 
-                bool isExtra = extraSet.Contains(imp);
-                int perTextureCeiling = isExtra ? request.ExtraTextureMaxResolution : int.MaxValue;
+                extraSpecs.TryGetValue(imp, out ExtraTextureSpec spec);
+                int perTextureCeiling = spec != null && spec.MaxResolution > 0 ? spec.MaxResolution : int.MaxValue;
 
                 var ladder = buildLadder(Math.Max(1, Math.Max(nw, nh)), perTextureCeiling)
                     .Where(l => !(l.Tier.RequiresNoAlpha && hasAlpha))
@@ -423,8 +439,8 @@ namespace Bluscream.TextureCompressor
                 if (ladder.Count == 0) continue;
 
                 // Normal maps flagged on the importer count as normals even if bound to an odd property
-                var role = isExtra
-                    ? ("menu-icon", request.ExtraTextureImportance)
+                var role = spec != null
+                    ? (spec.Role, spec.Importance)
                     : roles.TryGetValue(imp.assetPath, out var cls) ? cls : (isNormal ? ("normal", 1.2f) : ("unknown", 1.0f));
 
                 var e = new TexEntry

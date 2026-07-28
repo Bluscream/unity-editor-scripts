@@ -85,13 +85,26 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             // Expression menu icons live on ScriptableObjects, not renderers, so material walking never
             // sees them — yet they are serialized into the bundle and are usually left uncompressed.
-            var menuIcons = avatarRoot != null
-                ? AvatarSDKEvaluator.CollectMenuIconImportersSafe(avatarRoot)
-                : new System.Collections.Generic.List<UnityEditor.TextureImporter>();
+            var extras = new List<Bluscream.TextureCompressor.ExtraTextureSpec>();
+            if (avatarRoot != null)
+            {
+                foreach (var t in AvatarSDKEvaluator.CollectNonRendererTexturesSafe(avatarRoot))
+                {
+                    // Menu thumbnails are displayed small, so cap and sacrifice them early. Anything we
+                    // could not classify is budgeted but left uncapped at neutral importance.
+                    extras.Add(new Bluscream.TextureCompressor.ExtraTextureSpec
+                    {
+                        Importer = t.Importer,
+                        Role = t.IsMenuIcon ? "menu-icon" : "referenced",
+                        Importance = t.IsMenuIcon ? 0.3f : 1.0f,
+                        MaxResolution = t.IsMenuIcon ? 256 : 0
+                    });
+                }
+            }
 
             return new Bluscream.TextureCompressor.TextureBudgetRequest
             {
-                ExtraTextures = menuIcons,
+                ExtraTextures = extras,
                 VramBudgetBytes = vramBudget,
                 DiskBudgetBytes = diskBudget,
                 MaxResolution = 0, // start every texture at its native resolution; the allocator decides

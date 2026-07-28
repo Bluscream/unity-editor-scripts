@@ -773,6 +773,20 @@ namespace Bluscream.VRC
             }
         }
 
+        /// <summary>
+        /// All avatar textures that hang off no Renderer (menu icons plus component/material
+        /// references, which is what catches build-time menu injection). Never throws.
+        /// </summary>
+        public static List<VRCMenuIconCollector.CollectedTexture> CollectNonRendererTexturesSafe(GameObject avatarRoot)
+        {
+            try { return VRCMenuIconCollector.CollectNonRendererTextures(avatarRoot); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Non-renderer texture collection failed: {e.Message}");
+                return new List<VRCMenuIconCollector.CollectedTexture>();
+            }
+        }
+
         public const int MAX_BUNDLE_BUILD_TIMEOUT_SECONDS = 120;
 
         /// <summary>
