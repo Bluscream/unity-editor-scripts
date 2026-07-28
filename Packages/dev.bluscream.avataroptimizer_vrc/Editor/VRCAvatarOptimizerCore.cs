@@ -37,6 +37,12 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
+            // Never downscale below this — the optimizer compresses the format harder instead, which
+            // looks far better on large atlases (body/face) than a low-resolution texture.
+            public int MinTextureResolution = 512;
+            // How costly losing resolution is vs losing format detail. 1 = proportional (downscales
+            // readily), 2-3 = keep pixels and absorb the budget through bigger ASTC blocks / crunch.
+            public float ResolutionPriority = 2.0f;
             // Crunch trades VRAM (crunched formats are a fixed 8bpp) and quality for a much smaller
             // bundle. Only enable when disk size is the binding constraint — on Quest, ASTC block
             // compression is usually the better trade because it shrinks VRAM *and* disk.
@@ -227,6 +233,8 @@ namespace Bluscream.VRCAvatarOptimizer
                             VramBudgetBytes = textureVramBudget,
                             DiskBudgetBytes = textureDiskBudget,
                             MaxResolution = config.MaxTextureResolution,
+                            MinResolution = config.MinTextureResolution,
+                            ResolutionPriority = config.ResolutionPriority,
                             AllowCrunch = config.AllowCrunchCompression,
                             CrunchQuality = config.CrunchQuality,
                             Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
@@ -415,6 +423,8 @@ namespace Bluscream.VRCAvatarOptimizer
                             VramBudgetBytes = newVramBudget,
                             DiskBudgetBytes = newTextureDiskBudget,
                             MaxResolution = config.MaxTextureResolution,
+                            MinResolution = config.MinTextureResolution,
+                            ResolutionPriority = config.ResolutionPriority,
                             AllowCrunch = config.AllowCrunchCompression,
                             CrunchQuality = config.CrunchQuality,
                             Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android

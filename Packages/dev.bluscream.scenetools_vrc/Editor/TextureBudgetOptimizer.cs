@@ -21,7 +21,14 @@ namespace Bluscream.TextureCompressor
         /// <summary>Budget for the TEXTURE portion of the AssetBundle (total cap minus non-texture payload).</summary>
         public long DiskBudgetBytes = 10L * 1024 * 1024;
         public int MaxResolution = 2048;
-        public int MinResolution = 128;
+        /// <summary>Textures are never downscaled below this — the optimizer compresses the format harder instead.</summary>
+        public int MinResolution = 512;
+        /// <summary>
+        /// How expensive losing resolution is, relative to losing format detail.
+        /// 1.0 = proportional. Higher values (2-3) make downscaling costly, so a big body atlas keeps its
+        /// pixels and absorbs the budget through a larger ASTC block instead — usually the better look.
+        /// </summary>
+        public float ResolutionPriority = 2.0f;
         /// <summary>Allow crunched formats. Crunch trades VRAM (fixed 8bpp) and quality for much smaller disk size.</summary>
         public bool AllowCrunch = true;
         /// <summary>Unity crunch quality 0-100 (higher = better looking, larger on disk).</summary>
@@ -108,18 +115,26 @@ namespace Bluscream.TextureCompressor
             {
                 // Crunched ETC2 keeps 8bpp in VRAM but stores far fewer bytes — only worth it when the
                 // DISK budget is the binding constraint and VRAM has room to spare.
-                int q = Mathf.Clamp(crunchQuality, 0, 100);
-                tiers.Add(new Tier
+                // Crunch is a genuinely different trade than ASTC block growth: it keeps full resolution
+                // and pays with VRAM (fixed 8bpp) plus DCT-style artifacts, but its stored size is tiny.
+                // Offered at several qualities so the allocator can pick the point it needs rather than
+                // being forced onto one setting.
+                foreach (int q in new[] { Mathf.Clamp(crunchQuality, 0, 100), 25, 0 }.Distinct().OrderByDescending(v => v))
                 {
-                    Name = $"ETC2 RGBA8 Crunched {q}%",
-                    Format = TextureImporterFormat.ETC2_RGBA8Crunched,
-                    Bpp = 8.00f,
-                    DiskFactor = 0.10f + 0.30f * (q / 100f),
-                    Quality = 46f + 0.30f * q,   // sits between ASTC 12x12 and ASTC 6x6 depending on quality
-                    IsCrunched = true,
-                    CrunchQuality = q,
-                    SafeForNormalMaps = false     // crunch mangles normal maps
-                });
+                    tiers.Add(new Tier
+                    {
+                        Name = $"ETC2 Crunched {q}%",
+                        Format = TextureImporterFormat.ETC2_RGBA8Crunched,
+                        Bpp = 8.00f,
+                        // Crunch stores its own compressed stream; measured Unity output lands well under
+                        // block formats. The bundle's LZ4 cannot compress it further.
+                        DiskFactor = 0.05f + 0.15f * (q / 100f),
+                        Quality = 44f + 0.32f * q,
+                        IsCrunched = true,
+                        CrunchQuality = q,
+                        SafeForNormalMaps = false     // crunch mangles normal maps
+                    });
+                }
             }
             return tiers;
         }
@@ -184,18 +199,29 @@ namespace Bluscream.TextureCompressor
                 : MobileTiers(request.AllowCrunch, request.CrunchQuality);
 
             // Resolution ladder, capped by the user's max and floored by MinResolution
+            int minRes = Math.Min(request.MinResolution, request.MaxResolution);
             var resolutions = new[] { 4096, 2048, 1024, 512, 256, 128 }
-                .Where(r => r <= request.MaxResolution && r >= request.MinResolution)
+                .Where(r => r <= request.MaxResolution && r >= minRes)
                 .ToArray();
             if (resolutions.Length == 0) resolutions = new[] { Mathf.Clamp(request.MaxResolution, 32, 8192) };
 
-            // Global level ladder ordered best → worst. Quality is modelled as
-            // (format quality × linear resolution factor): halving resolution costs about as much as
-            // dropping two ASTC block tiers, which matches how avatars actually look in-headset.
+            // Global level ladder ordered best → worst.
+            //   score = formatQuality × (resolution / topResolution) ^ ResolutionPriority
+            // ResolutionPriority controls the trade the user cares about: at 1.0 losing half the
+            // resolution costs the same as halving format quality, so the optimizer happily downscales.
+            // At 2-3 downscaling becomes expensive and big atlases keep their pixels, absorbing the
+            // budget through larger ASTC blocks (blurrier, but far better than a 512px body texture).
+            int topRes = resolutions.Max();
+            float resPriority = Mathf.Clamp(request.ResolutionPriority, 0.25f, 4f);
             var allLevels = new List<Level>();
             foreach (int res in resolutions)
                 foreach (Tier t in tiers)
-                    allLevels.Add(new Level { Resolution = res, Tier = t, Score = t.Quality * (res / 4096f) });
+                    allLevels.Add(new Level
+                    {
+                        Resolution = res,
+                        Tier = t,
+                        Score = t.Quality * Mathf.Pow(res / (float)topRes, resPriority)
+                    });
             allLevels = allLevels.OrderByDescending(l => l.Score).ToList();
 
             // Build per-texture entries with a ladder filtered to what each texture supports

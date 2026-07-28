@@ -49,6 +49,8 @@ namespace Bluscream.VRCAvatarOptimizer
             config.ReplaceShaders = EditorPrefs.GetBool("VRCAvatarOptimizer_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.MaxTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxTextureResolution", 2048);
+            config.MinTextureResolution = EditorPrefs.GetInt("VRCAvatarOptimizer_MinTextureResolution", 512);
+            config.ResolutionPriority = EditorPrefs.GetFloat("VRCAvatarOptimizer_ResolutionPriority", 2.0f);
             config.AllowCrunchCompression = EditorPrefs.GetBool("VRCAvatarOptimizer_AllowCrunchCompression", false);
             config.CrunchQuality = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchQuality", 50);
             config.UncompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", 4.0f);
@@ -74,6 +76,8 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetInt("VRCAvatarOptimizer_MaxTextureResolution", config.MaxTextureResolution);
+            EditorPrefs.SetInt("VRCAvatarOptimizer_MinTextureResolution", config.MinTextureResolution);
+            EditorPrefs.SetFloat("VRCAvatarOptimizer_ResolutionPriority", config.ResolutionPriority);
             EditorPrefs.SetBool("VRCAvatarOptimizer_AllowCrunchCompression", config.AllowCrunchCompression);
             EditorPrefs.SetInt("VRCAvatarOptimizer_CrunchQuality", config.CrunchQuality);
             EditorPrefs.SetFloat("VRCAvatarOptimizer_UncompressedAvatarHeadroomMB", config.UncompressedAvatarHeadroomMB);
@@ -189,6 +193,18 @@ namespace Bluscream.VRCAvatarOptimizer
                 int[] resValues = new int[] { 4096, 2048, 1024, 512, 256, 128 };
                 string[] resLabels = new string[] { "4096 px", "2048 px (Recommended)", "1024 px", "512 px", "256 px", "128 px" };
                 config.MaxTextureResolution = EditorGUILayout.IntPopup("Max Texture Resolution", config.MaxTextureResolution, resLabels, resValues);
+
+                int[] minResValues = new int[] { 1024, 512, 256, 128 };
+                string[] minResLabels = new string[] { "1024 px", "512 px (Recommended)", "256 px", "128 px" };
+                config.MinTextureResolution = EditorGUILayout.IntPopup("Min Texture Resolution", config.MinTextureResolution, minResLabels, minResValues);
+
+                config.ResolutionPriority = EditorGUILayout.Slider("Preserve Resolution", config.ResolutionPriority, 0.5f, 3.0f);
+                EditorGUILayout.HelpBox(
+                    config.ResolutionPriority >= 2.0f
+                        ? $"Preserve Resolution {config.ResolutionPriority:F1} — large atlases (body/face) keep their pixels and absorb the budget through stronger format compression instead of being downscaled. Recommended: downscaling a body texture usually looks far worse than a bigger ASTC block."
+                        : $"Preserve Resolution {config.ResolutionPriority:F1} — the optimizer downscales textures more readily to save budget. Lower values favour crisp-but-small textures over blurry-but-large ones.",
+                    MessageType.None
+                );
 
                 float vramCapMB = currentProfile.MaxTextureMemoryBytes / (1024f * 1024f);
                 float bundleCapMB = currentProfile.MaxAssetBundleSizeBytes == long.MaxValue ? 0f : currentProfile.MaxAssetBundleSizeBytes / (1024f * 1024f);
