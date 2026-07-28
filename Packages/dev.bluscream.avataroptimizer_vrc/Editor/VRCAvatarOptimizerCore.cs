@@ -35,26 +35,61 @@ namespace Bluscream.VRCAvatarOptimizer
             // bundle exceeds the platform cap. Each attempt costs one full SDK build. 0 = never retry.
             public int MaxSizeConvergenceAttempts = 3;
             public bool ReplaceShaders = true;
+            // Textures are fully automatic: resolution, format, crunch and budgets are all derived from
+            // the target profile's caps and refined against real measured builds. See TextureAutoTuning.
             public bool OptimizeTextures = true;
-            public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128
-            // Never downscale below this — the optimizer compresses the format harder instead, which
-            // looks far better on large atlases (body/face) than a low-resolution texture.
-            public int MinTextureResolution = 512;
-            // How costly losing resolution is vs losing format detail. 1 = proportional (downscales
-            // readily), 2-3 = keep pixels and absorb the budget through bigger ASTC blocks / crunch.
-            public float ResolutionPriority = 2.0f;
-            // Crunch trades VRAM (crunched formats are a fixed 8bpp) and quality for a much smaller
-            // bundle. Only enable when disk size is the binding constraint — on Quest, ASTC block
-            // compression is usually the better trade because it shrinks VRAM *and* disk.
-            public bool AllowCrunchCompression = false;
-            public int CrunchQuality = 50;                     // Unity crunch quality 0-100 (higher = better looking, bigger)
-            public float UncompressedAvatarHeadroomMB = 4.0f;  // VRAM reserved for non-texture GPU cost, out of the profile's texture budget
-            public float CompressedAvatarHeadroomMB = 1.5f;    // Bundle bytes reserved for meshes/animations, out of the platform bundle cap
             public bool DecimateMeshes = true;
             public bool RemapAnimationsAndVRCFury = true;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
             public bool ClearEditorLogBeforeConversion = false;
+        }
+
+        /// <summary>
+        /// Automatic texture tuning constants. These replace the old user-facing texture settings:
+        /// everything is derived from the target profile's hard caps and then corrected against the
+        /// real measured bundle, so the result lands just under the limits rather than guessing.
+        /// </summary>
+        internal static class TextureAutoTuning
+        {
+            /// <summary>Stay this fraction under the hard VRAM cap to absorb estimate error (never go over).</summary>
+            public const double VramSafetyFraction = 0.03;
+            /// <summary>Stay this fraction under the hard bundle cap.</summary>
+            public const double BundleSafetyFraction = 0.03;
+            /// <summary>
+            /// Assumed non-texture (mesh/animation/controller) share of the bundle for the FIRST pass,
+            /// before a real build exists to measure it. Replaced by the measured value from then on.
+            /// </summary>
+            public const double InitialNonTextureShare = 0.45;
+            /// <summary>Resolution ceiling. Mobile GPUs gain nothing above 2K for avatar atlases.</summary>
+            public const int MobileMaxResolution = 2048;
+            public const int PCMaxResolution = 4096;
+            /// <summary>Preferred resolution floor — sub-floor levels are only used as a last resort.</summary>
+            public const int PreferredMinResolution = 512;
+            /// <summary>Downscaling costs more than format detail: keep pixels, grow the block instead.</summary>
+            public const float ResolutionPriority = 2.0f;
+            /// <summary>Crunch is always offered as a parallel axis; the allocator picks it only when it wins.</summary>
+            public const bool AllowCrunch = true;
+            public const int CrunchQuality = 50;
+        }
+
+        private static Bluscream.TextureCompressor.TextureBudgetRequest BuildTextureRequest(
+            ConversionConfig config, PlatformProfile profile, long vramBudget, long diskBudget)
+        {
+            bool mobile = config.Platform != TargetPlatform.PC;
+            return new Bluscream.TextureCompressor.TextureBudgetRequest
+            {
+                VramBudgetBytes = vramBudget,
+                DiskBudgetBytes = diskBudget,
+                MaxResolution = mobile ? TextureAutoTuning.MobileMaxResolution : TextureAutoTuning.PCMaxResolution,
+                MinResolution = TextureAutoTuning.PreferredMinResolution,
+                ResolutionPriority = TextureAutoTuning.ResolutionPriority,
+                AllowCrunch = TextureAutoTuning.AllowCrunch,
+                CrunchQuality = TextureAutoTuning.CrunchQuality,
+                Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
+                         : config.Platform == TargetPlatform.iOS ? Bluscream.TextureCompressor.TexturePlatform.iOS
+                         : Bluscream.TextureCompressor.TexturePlatform.Standalone
+            };
         }
 
         public static ConversionSummary ConvertAvatar(
@@ -214,40 +249,31 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
                 }
 
-                // Step 5: Texture budget allocation (VRAM + estimated bundle share)
+                // Step 5: Texture budget allocation (VRAM + estimated bundle share).
+                // Budgets come straight from the profile's hard caps minus a small safety fraction —
+                // the goal is to land just under the limits, so no user headroom guessing is involved.
                 Bluscream.TextureCompressor.TextureBudgetResult textureResult = null;
-                long textureDiskBudget = Math.Max(512 * 1024L, profile.MaxAssetBundleSizeBytes == long.MaxValue
-                    ? 200L * 1024 * 1024
-                    : profile.MaxAssetBundleSizeBytes - (long)(config.CompressedAvatarHeadroomMB * 1024 * 1024));
-                long textureVramBudget = Math.Max(1024 * 1024L, profile.MaxTextureMemoryBytes - (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024));
+                long bundleCapBytes = profile.MaxAssetBundleSizeBytes == long.MaxValue ? 200L * 1024 * 1024 : profile.MaxAssetBundleSizeBytes;
+                long textureVramBudget = Math.Max(1024 * 1024L, (long)(profile.MaxTextureMemoryBytes * (1.0 - TextureAutoTuning.VramSafetyFraction)));
+                // First pass has no measurement yet, so assume a typical non-texture share; Step 8.5
+                // replaces this with the real measured payload after the first build.
+                long textureDiskBudget = Math.Max(512 * 1024L, (long)(bundleCapBytes * (1.0 - TextureAutoTuning.InitialNonTextureShare)));
 
                 if (config.OptimizeTextures)
                 {
                     progressCallback?.Invoke("Allocating texture budget...", 0.70f);
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Allocating texture budget — VRAM ≤ {textureVramBudget / (1024.0 * 1024.0):F1} MB (profile {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB − {config.UncompressedAvatarHeadroomMB:F1} MB headroom), texture disk ≤ {textureDiskBudget / (1024.0 * 1024.0):F2} MB.");
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Auto-allocating texture budget — VRAM ≤ {textureVramBudget / (1024.0 * 1024.0):F1} MB (cap {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB), initial texture disk ≤ {textureDiskBudget / (1024.0 * 1024.0):F2} MB (cap {bundleCapBytes / (1024.0 * 1024.0):F2} MB, assuming ~{TextureAutoTuning.InitialNonTextureShare * 100:F0}% non-texture payload until measured).");
 
                     textureResult = Bluscream.TextureCompressor.TextureBudgetOptimizer.Optimize(
                         targetAvatar,
-                        new Bluscream.TextureCompressor.TextureBudgetRequest
-                        {
-                            VramBudgetBytes = textureVramBudget,
-                            DiskBudgetBytes = textureDiskBudget,
-                            MaxResolution = config.MaxTextureResolution,
-                            MinResolution = config.MinTextureResolution,
-                            ResolutionPriority = config.ResolutionPriority,
-                            AllowCrunch = config.AllowCrunchCompression,
-                            CrunchQuality = config.CrunchQuality,
-                            Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
-                                     : config.Platform == TargetPlatform.iOS ? Bluscream.TextureCompressor.TexturePlatform.iOS
-                                     : Bluscream.TextureCompressor.TexturePlatform.Standalone
-                        },
+                        BuildTextureRequest(config, profile, textureVramBudget, textureDiskBudget),
                         (msg) => progressCallback?.Invoke(msg, 0.70f)
                     );
 
                     summary.texturesOptimized = textureResult.TexturesProcessed;
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Texture budget allocated: {textureResult.Describe()}");
                     if (textureResult.WentBelowPreferredResolution)
-                        summary.AddWarning($"{textureResult.TexturesBelowPreferredResolution} texture(s) had to be downscaled below the preferred {config.MinTextureResolution}px floor to meet the budget.");
+                        summary.AddWarning($"{textureResult.TexturesBelowPreferredResolution} texture(s) had to be downscaled below the preferred {TextureAutoTuning.PreferredMinResolution}px floor to meet the budget.");
                     if (!textureResult.VramBudgetMet)
                         summary.AddWarning($"Texture VRAM ({textureResult.EstimatedVramBytes / (1024.0 * 1024.0):F1} MB) still exceeds the budget after maximum compression — reduce texture count or resolution.");
                 }
@@ -336,20 +362,13 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
 
                 AvatarSDKEvaluator.AvatarStats currentStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
-                long headroomBytes = (long)(config.UncompressedAvatarHeadroomMB * 1024 * 1024);
-                long maxUncompressedBytes = Math.Max(1024 * 1024L /* 1 MB */, profile.MaxTextureMemoryBytes - headroomBytes);
+                // The VRAM cap is hard — the target is the cap minus a small safety fraction, and going
+                // over is never acceptable, so there is no tolerance band on top of it.
+                long maxUncompressedBytes = textureVramBudget;
+                long uncompressedEffectiveLimit = profile.MaxTextureMemoryBytes;
 
-                // Only check bundle size if we successfully got one (bundleSizeBytes > 0)
                 bool bundleExceeds = (bundleSizeBytes > 0 && maxBundleBytes != long.MaxValue && bundleSizeBytes > maxBundleBytes);
-                // Apply a 5% tolerance to the uncompressed check ONLY when the user's headroom is itself
-                // at least 5% of the hard platform limit — guaranteeing the tolerance can't push us past
-                // the real ceiling. If headroom is too tight (e.g. 1 MB / 40 MB = 2.5%), no tolerance is added.
-                double headroomFraction = profile.MaxTextureMemoryBytes > 0 ? (double)headroomBytes / profile.MaxTextureMemoryBytes : 0.0;
-                const double toleranceThreshold = 0.05; // 5%
-                double uncompressedEffectiveLimit = headroomFraction >= toleranceThreshold
-                    ? maxUncompressedBytes * (1.0 + toleranceThreshold)  // safe to add 5% breathing room
-                    : maxUncompressedBytes;                                // headroom too tight, use exact budget
-                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > (long)uncompressedEffectiveLimit);
+                bool uncompressedExceeds = (currentStats.TotalTextureMemoryBytes > uncompressedEffectiveLimit);
 
 
                 // Convergence loop. Key insight: the bundle is (texture bytes + non-texture payload), and
@@ -394,7 +413,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     long realTextureDisk = (long)(estimatedTextureDisk * diskModelScale);
                     long nonTextureBytes = Math.Max(0, bundleSizeBytes - realTextureDisk);
-                    long safetyMargin = (long)(maxBundleBytes * 0.03); // 3% cushion for bundle overhead/variance
+                    long safetyMargin = (long)(maxBundleBytes * TextureAutoTuning.BundleSafetyFraction); // cushion for bundle overhead/variance
                     // Solve for the estimate that lands the bundle on the cap, in the model's own units
                     long newTextureDiskBudget = (long)((maxBundleBytes - nonTextureBytes - safetyMargin) / Math.Max(0.10, diskModelScale));
 
@@ -420,19 +439,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     textureVramBudget = newVramBudget;
                     textureResult = Bluscream.TextureCompressor.TextureBudgetOptimizer.Optimize(
                         targetAvatar,
-                        new Bluscream.TextureCompressor.TextureBudgetRequest
-                        {
-                            VramBudgetBytes = newVramBudget,
-                            DiskBudgetBytes = newTextureDiskBudget,
-                            MaxResolution = config.MaxTextureResolution,
-                            MinResolution = config.MinTextureResolution,
-                            ResolutionPriority = config.ResolutionPriority,
-                            AllowCrunch = config.AllowCrunchCompression,
-                            CrunchQuality = config.CrunchQuality,
-                            Platform = config.Platform == TargetPlatform.Android ? Bluscream.TextureCompressor.TexturePlatform.Android
-                                     : config.Platform == TargetPlatform.iOS ? Bluscream.TextureCompressor.TexturePlatform.iOS
-                                     : Bluscream.TextureCompressor.TexturePlatform.Standalone
-                        },
+                        BuildTextureRequest(config, profile, newVramBudget, newTextureDiskBudget),
                         (msg) => progressCallback?.Invoke(msg, 0.98f)
                     );
                     summary.texturesOptimized = textureResult.TexturesProcessed;
