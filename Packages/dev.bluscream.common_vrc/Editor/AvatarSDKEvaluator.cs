@@ -1019,16 +1019,18 @@ namespace Bluscream.VRC
             if (!string.IsNullOrEmpty(builtPath) && File.Exists(builtPath))
             {
                 bundlePath = builtPath;
-                long size = new FileInfo(builtPath).Length;
-                Debug.Log($"[AvatarSDKEvaluator] Synchronous dry-run build complete: '{builtPath}' ({size / (1024.0 * 1024.0):F2} MB)");
-                return size;
+                FileInfo fileInfo = new FileInfo(builtPath);
+                Debug.Log($"[AvatarSDKEvaluator] Synchronous dry-run build complete: '{builtPath}' ({fileInfo.Length / (1024.0 * 1024.0):F2} MB)");
+                return fileInfo.Length;
             }
 
             // Success callback didn't fire with a usable path — fall back to scanning the temp cache
-            long scanned = GetBuiltBundleSize(out bundlePath, buildStartTime);
-            if (scanned <= 0)
+            FileInfo scannedFile = GetBuiltBundleFileInfo(buildStartTime);
+            if (scannedFile == null)
                 throw new InvalidOperationException($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Synchronous export completed but no .vrca bundle was found for '{avatarRoot.name}'.");
-            return scanned;
+            
+            bundlePath = scannedFile.FullName;
+            return scannedFile.Length;
         }
 
         private static Type FindSdkType(string fullName)
@@ -1124,9 +1126,12 @@ namespace Bluscream.VRC
             return null;
         }
 
-        public static long GetBuiltBundleSize(out string bundlePath, DateTime minCreationTime, bool verbose = true)
+        /// <summary>
+        /// Scans Unity's temporary cache directory for the newest built .vrca AssetBundle written after minCreationTime.
+        /// Returns full FileInfo metadata (CreationTime, LastWriteTime, Length, Directory, Extension, etc.).
+        /// </summary>
+        public static FileInfo GetBuiltBundleFileInfo(DateTime minCreationTime, bool verbose = true)
         {
-            bundlePath = null;
             try
             {
                 string cachePath = Application.temporaryCachePath;
@@ -1149,9 +1154,8 @@ namespace Bluscream.VRC
 
                         if (newestBundle != null)
                         {
-                            bundlePath = newestBundle.FullName;
-                            if (verbose) Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{bundlePath}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
-                            return newestBundle.Length;
+                            if (verbose) Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{newestBundle.FullName}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
+                            return newestBundle;
                         }
 
                         // Bundles exist but none are newer than buildStartTime
@@ -1169,9 +1173,24 @@ namespace Bluscream.VRC
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AvatarSDKEvaluator] Error reading temp cache for bundle size: {e.Message}");
+                Debug.LogError($"[AvatarSDKEvaluator] Error reading temp cache for bundle FileInfo: {e.Message}");
             }
 
+            return null;
+        }
+
+        /// <summary>
+        /// Convenience overload returning byte size of the built AssetBundle, outputting bundlePath string.
+        /// </summary>
+        public static long GetBuiltBundleSize(out string bundlePath, DateTime minCreationTime, bool verbose = true)
+        {
+            FileInfo fileInfo = GetBuiltBundleFileInfo(minCreationTime, verbose);
+            if (fileInfo != null)
+            {
+                bundlePath = fileInfo.FullName;
+                return fileInfo.Length;
+            }
+            bundlePath = null;
             return -1;
         }
 
