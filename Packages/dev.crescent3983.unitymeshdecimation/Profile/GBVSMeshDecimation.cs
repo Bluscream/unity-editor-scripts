@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityMeshDecimation.Internal;
 using System;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace UnityMeshDecimation {
 	[CreateAssetMenu(menuName = "MeshDecimation/GBVSMeshDecimation")]
