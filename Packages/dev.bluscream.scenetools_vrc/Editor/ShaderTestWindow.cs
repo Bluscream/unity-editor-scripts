@@ -40,7 +40,7 @@ namespace Bluscream.ShaderTest
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Shader Test", EditorStyles.boldLabel);
-            if (GUILayout.Button("Print All Shaders to Log", GUILayout.Width(170), GUILayout.Height(20)))
+            if (GUILayout.Button("Print to Log", GUILayout.Width(100), GUILayout.Height(20)))
             {
                 PrintAllShadersToLog();
             }
@@ -217,15 +217,34 @@ namespace Bluscream.ShaderTest
         {
             LoadShaders();
             int totalShaders = shadersByPath.Values.Sum(list => list.Count);
-            Debug.Log($"<color=cyan><b>[ShaderTest] Printing {totalShaders} detected shader(s) across {shadersByPath.Count} category path(s):</b></color>");
+            
+            string goPath = targetGameObject != null ? AnimationUtility.CalculateTransformPath(targetGameObject.transform, null) : null;
+            if (string.IsNullOrEmpty(goPath) && targetGameObject != null) goPath = targetGameObject.name;
+            string matPath = targetMaterial != null ? AssetDatabase.GetAssetPath(targetMaterial) : null;
+            if (string.IsNullOrEmpty(matPath) && targetMaterial != null) matPath = targetMaterial.name;
+
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Debug.Log($"<color=cyan><b>[ShaderTest] Shader Dump ({totalShaders} shaders across {shadersByPath.Count} categories):</b></color>");
+            if (!string.IsNullOrEmpty(goPath))
+                Debug.Log($"  <b>GameObject:</b> {goPath}");
+            if (!string.IsNullOrEmpty(matPath))
+                Debug.Log($"  <b>Material:</b> {matPath}");
+            if (targetMaterial != null)
+                Debug.Log($"  <b>Active Shader:</b> {targetMaterial.shader?.name} (Original: {originalShader?.name})");
+
             foreach (var kvp in shadersByPath.OrderBy(k => k.Key))
             {
                 Debug.Log($"<color=lime><b>[Category: {kvp.Key}]</b></color> ({kvp.Value.Count} shaders)");
                 foreach (Shader s in kvp.Value.OrderBy(s => s.name))
                 {
-                    Debug.Log($"  • {s.name}");
+                    string suffix = "";
+                    if (s == originalShader) suffix += " <color=yellow><b>(Original)</b></color>";
+                    if (s == currentShader) suffix += " <color=green><b>(Selected)</b></color>";
+
+                    Debug.Log($"  • {s.name}{suffix}");
                 }
             }
+            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
         private void ApplyShader(Shader shader)
