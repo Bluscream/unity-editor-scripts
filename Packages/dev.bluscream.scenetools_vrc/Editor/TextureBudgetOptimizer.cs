@@ -64,7 +64,7 @@ namespace Bluscream.TextureCompressor
             public string Name;
             public TextureImporterFormat Format;
             public float Bpp;          // VRAM bits per pixel
-            public float DiskFactor;   // stored bytes ≈ VRAM bytes × this
+            public float DiskFactor;   // stored bytes ≈ VRAM bytes × this (block data compresses ~2x under the bundle's LZ4)
             public float Quality;      // perceptual rank, 0-100
             public bool IsCrunched;
             public int CrunchQuality;
@@ -96,12 +96,12 @@ namespace Bluscream.TextureCompressor
         {
             var tiers = new List<Tier>
             {
-                new Tier { Name = "ASTC 4x4",   Format = TextureImporterFormat.ASTC_4x4,   Bpp = 8.00f, DiskFactor = 0.90f, Quality = 100f },
-                new Tier { Name = "ASTC 5x5",   Format = TextureImporterFormat.ASTC_5x5,   Bpp = 5.12f, DiskFactor = 0.90f, Quality = 92f  },
-                new Tier { Name = "ASTC 6x6",   Format = TextureImporterFormat.ASTC_6x6,   Bpp = 3.55f, DiskFactor = 0.90f, Quality = 84f  },
-                new Tier { Name = "ASTC 8x8",   Format = TextureImporterFormat.ASTC_8x8,   Bpp = 2.00f, DiskFactor = 0.90f, Quality = 70f  },
-                new Tier { Name = "ASTC 10x10", Format = TextureImporterFormat.ASTC_10x10, Bpp = 1.28f, DiskFactor = 0.90f, Quality = 58f  },
-                new Tier { Name = "ASTC 12x12", Format = TextureImporterFormat.ASTC_12x12, Bpp = 1.00f, DiskFactor = 0.90f, Quality = 50f  },
+                new Tier { Name = "ASTC 4x4",   Format = TextureImporterFormat.ASTC_4x4,   Bpp = 8.00f, DiskFactor = 0.50f, Quality = 100f },
+                new Tier { Name = "ASTC 5x5",   Format = TextureImporterFormat.ASTC_5x5,   Bpp = 5.12f, DiskFactor = 0.50f, Quality = 92f  },
+                new Tier { Name = "ASTC 6x6",   Format = TextureImporterFormat.ASTC_6x6,   Bpp = 3.55f, DiskFactor = 0.50f, Quality = 84f  },
+                new Tier { Name = "ASTC 8x8",   Format = TextureImporterFormat.ASTC_8x8,   Bpp = 2.00f, DiskFactor = 0.50f, Quality = 70f  },
+                new Tier { Name = "ASTC 10x10", Format = TextureImporterFormat.ASTC_10x10, Bpp = 1.28f, DiskFactor = 0.50f, Quality = 58f  },
+                new Tier { Name = "ASTC 12x12", Format = TextureImporterFormat.ASTC_12x12, Bpp = 1.00f, DiskFactor = 0.50f, Quality = 50f  },
             };
 
             if (allowCrunch)
@@ -129,9 +129,9 @@ namespace Bluscream.TextureCompressor
         {
             var tiers = new List<Tier>
             {
-                new Tier { Name = "BC7",  Format = TextureImporterFormat.BC7,   Bpp = 8.00f, DiskFactor = 0.90f, Quality = 100f },
-                new Tier { Name = "DXT5", Format = TextureImporterFormat.DXT5,  Bpp = 8.00f, DiskFactor = 0.90f, Quality = 82f  },
-                new Tier { Name = "DXT1", Format = TextureImporterFormat.DXT1,  Bpp = 4.00f, DiskFactor = 0.90f, Quality = 64f, RequiresNoAlpha = true },
+                new Tier { Name = "BC7",  Format = TextureImporterFormat.BC7,   Bpp = 8.00f, DiskFactor = 0.50f, Quality = 100f },
+                new Tier { Name = "DXT5", Format = TextureImporterFormat.DXT5,  Bpp = 8.00f, DiskFactor = 0.50f, Quality = 82f  },
+                new Tier { Name = "DXT1", Format = TextureImporterFormat.DXT1,  Bpp = 4.00f, DiskFactor = 0.50f, Quality = 64f, RequiresNoAlpha = true },
             };
             if (allowCrunch)
             {

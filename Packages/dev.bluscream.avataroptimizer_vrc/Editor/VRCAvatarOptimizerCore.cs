@@ -349,6 +349,14 @@ namespace Bluscream.VRCAvatarOptimizer
                 //     newTextureDisk  = bundleLimit − nonTexture − safetyMargin
                 // Each attempt re-derives nonTexture from the fresh measurement, so modelling errors in
                 // the texture disk estimate self-correct within a couple of iterations.
+                // Calibration: our texture disk estimate is a model, so it carries a systematic error.
+                // With two (estimate, measured) samples we can measure the model's slope directly —
+                // how many real bundle bytes one estimated byte is worth — and correct with it. Without
+                // a correction the residual "non-texture payload" silently absorbs the error and the
+                // loop over-compresses.
+                double diskModelScale = 1.0;
+                long prevEstimatedDisk = -1, prevMeasuredBundle = -1;
+
                 for (int attempt = 1; attempt <= Math.Max(0, config.MaxSizeConvergenceAttempts) && (bundleExceeds || uncompressedExceeds); attempt++)
                 {
                     if (textureResult == null)
@@ -358,12 +366,30 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
 
                     long estimatedTextureDisk = textureResult.EstimatedDiskBytes;
-                    long nonTextureBytes = Math.Max(0, bundleSizeBytes - estimatedTextureDisk);
+
+                    // Refine the model scale from the last two samples (needs a meaningful estimate delta)
+                    if (prevEstimatedDisk > 0 && prevMeasuredBundle > 0)
+                    {
+                        long estDelta = prevEstimatedDisk - estimatedTextureDisk;
+                        long measuredDelta = prevMeasuredBundle - bundleSizeBytes;
+                        if (estDelta > 64 * 1024 && measuredDelta > 0)
+                        {
+                            double slope = (double)measuredDelta / estDelta;
+                            diskModelScale = Math.Max(0.10, Math.Min(1.50, slope));
+                            Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Calibrated texture disk model: 1 estimated MB ≈ {diskModelScale:F2} MB of real bundle (measured {measuredDelta / (1024.0 * 1024.0):F2} MB drop for a {estDelta / (1024.0 * 1024.0):F2} MB estimate drop).");
+                        }
+                    }
+                    prevEstimatedDisk = estimatedTextureDisk;
+                    prevMeasuredBundle = bundleSizeBytes;
+
+                    long realTextureDisk = (long)(estimatedTextureDisk * diskModelScale);
+                    long nonTextureBytes = Math.Max(0, bundleSizeBytes - realTextureDisk);
                     long safetyMargin = (long)(maxBundleBytes * 0.03); // 3% cushion for bundle overhead/variance
-                    long newTextureDiskBudget = maxBundleBytes - nonTextureBytes - safetyMargin;
+                    // Solve for the estimate that lands the bundle on the cap, in the model's own units
+                    long newTextureDiskBudget = (long)((maxBundleBytes - nonTextureBytes - safetyMargin) / Math.Max(0.10, diskModelScale));
 
                     Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Attempt {attempt}/{config.MaxSizeConvergenceAttempts}: bundle {bundleSizeBytes / (1024.0 * 1024.0):F2} MB / {maxBundleBytes / (1024.0 * 1024.0):F2} MB cap, VRAM {currentStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB / {maxUncompressedBytes / (1024.0 * 1024.0):F1} MB. " +
-                                     $"Estimated split: ~{estimatedTextureDisk / (1024.0 * 1024.0):F2} MB textures + ~{nonTextureBytes / (1024.0 * 1024.0):F2} MB meshes/animations/controllers.");
+                                     $"Estimated split: ~{realTextureDisk / (1024.0 * 1024.0):F2} MB textures + ~{nonTextureBytes / (1024.0 * 1024.0):F2} MB meshes/animations/controllers.");
 
                     if (newTextureDiskBudget < 256 * 1024L)
                     {
