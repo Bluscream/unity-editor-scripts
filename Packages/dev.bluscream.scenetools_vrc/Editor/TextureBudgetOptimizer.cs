@@ -104,6 +104,67 @@ namespace Bluscream.TextureCompressor
             public List<Level> Ladder;
             public int LevelIndex;
             public long Vram, Disk;
+            /// <summary>Multiplier on the cost of degrading this texture. >1 protects, &lt;1 sacrifices first.</summary>
+            public float Importance = 1f;
+            public string Role = "unknown";
+        }
+
+        /// <summary>
+        /// How much visual weight a texture carries, inferred from the shader properties it is bound to.
+        /// Without this the allocator cannot tell a body albedo from a wristwatch roughness map and will
+        /// happily crunch the former while preserving the latter at 2048px.
+        /// </summary>
+        private static readonly (string[] props, string role, float importance)[] RoleRules =
+        {
+            // Albedo / base colour — what the eye actually reads. Protect hardest.
+            (new[] { "_maintex", "_basemap", "_basecolormap", "_maintexture", "_albedomap", "_color" }, "albedo", 1.8f),
+            // Normal maps — visible as shading detail, and they band badly at large block sizes.
+            (new[] { "_bumpmap", "_normalmap", "_detailnormalmap", "_normalmap2", "_bumpmap2" }, "normal", 1.2f),
+            // Emission / matcaps — noticeable but usually low frequency.
+            (new[] { "_emissionmap", "_emissivemap", "_matcap", "_spheretex", "_sphereadd" }, "emission", 0.8f),
+            // Data / mask maps — low frequency, survive aggressive compression almost invisibly.
+            (new[] { "_metallicglossmap", "_specglossmap", "_occlusionmap", "_detailmask", "_masktex",
+                     "_aomap", "_roughnessmap", "_smoothnessmap", "_metallicmap", "_mask", "_shadowmask" }, "data", 0.5f),
+        };
+
+        /// <summary>
+        /// Maps every texture on the avatar to the shader properties it is bound to, so each one can be
+        /// classified. A texture used in several roles keeps the most protective classification.
+        /// </summary>
+        private static Dictionary<string, (string role, float importance)> ClassifyTextures(GameObject avatarRoot)
+        {
+            var result = new Dictionary<string, (string, float)>();
+            if (avatarRoot == null) return result;
+
+            foreach (Renderer r in avatarRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                foreach (Material m in r.sharedMaterials)
+                {
+                    if (m == null || m.shader == null) continue;
+                    int count = ShaderUtil.GetPropertyCount(m.shader);
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (ShaderUtil.GetPropertyType(m.shader, i) != ShaderUtil.ShaderPropertyType.TexEnv) continue;
+                        string prop = ShaderUtil.GetPropertyName(m.shader, i);
+                        Texture tex = m.GetTexture(prop);
+                        if (tex == null) continue;
+                        string path = AssetDatabase.GetAssetPath(tex);
+                        if (string.IsNullOrEmpty(path)) continue;
+
+                        string propLower = prop.ToLowerInvariant();
+                        foreach (var (props, role, importance) in RoleRules)
+                        {
+                            if (!props.Any(p => propLower == p || propLower.EndsWith(p))) continue;
+                            // Keep the most protective role when a texture serves several purposes
+                            if (!result.TryGetValue(path, out var existing) || importance > existing.Item2)
+                                result[path] = (role, importance);
+                            break;
+                        }
+                    }
+                }
+            }
+            return result;
         }
 
         // ── Mobile (Quest / iOS). ASTC is the only sane choice for VRAM; crunch is ETC2-only in Unity,
@@ -252,6 +313,7 @@ namespace Bluscream.TextureCompressor
             };
 
             // Build per-texture entries with a ladder filtered to what each texture supports
+            var roles = ClassifyTextures(avatarRoot);
             var entries = new List<TexEntry>();
             foreach (TextureImporter imp in importers)
             {
@@ -267,6 +329,9 @@ namespace Bluscream.TextureCompressor
                     .ToList();
                 if (ladder.Count == 0) continue;
 
+                // Normal maps flagged on the importer count as normals even if bound to an odd property
+                var role = roles.TryGetValue(imp.assetPath, out var cls) ? cls : (isNormal ? ("normal", 1.2f) : ("unknown", 1.0f));
+
                 var e = new TexEntry
                 {
                     Importer = imp,
@@ -274,7 +339,9 @@ namespace Bluscream.TextureCompressor
                     NativeH = Math.Max(1, nh),
                     Mipmaps = imp.mipmapEnabled,
                     Ladder = ladder,
-                    LevelIndex = 0
+                    LevelIndex = 0,
+                    Role = role.Item1,
+                    Importance = role.Item2
                 };
                 Measure(e);
                 entries.Add(e);
@@ -285,6 +352,8 @@ namespace Bluscream.TextureCompressor
             long totalVram = entries.Sum(e => e.Vram);
             long totalDisk = entries.Sum(e => e.Disk);
 
+            Debug.Log($"[TextureBudget] Texture roles: " + string.Join(", ",
+                entries.GroupBy(e => e.Role).OrderByDescending(g => g.Count()).Select(g => $"{g.Count()}× {g.Key}")));
             Debug.Log($"[TextureBudget] {entries.Count} texture(s) on {platformName}. Starting at best tier: " +
                       $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB (budget {result.VramBudgetBytes / (1024.0 * 1024.0):F1} MB), " +
                       $"disk ~{totalDisk / (1024.0 * 1024.0):F2} MB (budget {result.DiskBudgetBytes / (1024.0 * 1024.0):F2} MB).");
@@ -343,7 +412,9 @@ namespace Bluscream.TextureCompressor
                     if (diskOver) relief += (double)diskSaved / result.DiskBudgetBytes;
                     if (relief <= 0) continue;
 
-                    float qualityLost = Math.Max(0.01f, e.Ladder[e.LevelIndex].Score - e.Ladder[candidate].Score);
+                    // Weight the cost by how much the texture matters: a body albedo "costs" far more to
+                    // degrade than a roughness mask, so the greedy spends the budget on masks first.
+                    float qualityLost = Math.Max(0.01f, e.Ladder[e.LevelIndex].Score - e.Ladder[candidate].Score) * e.Importance;
                     double score = relief / qualityLost;
 
                     if (score > bestScore)
@@ -368,6 +439,60 @@ namespace Bluscream.TextureCompressor
                 best.Disk = bestDisk;
             }
 
+            // ── Ascent: the descent stops the moment both budgets fit, which can leave headroom unused
+            //    (especially VRAM, since disk usually binds first). Spend whatever is genuinely left by
+            //    promoting textures back up their ladder — most valuable and cheapest first — as long as
+            //    both budgets stay satisfied. Never runs when either budget is still exceeded.
+            if (totalVram <= result.VramBudgetBytes && totalDisk <= result.DiskBudgetBytes)
+            {
+                int upgrades = 0;
+                int ascentGuard = entries.Sum(e => e.Ladder.Count) + 16;
+                while (ascentGuard-- > 0)
+                {
+                    TexEntry bestUp = null;
+                    int bestUpIndex = -1;
+                    double bestUpScore = 0;
+                    long upVram = 0, upDisk = 0;
+
+                    foreach (TexEntry e in entries)
+                    {
+                        // Walk towards higher quality (lower index), nearest first
+                        for (int k = e.LevelIndex - 1; k >= 0; k--)
+                        {
+                            Measure(e, k, out long kv, out long kd);
+                            if (totalVram - e.Vram + kv > result.VramBudgetBytes) continue;
+                            if (totalDisk - e.Disk + kd > result.DiskBudgetBytes) continue;
+
+                            float gain = (e.Ladder[k].Score - e.Ladder[e.LevelIndex].Score) * e.Importance;
+                            if (gain <= 0) continue;
+
+                            // Cost in the scarcer currency, normalised against each budget
+                            double cost = Math.Max(1e-9,
+                                (double)(kv - e.Vram) / result.VramBudgetBytes +
+                                (double)(kd - e.Disk) / result.DiskBudgetBytes);
+                            double s = gain / cost;
+                            if (s > bestUpScore)
+                            {
+                                bestUpScore = s; bestUp = e; bestUpIndex = k; upVram = kv; upDisk = kd;
+                            }
+                            break; // nearest affordable upgrade for this texture only
+                        }
+                    }
+
+                    if (bestUp == null) break;
+
+                    totalVram += upVram - bestUp.Vram;
+                    totalDisk += upDisk - bestUp.Disk;
+                    bestUp.LevelIndex = bestUpIndex;
+                    bestUp.Vram = upVram;
+                    bestUp.Disk = upDisk;
+                    upgrades++;
+                }
+
+                if (upgrades > 0)
+                    Debug.Log($"[TextureBudget] Reclaimed leftover budget with {upgrades} quality upgrade(s) → VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
+            }
+
             // ── Apply
             int index = 0;
             AssetDatabase.StartAssetEditing();
@@ -378,6 +503,10 @@ namespace Bluscream.TextureCompressor
                     index++;
                     Level lvl = e.Ladder[e.LevelIndex];
                     progressCallback?.Invoke($"Applying texture settings ({index}/{entries.Count}): {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
+                    // Per-texture decisions are only visible here; log the important ones so the
+                    // allocation can be audited without digging through .meta files.
+                    if (e.Importance >= 1.5f)
+                        Debug.Log($"[TextureBudget]   [{e.Role}] {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
 
                     TextureImporterPlatformSettings s = e.Importer.GetPlatformTextureSettings(platformName);
                     s.overridden = true;
