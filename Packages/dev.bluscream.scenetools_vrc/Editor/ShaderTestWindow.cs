@@ -40,11 +40,11 @@ namespace Bluscream.ShaderTest
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Shader Test", EditorStyles.boldLabel);
-            if (GUILayout.Button("Print to Log", GUILayout.Width(100), GUILayout.Height(20)))
+            if (GUILayout.Button("Print to Log", GUILayout.Width(80), GUILayout.Height(20)))
             {
                 PrintAllShadersToLog();
             }
-            if (GUILayout.Button("Reload Shaders", GUILayout.Width(110), GUILayout.Height(20)))
+            if (GUILayout.Button("Reload Shaders", GUILayout.Width(95), GUILayout.Height(20)))
             {
                 LoadShaders();
             }
@@ -223,28 +223,31 @@ namespace Bluscream.ShaderTest
             string matPath = targetMaterial != null ? AssetDatabase.GetAssetPath(targetMaterial) : null;
             if (string.IsNullOrEmpty(matPath) && targetMaterial != null) matPath = targetMaterial.name;
 
-            Debug.Log($"================================================================================");
-            Debug.Log($"[ShaderTest] Shader Dump ({totalShaders} shaders across {shadersByPath.Count} categories):");
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("================================================================================");
+            sb.AppendLine($"[ShaderTest] Shader Dump ({totalShaders} shaders across {shadersByPath.Count} categories):");
             if (!string.IsNullOrEmpty(goPath))
-                Debug.Log($"  GameObject: {goPath}");
+                sb.AppendLine($"  GameObject: {goPath}");
             if (!string.IsNullOrEmpty(matPath))
-                Debug.Log($"  Material: {matPath}");
+                sb.AppendLine($"  Material: {matPath}");
             if (targetMaterial != null)
-                Debug.Log($"  Active Shader: {targetMaterial.shader?.name} (Original: {originalShader?.name})");
+                sb.AppendLine($"  Active Shader: {targetMaterial.shader?.name} (Original: {originalShader?.name})");
 
             foreach (var kvp in shadersByPath.OrderBy(k => k.Key))
             {
-                Debug.Log($"[Category: {kvp.Key}] ({kvp.Value.Count} shaders)");
+                sb.AppendLine($"[Category: {kvp.Key}] ({kvp.Value.Count} shaders)");
                 foreach (Shader s in kvp.Value.OrderBy(s => s.name))
                 {
                     string suffix = "";
                     if (s == originalShader) suffix += " (Original)";
                     if (s == currentShader) suffix += " (Selected)";
 
-                    Debug.Log($"  • {s.name}{suffix}");
+                    sb.AppendLine($"  • {s.name}{suffix}");
                 }
             }
-            Debug.Log($"================================================================================");
+            sb.AppendLine("================================================================================");
+
+            Debug.Log(sb.ToString());
         }
 
         private void ApplyShader(Shader shader)
