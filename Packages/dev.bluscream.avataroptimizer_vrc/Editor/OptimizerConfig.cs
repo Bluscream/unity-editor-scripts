@@ -38,13 +38,83 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class ProfileLimitData
     {
+        // Geometry & Mesh
         public int MaxTriangles = int.MaxValue;
+        public int MaxSkinnedMeshes = int.MaxValue;
+        public int MaxMeshRenderers = int.MaxValue;
         public int MaxMaterialSlots = int.MaxValue;
-        public int MaxPhysBoneComponents = 8;
-        public int MaxPhysBoneTransforms = 64;
-        public int MaxPhysBoneColliders = 16;
-        public int MaxPhysBoneCollisionChecks = 64;
-        public long MaxTextureMemoryBytes = 40 * 1024 * 1024L;
+        public int MaxBones = int.MaxValue;
+        public int MaxAnimators = int.MaxValue;
+
+        // Texture & Memory
+        public long MaxTextureMemoryBytes = long.MaxValue; // 40 MB default
+        public long MaxAssetBundleSizeBytes = long.MaxValue;
+
+        // PhysBone
+        public int MaxPhysBoneComponents = int.MaxValue;
+        public int MaxPhysBoneTransforms = int.MaxValue;
+        public int MaxPhysBoneColliders = int.MaxValue;
+        public int MaxPhysBoneCollisionChecks = int.MaxValue;
+        public int MaxContacts = int.MaxValue;
+
+        // Particle Systems
+        public int MaxParticleSystems = int.MaxValue;
+        public int MaxActiveParticles = int.MaxValue;
+        public int MaxMeshParticlePolyCount = int.MaxValue;
+        public bool ParticleTrailsEnabledAllowed = true;
+        public bool ParticleCollisionEnabledAllowed = true;
+
+        // Renderers & Constraints
+        public int MaxTrailRenderers = int.MaxValue;
+        public int MaxLineRenderers = int.MaxValue;
+        public int MaxConstraints = int.MaxValue;
+        public int MaxConstraintDepth = int.MaxValue;
+
+        // Physics & Cloth
+        public int MaxClothComponents = int.MaxValue;
+        public int MaxClothVertices = int.MaxValue;
+        public int MaxPhysicsColliders = int.MaxValue;
+        public int MaxRigidbodies = int.MaxValue;
+
+        // Lights & Audio
+        public int MaxLights = int.MaxValue;
+        public int MaxAudioSources = int.MaxValue;
+
+        /// <summary>Merge another ProfileLimitData on top of this one, overriding any fields that are not at their default unlimited value.</summary>
+        public ProfileLimitData MergeWith(ProfileLimitData overlay)
+        {
+            if (overlay == null) return this;
+            var r = new ProfileLimitData();
+            r.MaxTriangles              = overlay.MaxTriangles              != int.MaxValue  ? overlay.MaxTriangles              : MaxTriangles;
+            r.MaxSkinnedMeshes          = overlay.MaxSkinnedMeshes          != int.MaxValue  ? overlay.MaxSkinnedMeshes          : MaxSkinnedMeshes;
+            r.MaxMeshRenderers          = overlay.MaxMeshRenderers          != int.MaxValue  ? overlay.MaxMeshRenderers          : MaxMeshRenderers;
+            r.MaxMaterialSlots          = overlay.MaxMaterialSlots          != int.MaxValue  ? overlay.MaxMaterialSlots          : MaxMaterialSlots;
+            r.MaxBones                  = overlay.MaxBones                  != int.MaxValue  ? overlay.MaxBones                  : MaxBones;
+            r.MaxAnimators              = overlay.MaxAnimators              != int.MaxValue  ? overlay.MaxAnimators              : MaxAnimators;
+            r.MaxTextureMemoryBytes     = overlay.MaxTextureMemoryBytes     != long.MaxValue ? overlay.MaxTextureMemoryBytes     : MaxTextureMemoryBytes;
+            r.MaxAssetBundleSizeBytes   = overlay.MaxAssetBundleSizeBytes   != long.MaxValue ? overlay.MaxAssetBundleSizeBytes   : MaxAssetBundleSizeBytes;
+            r.MaxPhysBoneComponents     = overlay.MaxPhysBoneComponents     != int.MaxValue  ? overlay.MaxPhysBoneComponents     : MaxPhysBoneComponents;
+            r.MaxPhysBoneTransforms     = overlay.MaxPhysBoneTransforms     != int.MaxValue  ? overlay.MaxPhysBoneTransforms     : MaxPhysBoneTransforms;
+            r.MaxPhysBoneColliders      = overlay.MaxPhysBoneColliders      != int.MaxValue  ? overlay.MaxPhysBoneColliders      : MaxPhysBoneColliders;
+            r.MaxPhysBoneCollisionChecks= overlay.MaxPhysBoneCollisionChecks!= int.MaxValue  ? overlay.MaxPhysBoneCollisionChecks: MaxPhysBoneCollisionChecks;
+            r.MaxContacts               = overlay.MaxContacts               != int.MaxValue  ? overlay.MaxContacts               : MaxContacts;
+            r.MaxParticleSystems        = overlay.MaxParticleSystems        != int.MaxValue  ? overlay.MaxParticleSystems        : MaxParticleSystems;
+            r.MaxActiveParticles        = overlay.MaxActiveParticles        != int.MaxValue  ? overlay.MaxActiveParticles        : MaxActiveParticles;
+            r.MaxMeshParticlePolyCount  = overlay.MaxMeshParticlePolyCount  != int.MaxValue  ? overlay.MaxMeshParticlePolyCount  : MaxMeshParticlePolyCount;
+            r.ParticleTrailsEnabledAllowed    = overlay.ParticleTrailsEnabledAllowed;
+            r.ParticleCollisionEnabledAllowed = overlay.ParticleCollisionEnabledAllowed;
+            r.MaxTrailRenderers         = overlay.MaxTrailRenderers         != int.MaxValue  ? overlay.MaxTrailRenderers         : MaxTrailRenderers;
+            r.MaxLineRenderers          = overlay.MaxLineRenderers          != int.MaxValue  ? overlay.MaxLineRenderers          : MaxLineRenderers;
+            r.MaxConstraints            = overlay.MaxConstraints            != int.MaxValue  ? overlay.MaxConstraints            : MaxConstraints;
+            r.MaxConstraintDepth        = overlay.MaxConstraintDepth        != int.MaxValue  ? overlay.MaxConstraintDepth        : MaxConstraintDepth;
+            r.MaxClothComponents        = overlay.MaxClothComponents        != int.MaxValue  ? overlay.MaxClothComponents        : MaxClothComponents;
+            r.MaxClothVertices          = overlay.MaxClothVertices          != int.MaxValue  ? overlay.MaxClothVertices          : MaxClothVertices;
+            r.MaxPhysicsColliders       = overlay.MaxPhysicsColliders       != int.MaxValue  ? overlay.MaxPhysicsColliders       : MaxPhysicsColliders;
+            r.MaxRigidbodies            = overlay.MaxRigidbodies            != int.MaxValue  ? overlay.MaxRigidbodies            : MaxRigidbodies;
+            r.MaxLights                 = overlay.MaxLights                 != int.MaxValue  ? overlay.MaxLights                 : MaxLights;
+            r.MaxAudioSources           = overlay.MaxAudioSources           != int.MaxValue  ? overlay.MaxAudioSources           : MaxAudioSources;
+            return r;
+        }
     }
 
     [Serializable]
@@ -58,6 +128,8 @@ namespace Bluscream.VRCAvatarOptimizer
     public class PlatformProfileData
     {
         public string platform;
+        /// <summary>Base limits for this platform applied to all ranks. Rank-specific limits override these.</summary>
+        public ProfileLimitData limits = new ProfileLimitData();
         public List<RankProfileData> ranks = new List<RankProfileData>();
     }
 
@@ -102,12 +174,14 @@ namespace Bluscream.VRCAvatarOptimizer
                 foreach (var platData in platformProfiles)
                 {
                     if (string.IsNullOrWhiteSpace(platData.platform) || platData.ranks == null) continue;
+                    var baseLimits = platData.limits ?? new ProfileLimitData();
                     var rankDict = new Dictionary<string, ProfileLimitData>(StringComparer.OrdinalIgnoreCase);
                     foreach (var rankData in platData.ranks)
                     {
-                        if (!string.IsNullOrWhiteSpace(rankData.name) && rankData.limits != null)
+                        if (!string.IsNullOrWhiteSpace(rankData.name))
                         {
-                            rankDict[rankData.name] = rankData.limits;
+                            // Rank limits override base platform limits; missing fields fall through to baseLimits
+                            rankDict[rankData.name] = baseLimits.MergeWith(rankData.limits);
                         }
                     }
                     ProfileDict[platData.platform] = rankDict;

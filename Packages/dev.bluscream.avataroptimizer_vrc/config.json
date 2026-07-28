@@ -161,32 +161,67 @@
   "platformProfiles": [
     {
       "platform": "Android",
+      "limits": {
+        "MaxPhysBoneComponents": 8,
+        "MaxPhysBoneTransforms": 64,
+        "MaxPhysBoneColliders": 16,
+        "MaxPhysBoneCollisionChecks": 64,
+        "MaxContacts": 16,
+        "MaxParticleSystems": 0,
+        "MaxActiveParticles": 0,
+        "MaxMeshParticlePolyCount": 0,
+        "ParticleTrailsEnabledAllowed": false,
+        "ParticleCollisionEnabledAllowed": false,
+        "MaxTrailRenderers": 0,
+        "MaxLineRenderers": 0,
+        "MaxClothComponents": 0,
+        "MaxLights": 0,
+        "MaxAudioSources": 0
+      },
       "ranks": [
-        { "name": "Excellent", "limits": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 } },
-        { "name": "Good", "limits": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 } },
-        { "name": "Medium", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 } },
-        { "name": "Poor", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } },
-        { "name": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } }
+        { "name": "Excellent", "limits": { "MaxTriangles": 10000, "MaxSkinnedMeshes": 1, "MaxMeshRenderers": 0, "MaxMaterialSlots": 1, "MaxBones": 75, "MaxAnimators": 0, "MaxTextureMemoryBytes": 10485760, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0 } },
+        { "name": "Good",      "limits": { "MaxTriangles": 15000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 1, "MaxMaterialSlots": 2, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 15728640, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16 } },
+        { "name": "Medium",    "limits": { "MaxTriangles": 20000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 2, "MaxMaterialSlots": 4, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 20971520, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32 } },
+        { "name": "Poor",      "limits": { "MaxTriangles": 20000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 2, "MaxMaterialSlots": 4, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 41943040 } },
+        { "name": "VeryPoor",  "limits": { "MaxTextureMemoryBytes": 41943040 } }
       ]
     },
     {
       "platform": "iOS",
+      "limits": {
+        "MaxPhysBoneComponents": 8,
+        "MaxPhysBoneTransforms": 64,
+        "MaxPhysBoneColliders": 16,
+        "MaxPhysBoneCollisionChecks": 64,
+        "MaxContacts": 16,
+        "MaxParticleSystems": 0,
+        "MaxActiveParticles": 0,
+        "MaxMeshParticlePolyCount": 0,
+        "ParticleTrailsEnabledAllowed": false,
+        "ParticleCollisionEnabledAllowed": false,
+        "MaxTrailRenderers": 0,
+        "MaxLineRenderers": 0,
+        "MaxClothComponents": 0,
+        "MaxLights": 0,
+        "MaxAudioSources": 0
+      },
       "ranks": [
-        { "name": "Excellent", "limits": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 } },
-        { "name": "Good", "limits": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 } },
-        { "name": "Medium", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 } },
-        { "name": "Poor", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } },
-        { "name": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } }
+        { "name": "Excellent", "limits": { "MaxTriangles": 10000, "MaxSkinnedMeshes": 1, "MaxMeshRenderers": 0, "MaxMaterialSlots": 1, "MaxBones": 75, "MaxAnimators": 0, "MaxTextureMemoryBytes": 10485760, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0 } },
+        { "name": "Good",      "limits": { "MaxTriangles": 15000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 1, "MaxMaterialSlots": 2, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 15728640, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16 } },
+        { "name": "Medium",    "limits": { "MaxTriangles": 20000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 2, "MaxMaterialSlots": 4, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 20971520, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32 } },
+        { "name": "Poor",      "limits": { "MaxTriangles": 20000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 2, "MaxMaterialSlots": 4, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 41943040 } },
+        { "name": "VeryPoor",  "limits": { "MaxTextureMemoryBytes": 41943040 } }
       ]
     },
     {
       "platform": "PC",
+      "limits": {},
       "ranks": [
-        { "name": "Excellent", "limits": { "MaxTriangles": 32000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 4, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 4, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 41943040 } },
-        { "name": "Good", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 8, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 8, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 78643200 } },
-        { "name": "Medium", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 16, "MaxPhysBoneComponents": 16, "MaxPhysBoneTransforms": 128, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 128, "MaxTextureMemoryBytes": 157286400 } },
-        { "name": "Poor", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 32, "MaxPhysBoneComponents": 32, "MaxPhysBoneTransforms": 256, "MaxPhysBoneColliders": 32, "MaxPhysBoneCollisionChecks": 256, "MaxTextureMemoryBytes": 314572800 } },
-        { "name": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 2147483647, "MaxPhysBoneTransforms": 2147483647, "MaxPhysBoneColliders": 2147483647, "MaxPhysBoneCollisionChecks": 2147483647, "MaxTextureMemoryBytes": 2147483647 } }
+        { "name": "Excellent", "limits": { "MaxTriangles": 32000, "MaxSkinnedMeshes": 1, "MaxMeshRenderers": 0, "MaxMaterialSlots": 4, "MaxBones": 75, "MaxAnimators": 1, "MaxTextureMemoryBytes": 41943040, "MaxPhysBoneComponents": 4, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 4, "MaxPhysBoneCollisionChecks": 32, "MaxContacts": 16, "MaxParticleSystems": 0, "MaxActiveParticles": 0, "MaxTrailRenderers": 0, "MaxLineRenderers": 0, "MaxClothComponents": 0, "MaxLights": 0, "MaxAudioSources": 0 } },
+        { "name": "Good",      "limits": { "MaxTriangles": 70000, "MaxSkinnedMeshes": 2, "MaxMeshRenderers": 2, "MaxMaterialSlots": 8, "MaxBones": 150, "MaxAnimators": 1, "MaxTextureMemoryBytes": 78643200, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 8, "MaxPhysBoneCollisionChecks": 64, "MaxContacts": 64, "MaxParticleSystems": 8, "MaxActiveParticles": 200, "MaxTrailRenderers": 4, "MaxLineRenderers": 4, "MaxClothComponents": 1, "MaxLights": 0, "MaxAudioSources": 4 } },
+        { "name": "Medium",    "limits": { "MaxTriangles": 70000, "MaxSkinnedMeshes": 8, "MaxMeshRenderers": 8, "MaxMaterialSlots": 16, "MaxBones": 256, "MaxAnimators": 4, "MaxTextureMemoryBytes": 157286400, "MaxPhysBoneComponents": 16, "MaxPhysBoneTransforms": 128, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 128, "MaxContacts": 128, "MaxParticleSystems": 16, "MaxActiveParticles": 1000, "MaxTrailRenderers": 8, "MaxLineRenderers": 8, "MaxClothComponents": 1, "MaxLights": 4, "MaxAudioSources": 8 } },
+        { "name": "Poor",      "limits": { "MaxTriangles": 70000, "MaxSkinnedMeshes": 16, "MaxMeshRenderers": 16, "MaxMaterialSlots": 32, "MaxBones": 400, "MaxAnimators": 16, "MaxTextureMemoryBytes": 314572800, "MaxPhysBoneComponents": 32, "MaxPhysBoneTransforms": 256, "MaxPhysBoneColliders": 32, "MaxPhysBoneCollisionChecks": 256, "MaxContacts": 256, "MaxParticleSystems": 32, "MaxActiveParticles": 2500, "MaxTrailRenderers": 16, "MaxLineRenderers": 16, "MaxClothComponents": 4, "MaxLights": 4, "MaxAudioSources": 16 } },
+        { "name": "VeryPoor",  "limits": {} }
       ]
     }
   ]
