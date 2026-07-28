@@ -4,6 +4,7 @@
   "shaderMapping": {
     "rules": [
       {
+        "description": "Exact match for base lilToon shader to standard Quest toon shader",
         "matchType": "Exact",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -11,6 +12,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for lilToon/lilToon category path to standard Quest toon shader",
         "matchType": "Exact",
         "pattern": "lilToon/lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -18,6 +20,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Cutout pass to Quest Toon Standard",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonCutout",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -25,6 +28,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Gem transparent shader to Quest Mobile Particles Multiply",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonGem",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -32,6 +36,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Refraction shader to Quest Mobile Particles Multiply",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefraction",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -39,6 +44,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Refraction Blur shader to Quest Mobile Particles Multiply",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefractionBlur",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -46,6 +52,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Lite to Quest Toon Standard",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLite",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -53,6 +60,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Lite Transparent pass to Quest Particles Additive",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLiteTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -60,6 +68,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Exact match for Hidden lilToon Transparent pass to Quest Particles Additive",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -67,6 +76,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Property match for materials using _RefractionMap property to Quest Mobile Particles Multiply",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -74,6 +84,7 @@
         "requiredProperties": ["_RefractionMap"]
       },
       {
+        "description": "Property match for materials using _DissolveTex property to Quest Mobile Toon Standard",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -81,6 +92,7 @@
         "requiredProperties": ["_DissolveTex"]
       },
       {
+        "description": "Poiyomi materials with _Particle property swap to Quest Mobile Particles Additive",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -88,6 +100,7 @@
         "requiredProperties": ["_Particle"]
       },
       {
+        "description": "General Poiyomi toon and pro shader catch-all to Quest Mobile Toon Standard",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -95,6 +108,7 @@
         "requiredProperties": []
       },
       {
+        "description": "General lilToon shader catch-all to Quest Mobile Toon Standard",
         "matchType": "Contains",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -102,6 +116,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Eye, lens, and glass mesh materials to transparent Quest Mobile Particles Multiply",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -109,6 +124,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Special effect volumes, light cones, visors, and censors to Quest Mobile Particles Multiply",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -116,6 +132,7 @@
         "requiredProperties": []
       },
       {
+        "description": "Generic transparent shaders to Quest Mobile Particles Additive",
         "matchType": "Contains",
         "pattern": "transparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",

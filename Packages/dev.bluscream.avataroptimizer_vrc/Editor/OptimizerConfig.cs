@@ -20,6 +20,7 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class ShaderMappingRule
     {
+        public string description;
         public string matchType = "Contains"; // Exact, StartsWith, EndsWith, Contains, Regex
         public string pattern;
         public string targetShader;

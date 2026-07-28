@@ -255,7 +255,7 @@ namespace Bluscream.VRCAvatarOptimizer
                             Success = true,
                             ReplacementShader = shader,
                             ReplacementShaderName = rule.targetShader,
-                            MatchType = $"Rule ({rule.matchType}: {rule.pattern})"
+                            MatchType = !string.IsNullOrWhiteSpace(rule.description) ? $"Rule '{rule.description}' ({rule.matchType}: {rule.pattern})" : $"Rule ({rule.matchType}: {rule.pattern})"
                         };
                     }
                 }
