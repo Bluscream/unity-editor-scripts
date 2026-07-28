@@ -114,7 +114,7 @@ namespace Bluscream.VRCAvatarOptimizer
             (@".*(?:^|[\W_])visor(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
             (@".*(?:^|[\W_])hud(?:[\W_]|$).*", QUEST_PARTICLES_ADDITIVE, false),
             (".*censor.*", QUEST_PARTICLES_ADDITIVE, false),
-            (".*squish.*", QUEST_PARTICLES_ADDITIVE, false),
+            (".*squish.*", QUEST_PARTICLES_MULTIPLY, false),
             (@".*(?:^|[\W_])glass(?:[\W_]|$).*", QUEST_PARTICLES_MULTIPLY, false),
             (".*transparent.*multiply.*", QUEST_PARTICLES_MULTIPLY, false),
             (".*transparent.*", QUEST_PARTICLES_ADDITIVE, false),
