@@ -17,9 +17,16 @@ namespace Bluscream.VRCAvatarOptimizer
     }
 
     [Serializable]
+    public class LookupEntryData
+    {
+        public string key;
+        public string value;
+    }
+
+    [Serializable]
     public class ShaderMappingData
     {
-        public Dictionary<string, string> lookupTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public List<LookupEntryData> lookupTable = new List<LookupEntryData>();
         public List<PatternRuleData> patternRules = new List<PatternRuleData>();
     }
 
@@ -36,11 +43,65 @@ namespace Bluscream.VRCAvatarOptimizer
     }
 
     [Serializable]
+    public class RankProfileData
+    {
+        public string rank;
+        public ProfileLimitData limits = new ProfileLimitData();
+    }
+
+    [Serializable]
+    public class PlatformProfileData
+    {
+        public string platform;
+        public List<RankProfileData> ranks = new List<RankProfileData>();
+    }
+
+    [Serializable]
     public class OptimizerConfigData
     {
         public string version = "1.0.0";
         public ShaderMappingData shaderMapping = new ShaderMappingData();
-        public Dictionary<string, Dictionary<string, ProfileLimitData>> platformProfiles = new Dictionary<string, Dictionary<string, ProfileLimitData>>();
+        public List<PlatformProfileData> platformProfiles = new List<PlatformProfileData>();
+
+        // Fast lookup dictionaries populated automatically post-deserialization
+        [NonSerialized]
+        public Dictionary<string, string> LookupDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        [NonSerialized]
+        public Dictionary<string, Dictionary<string, ProfileLimitData>> ProfileDict = new Dictionary<string, Dictionary<string, ProfileLimitData>>(StringComparer.OrdinalIgnoreCase);
+
+        public void BuildLookupDictionaries()
+        {
+            LookupDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (shaderMapping?.lookupTable != null)
+            {
+                foreach (var entry in shaderMapping.lookupTable)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.key) && !string.IsNullOrWhiteSpace(entry.value))
+                    {
+                        LookupDict[entry.key] = entry.value;
+                    }
+                }
+            }
+
+            ProfileDict = new Dictionary<string, Dictionary<string, ProfileLimitData>>(StringComparer.OrdinalIgnoreCase);
+            if (platformProfiles != null)
+            {
+                foreach (var platData in platformProfiles)
+                {
+                    if (string.IsNullOrWhiteSpace(platData.platform) || platData.ranks == null) continue;
+                    var rankDict = new Dictionary<string, ProfileLimitData>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var rankData in platData.ranks)
+                    {
+                        if (!string.IsNullOrWhiteSpace(rankData.rank) && rankData.limits != null)
+                        {
+                            rankDict[rankData.rank] = rankData.limits;
+                        }
+                    }
+                    ProfileDict[platData.platform] = rankDict;
+                }
+            }
+        }
     }
 
     [InitializeOnLoad]
@@ -144,6 +205,8 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
 
                 int warningCount = ValidateConfigData(data, sourceName);
+                data.BuildLookupDictionaries();
+
                 if (warningCount > 0)
                 {
                     Debug.LogWarning($"[OptimizerConfig] {sourceName} loaded with {warningCount} validation warning(s).");
@@ -200,53 +263,50 @@ namespace Bluscream.VRCAvatarOptimizer
             // Validate Shader Mapping Lookup Table
             if (data.shaderMapping?.lookupTable != null)
             {
-                List<string> invalidKeys = new List<string>();
-                foreach (var kvp in data.shaderMapping.lookupTable)
+                for (int i = data.shaderMapping.lookupTable.Count - 1; i >= 0; i--)
                 {
-                    if (string.IsNullOrWhiteSpace(kvp.Key) || string.IsNullOrWhiteSpace(kvp.Value))
+                    var entry = data.shaderMapping.lookupTable[i];
+                    if (string.IsNullOrWhiteSpace(entry.key) || string.IsNullOrWhiteSpace(entry.value))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Lookup table entry '{kvp.Key}' -> '{kvp.Value}' has empty key/value — flagging for removal.");
-                        invalidKeys.Add(kvp.Key);
+                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Lookup table entry #{i} ('{entry.key}' -> '{entry.value}') has empty key or value — removing entry.");
+                        data.shaderMapping.lookupTable.RemoveAt(i);
                         warnings++;
                     }
-                }
-                foreach (string key in invalidKeys)
-                {
-                    data.shaderMapping.lookupTable.Remove(key);
                 }
             }
 
             // Validate Platform Profile Limits (Out of Bounds checks)
             if (data.platformProfiles != null)
             {
-                foreach (var platformKvp in data.platformProfiles)
+                foreach (var platData in data.platformProfiles)
                 {
-                    foreach (var rankKvp in platformKvp.Value)
+                    if (platData?.ranks == null) continue;
+                    foreach (var rankData in platData.ranks)
                     {
-                        ProfileLimitData p = rankKvp.Value;
+                        ProfileLimitData p = rankData?.limits;
                         if (p == null) continue;
 
                         if (p.MaxTriangles < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platformKvp.Key}/{rankKvp.Key} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
                             p.MaxTriangles = 0;
                             warnings++;
                         }
                         if (p.MaxMaterialSlots < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platformKvp.Key}/{rankKvp.Key} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
                             p.MaxMaterialSlots = 0;
                             warnings++;
                         }
                         if (p.MaxTextureMemoryBytes < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platformKvp.Key}/{rankKvp.Key} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
                             p.MaxTextureMemoryBytes = 0;
                             warnings++;
                         }
                         if (p.MaxPhysBoneComponents < 0 || p.MaxPhysBoneComponents > 256)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platformKvp.Key}/{rankKvp.Key} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.rank} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
                             p.MaxPhysBoneComponents = Mathf.Clamp(p.MaxPhysBoneComponents, 0, 256);
                             warnings++;
                         }

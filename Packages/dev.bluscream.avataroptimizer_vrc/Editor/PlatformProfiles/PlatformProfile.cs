@@ -194,12 +194,12 @@ namespace Bluscream.VRCAvatarOptimizer
 
         private static PlatformProfile ApplyConfigLimits(PlatformProfile profile)
         {
-            if (profile == null || OptimizerConfig.ActiveConfig?.platformProfiles == null) return profile;
+            if (profile == null || OptimizerConfig.ActiveConfig?.ProfileDict == null) return profile;
 
             string platStr = profile.Platform.ToString();
             string rankStr = profile.Rank.ToString();
 
-            if (OptimizerConfig.ActiveConfig.platformProfiles.TryGetValue(platStr, out var ranks) &&
+            if (OptimizerConfig.ActiveConfig.ProfileDict.TryGetValue(platStr, out var ranks) &&
                 ranks.TryGetValue(rankStr, out ProfileLimitData data))
             {
                 if (data.MaxTriangles > 0) profile.MaxTriangles = data.MaxTriangles;

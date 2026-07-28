@@ -2,41 +2,41 @@
   "$schema": "https://json.schemastore.org/json-schema.json",
   "version": "1.0.0",
   "shaderMapping": {
-    "lookupTable": {
-      "liltoon": "VRChat/Mobile/Toon Standard",
-      "liltoon/liltoon": "VRChat/Mobile/Toon Standard",
-      "hidden/liltoonoutline": "VRChat/Mobile/Toon Standard",
-      "hidden/liltooncutout": "VRChat/Mobile/Toon Standard",
-      "hidden/liltoongem": "VRChat/Mobile/Particles/Multiply",
-      "hidden/liltoonrefraction": "VRChat/Mobile/Particles/Multiply",
-      "hidden/liltoonrefractionblur": "VRChat/Mobile/Particles/Multiply",
-      "hidden/liltoonlite": "VRChat/Mobile/Toon Standard",
-      "hidden/liltoonlitetransparent": "VRChat/Mobile/Particles/Additive",
-      "hidden/liltoontransparent": "VRChat/Mobile/Particles/Additive",
-      "hidden/liltoonfur": "VRChat/Mobile/Toon Standard",
-      "poiyomi/toon": "VRChat/Mobile/Toon Standard",
-      "poiyomi/toon lite": "VRChat/Mobile/Toon Standard",
-      "poiyomi/toon lit": "VRChat/Mobile/Toon Lit",
-      "poiyomi/toon unlit": "VRChat/Mobile/Toon Lit",
-      "poiyomi/toon standard": "VRChat/Mobile/Toon Standard",
-      "poiyomi/pro": "VRChat/Mobile/Toon Standard",
-      "standard": "VRChat/Mobile/Standard Lite",
-      "standard (specular setup)": "VRChat/Mobile/Bumped Mapped Specular",
-      "standard (roughness setup)": "VRChat/Mobile/Standard Lite",
-      "diffuse": "VRChat/Mobile/Diffuse",
-      "bumped diffuse": "VRChat/Mobile/Bumped Diffuse",
-      "bumped specular": "VRChat/Mobile/Bumped Mapped Specular",
-      "specular": "VRChat/Mobile/Bumped Mapped Specular",
-      "particles/additive": "VRChat/Mobile/Particles/Additive",
-      "particles/additive (soft)": "VRChat/Mobile/Particles/Additive",
-      "particles/alpha blended": "VRChat/Mobile/Particles/Additive",
-      "particles/alpha blended premultiply": "VRChat/Mobile/Particles/Additive",
-      "particles/vertexlit blended": "VRChat/Mobile/Particles/Additive",
-      "particles/standard surface": "VRChat/Mobile/Particles/Additive",
-      "particles/standard unlit": "VRChat/Mobile/Particles/Additive",
-      "particles/multiply": "VRChat/Mobile/Particles/Multiply",
-      "particles/multiply (double)": "VRChat/Mobile/Particles/Multiply"
-    },
+    "lookupTable": [
+      { "key": "liltoon", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "liltoon/liltoon", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "hidden/liltoonoutline", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "hidden/liltooncutout", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "hidden/liltoongem", "value": "VRChat/Mobile/Particles/Multiply" },
+      { "key": "hidden/liltoonrefraction", "value": "VRChat/Mobile/Particles/Multiply" },
+      { "key": "hidden/liltoonrefractionblur", "value": "VRChat/Mobile/Particles/Multiply" },
+      { "key": "hidden/liltoonlite", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "hidden/liltoonlitetransparent", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "hidden/liltoontransparent", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "hidden/liltoonfur", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "poiyomi/toon", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "poiyomi/toon lite", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "poiyomi/toon lit", "value": "VRChat/Mobile/Toon Lit" },
+      { "key": "poiyomi/toon unlit", "value": "VRChat/Mobile/Toon Lit" },
+      { "key": "poiyomi/toon standard", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "poiyomi/pro", "value": "VRChat/Mobile/Toon Standard" },
+      { "key": "standard", "value": "VRChat/Mobile/Standard Lite" },
+      { "key": "standard (specular setup)", "value": "VRChat/Mobile/Bumped Mapped Specular" },
+      { "key": "standard (roughness setup)", "value": "VRChat/Mobile/Standard Lite" },
+      { "key": "diffuse", "value": "VRChat/Mobile/Diffuse" },
+      { "key": "bumped diffuse", "value": "VRChat/Mobile/Bumped Diffuse" },
+      { "key": "bumped specular", "value": "VRChat/Mobile/Bumped Mapped Specular" },
+      { "key": "specular", "value": "VRChat/Mobile/Bumped Mapped Specular" },
+      { "key": "particles/additive", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/additive (soft)", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/alpha blended", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/alpha blended premultiply", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/vertexlit blended", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/standard surface", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/standard unlit", "value": "VRChat/Mobile/Particles/Additive" },
+      { "key": "particles/multiply", "value": "VRChat/Mobile/Particles/Multiply" },
+      { "key": "particles/multiply (double)", "value": "VRChat/Mobile/Particles/Multiply" }
+    ],
     "patternRules": [
       { "pattern": ".*poiyomi.*particle.*", "replacement": "VRChat/Mobile/Particles/Additive", "caseSensitive": false },
       { "pattern": ".*poiyomi.*outline.*", "replacement": "VRChat/Mobile/Toon Standard", "caseSensitive": false },
@@ -96,27 +96,36 @@
       { "pattern": ".*glow.*", "replacement": "VRChat/Mobile/Particles/Additive", "caseSensitive": false }
     ]
   },
-  "platformProfiles": {
-    "Android": {
-      "Excellent": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 },
-      "Good": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 },
-      "Medium": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 },
-      "Poor": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 },
-      "VeryPoor": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 }
+  "platformProfiles": [
+    {
+      "platform": "Android",
+      "ranks": [
+        { "rank": "Excellent", "limits": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 } },
+        { "rank": "Good", "limits": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 } },
+        { "rank": "Medium", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 } },
+        { "rank": "Poor", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } },
+        { "rank": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } }
+      ]
     },
-    "iOS": {
-      "Excellent": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 },
-      "Good": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 },
-      "Medium": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 },
-      "Poor": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 },
-      "VeryPoor": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 }
+    {
+      "platform": "iOS",
+      "ranks": [
+        { "rank": "Excellent", "limits": { "MaxTriangles": 10000, "MaxMaterialSlots": 1, "MaxPhysBoneComponents": 0, "MaxPhysBoneTransforms": 0, "MaxPhysBoneColliders": 0, "MaxPhysBoneCollisionChecks": 0, "MaxTextureMemoryBytes": 10485760 } },
+        { "rank": "Good", "limits": { "MaxTriangles": 15000, "MaxMaterialSlots": 2, "MaxPhysBoneComponents": 1, "MaxPhysBoneTransforms": 16, "MaxPhysBoneColliders": 1, "MaxPhysBoneCollisionChecks": 16, "MaxTextureMemoryBytes": 15728640 } },
+        { "rank": "Medium", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 2, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 2, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 20971520 } },
+        { "rank": "Poor", "limits": { "MaxTriangles": 20000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } },
+        { "rank": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 41943040 } }
+      ]
     },
-    "PC": {
-      "Excellent": { "MaxTriangles": 32000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 4, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 4, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 41943040 },
-      "Good": { "MaxTriangles": 70000, "MaxMaterialSlots": 8, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 8, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 78643200 },
-      "Medium": { "MaxTriangles": 70000, "MaxMaterialSlots": 16, "MaxPhysBoneComponents": 16, "MaxPhysBoneTransforms": 128, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 128, "MaxTextureMemoryBytes": 157286400 },
-      "Poor": { "MaxTriangles": 70000, "MaxMaterialSlots": 32, "MaxPhysBoneComponents": 32, "MaxPhysBoneTransforms": 256, "MaxPhysBoneColliders": 32, "MaxPhysBoneCollisionChecks": 256, "MaxTextureMemoryBytes": 314572800 },
-      "VeryPoor": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 2147483647, "MaxPhysBoneTransforms": 2147483647, "MaxPhysBoneColliders": 2147483647, "MaxPhysBoneCollisionChecks": 2147483647, "MaxTextureMemoryBytes": 2147483647 }
+    {
+      "platform": "PC",
+      "ranks": [
+        { "rank": "Excellent", "limits": { "MaxTriangles": 32000, "MaxMaterialSlots": 4, "MaxPhysBoneComponents": 4, "MaxPhysBoneTransforms": 32, "MaxPhysBoneColliders": 4, "MaxPhysBoneCollisionChecks": 32, "MaxTextureMemoryBytes": 41943040 } },
+        { "rank": "Good", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 8, "MaxPhysBoneComponents": 8, "MaxPhysBoneTransforms": 64, "MaxPhysBoneColliders": 8, "MaxPhysBoneCollisionChecks": 64, "MaxTextureMemoryBytes": 78643200 } },
+        { "rank": "Medium", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 16, "MaxPhysBoneComponents": 16, "MaxPhysBoneTransforms": 128, "MaxPhysBoneColliders": 16, "MaxPhysBoneCollisionChecks": 128, "MaxTextureMemoryBytes": 157286400 } },
+        { "rank": "Poor", "limits": { "MaxTriangles": 70000, "MaxMaterialSlots": 32, "MaxPhysBoneComponents": 32, "MaxPhysBoneTransforms": 256, "MaxPhysBoneColliders": 32, "MaxPhysBoneCollisionChecks": 256, "MaxTextureMemoryBytes": 314572800 } },
+        { "rank": "VeryPoor", "limits": { "MaxTriangles": 2147483647, "MaxMaterialSlots": 2147483647, "MaxPhysBoneComponents": 2147483647, "MaxPhysBoneTransforms": 2147483647, "MaxPhysBoneColliders": 2147483647, "MaxPhysBoneCollisionChecks": 2147483647, "MaxTextureMemoryBytes": 2147483647 } }
+      ]
     }
-  }
+  ]
 }

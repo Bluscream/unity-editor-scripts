@@ -181,8 +181,8 @@ namespace Bluscream.VRCAvatarOptimizer
 
             // Try exact lookup from OptimizerConfig JSON first, then static lookup table
             string exactMatch = null;
-            if (OptimizerConfig.ActiveConfig?.shaderMapping?.lookupTable != null &&
-                OptimizerConfig.ActiveConfig.shaderMapping.lookupTable.TryGetValue(originalShaderName, out exactMatch))
+            if (OptimizerConfig.ActiveConfig?.LookupDict != null &&
+                OptimizerConfig.ActiveConfig.LookupDict.TryGetValue(originalShaderName, out exactMatch))
             {
                 Shader shader = Shader.Find(exactMatch);
                 if (shader != null)
