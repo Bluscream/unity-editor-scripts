@@ -4,6 +4,7 @@
   "shaderMapping": {
     "rules": [
       {
+        "priority": 10,
         "description": "lilToon base shader — added in commit 6514f13 as part of the first comprehensive shader dump mapping pass; exact match avoids catching unrelated shaders that contain 'liltoon' in path.",
         "matchType": "Exact",
         "pattern": "lilToon",
@@ -12,6 +13,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 20,
         "description": "lilToon/lilToon category path — same pass as above; Unity stores the shader with a full category prefix path so both 'lilToon' and 'lilToon/lilToon' must be mapped independently.",
         "matchType": "Exact",
         "pattern": "lilToon/lilToon",
@@ -20,6 +22,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 30,
         "description": "Hidden/lilToonCutout — cutout alpha mode hidden variant used by lilToon for alphatest materials. Added in 6514f13; maps to Toon Standard (no translucency needed on Quest).",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonCutout",
@@ -28,6 +31,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 40,
         "description": "Hidden/lilToonGem — lilToon's gem/crystal transparency shader uses refraction. Maps to Particles/Multiply for transparent glass-like appearance on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonGem",
@@ -36,6 +40,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 50,
         "description": "Hidden/lilToonRefraction — lilToon refraction shader (glass, water, distortion). Maps to Particles/Multiply for transparency on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefraction",
@@ -44,6 +49,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 60,
         "description": "Hidden/lilToonRefractionBlur — lilToon refraction with blur pass. Same reasoning as lilToonRefraction. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefractionBlur",
@@ -52,6 +58,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 70,
         "description": "Hidden/lilToonLite — lightweight lilToon variant used for secondary/background meshes. Maps to Toon Standard. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLite",
@@ -60,6 +67,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 80,
         "description": "Hidden/lilToonLiteTransparent — transparent pass of lilToon Lite. Maps to Particles/Additive for see-through rendering on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLiteTransparent",
@@ -68,6 +76,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 90,
         "description": "Hidden/lilToonTransparent — lilToon's transparent mode hidden pass. Maps to Particles/Additive for alpha transparency on Quest. Added in 6514f13.",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonTransparent",
@@ -76,6 +85,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 100,
         "description": "Property match on _RefractionMap — detects refraction/glass materials regardless of shader name (e.g. locked Poiyomi refraction with hashed name). Added when requiredProperties support was introduced in dfaee12 to survive shader locking obfuscation.",
         "matchType": "Contains",
         "pattern": "",
@@ -84,6 +94,7 @@
         "requiredProperties": ["_RefractionMap"]
       },
       {
+        "priority": 110,
         "description": "Property match on _DissolveTex — detects dissolve-effect materials regardless of shader name (locked Poiyomi dissolve variants). Added in dfaee12 alongside _RefractionMap to handle name-obfuscated locked shader variants.",
         "matchType": "Contains",
         "pattern": "",
@@ -92,7 +103,8 @@
         "requiredProperties": ["_DissolveTex"]
       },
       {
-        "description": "Poiyomi particle subshaders — catches Poiyomi shaders that also expose _Particle property, e.g. Poiyomi particle/additive variants used for wings, sparkles, and glow effects. Added in 6514f13.",
+        "priority": 120,
+        "description": "Poiyomi particle subshaders — catches Poiyomi shaders that also expose _Particle property, e.g. Poiyomi particle/additive variants used for wings, sparkles, and glow effects. Added in 6514f13. Must come before the generic Poiyomi catch-all at priority 130.",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -100,7 +112,8 @@
         "requiredProperties": ["_Particle"]
       },
       {
-        "description": "Poiyomi catch-all — maps all remaining Poiyomi Pro/Toon/Locked variants to Toon Standard. Added as a fallback in commit 71f2580 specifically to handle Hidden/Locked/.poiyomi/... hashed variants that can't be matched by name. Must come after property-based Poiyomi rules.",
+        "priority": 130,
+        "description": "Poiyomi catch-all — maps all remaining Poiyomi Pro/Toon/Locked variants to Toon Standard. Added as a fallback in commit 71f2580 specifically to handle Hidden/Locked/.poiyomi/... hashed variants that can't be matched by name. Must come after property-based Poiyomi rule at priority 120.",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -108,7 +121,8 @@
         "requiredProperties": []
       },
       {
-        "description": "lilToon catch-all — catches any remaining lilToon variant paths not covered by exact rules above (e.g. Hidden/lilToonFur, Hidden/lilToonOutline). Added in 6514f13 as a safety net after the specific exact rules.",
+        "priority": 140,
+        "description": "lilToon catch-all — catches any remaining lilToon variant paths not covered by exact rules (e.g. Hidden/lilToonFur, Hidden/lilToonOutline). Added in 6514f13 as a safety net after the specific exact rules at priorities 10-90.",
         "matchType": "Contains",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -116,6 +130,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 150,
         "description": "Eye and lens materials — fixed in commit 2d88f38 after user reported 'Mayu Lenses (Android) [Very Poor]' was incorrectly mapped to Diffuse instead of Multiply. Lens/eye meshes need transparency for the iris/pupil overlay effect to look correct on Quest.",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
@@ -124,7 +139,8 @@
         "requiredProperties": []
       },
       {
-        "description": "Transparent special-effect volumes — fixed across commits eb280a1/fc92cad/c67db47/3af5df5 after user tested each material: 'Fake_Volume 2' (flashlight cone needs transparency), visor/astral material, squishglass ('Dummy (Android) [Very Poor]'), and PixelatePlane ('UnlitPixel') and camera blocker visualizer all need Multiply for correct see-through rendering.",
+        "priority": 160,
+        "description": "Transparent special-effect volumes — fixed across commits eb280a1/fc92cad/c67db47/3af5df5 after user tested each material: 'Fake_Volume 2' (flashlight cone needs transparency), visor/astral material, squishglass ('Dummy (Android) [Very Poor]'), PixelatePlane ('UnlitPixel'), and camera blocker visualizer all need Multiply for correct see-through rendering.",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -132,6 +148,7 @@
         "requiredProperties": []
       },
       {
+        "priority": 170,
         "description": "Generic transparent shaders — catch-all from commit 760849e for any shader whose name contains 'transparent' and hasn't matched an earlier specific rule. Maps to Additive as a safe default for unknown transparent modes.",
         "matchType": "Contains",
         "pattern": "transparent",

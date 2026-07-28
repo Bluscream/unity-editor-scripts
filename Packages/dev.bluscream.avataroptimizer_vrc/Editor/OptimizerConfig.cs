@@ -20,6 +20,7 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class ShaderMappingRule
     {
+        public int priority = 100; // Lower = evaluated first;
         public string description;
         public string matchType = "Contains"; // Exact, StartsWith, EndsWith, Contains, Regex
         public string pattern;
@@ -76,6 +77,9 @@ namespace Bluscream.VRCAvatarOptimizer
 
         public void BuildLookupDictionaries()
         {
+            // Sort rules by priority ascending (lower priority number = evaluated first)
+            shaderMapping?.rules?.Sort((a, b) => (a?.priority ?? int.MaxValue).CompareTo(b?.priority ?? int.MaxValue));
+
             LookupDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (shaderMapping?.rules != null)
             {
