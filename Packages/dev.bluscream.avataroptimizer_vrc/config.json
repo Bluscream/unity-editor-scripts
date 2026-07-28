@@ -4,7 +4,6 @@
   "shaderMapping": {
     "rules": [
       {
-        "name": "Exact: lilToon base",
         "matchType": "Exact",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -12,7 +11,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: lilToon/lilToon",
         "matchType": "Exact",
         "pattern": "lilToon/lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -20,7 +18,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Cutout",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonCutout",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -28,7 +25,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Gem",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonGem",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -36,7 +32,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Refraction",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefraction",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -44,7 +39,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Refraction Blur",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefractionBlur",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -52,7 +46,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Lite",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLite",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -60,7 +53,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Lite Transparent",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLiteTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -68,7 +60,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Exact: Hidden lilToon Transparent",
         "matchType": "Exact",
         "pattern": "Hidden/lilToonTransparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -76,7 +67,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Property Rule: Refraction / Glass Shader",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -84,7 +74,6 @@
         "requiredProperties": ["_RefractionMap"]
       },
       {
-        "name": "Property Rule: Dissolve Effect Shader",
         "matchType": "Contains",
         "pattern": "",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -92,7 +81,6 @@
         "requiredProperties": ["_DissolveTex"]
       },
       {
-        "name": "Poiyomi Particle Rule",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Particles/Additive",
@@ -100,7 +88,6 @@
         "requiredProperties": ["_Particle"]
       },
       {
-        "name": "Poiyomi General Catch-all",
         "matchType": "Contains",
         "pattern": "poiyomi",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -108,7 +95,6 @@
         "requiredProperties": []
       },
       {
-        "name": "lilToon General Catch-all",
         "matchType": "Contains",
         "pattern": "lilToon",
         "targetShader": "VRChat/Mobile/Toon Standard",
@@ -116,7 +102,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Lens & Glasses Rule",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -124,7 +109,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Cone & Volume Light Rule",
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
         "targetShader": "VRChat/Mobile/Particles/Multiply",
@@ -132,7 +116,6 @@
         "requiredProperties": []
       },
       {
-        "name": "Generic Transparent Rule",
         "matchType": "Contains",
         "pattern": "transparent",
         "targetShader": "VRChat/Mobile/Particles/Additive",

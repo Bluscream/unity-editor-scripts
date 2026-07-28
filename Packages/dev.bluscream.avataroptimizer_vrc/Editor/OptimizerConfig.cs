@@ -20,7 +20,6 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class ShaderMappingRule
     {
-        public string name;
         public string matchType = "Contains"; // Exact, StartsWith, EndsWith, Contains, Regex
         public string pattern;
         public string targetShader;
@@ -247,14 +246,14 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                     if (string.IsNullOrWhiteSpace(rule.targetShader))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has empty targetShader — removing invalid rule.");
+                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.pattern}') has empty targetShader — removing invalid rule.");
                         data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(rule.pattern) && (rule.requiredProperties == null || rule.requiredProperties.Count == 0))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has neither pattern nor requiredProperties specified — removing invalid rule.");
+                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} has neither pattern nor requiredProperties specified — removing invalid rule.");
                         data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
@@ -269,7 +268,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.name}') has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
                             data.shaderMapping.rules.RemoveAt(i);
                             warnings++;
                         }
