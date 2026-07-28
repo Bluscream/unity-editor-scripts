@@ -25,7 +25,7 @@ namespace UnityMeshDecimation.UI {
         private int vertexCount;
         private TargetConditions targetConditions;
         private MeshDecimationProfile profile;
-        private Editor profileEditor;
+        private UnityEditor.Editor profileEditor;
         private string outputPath;
 
         #region Editor Hooks
@@ -71,7 +71,7 @@ namespace UnityMeshDecimation.UI {
             EasyGUILayout.BeginRegion("Profile");
             EasyGUILayout.ObjectField(string.Empty, ref this.profile);
             if (this.profile) {
-                Editor.CreateCachedEditor(this.profile, null, ref this.profileEditor);
+                UnityEditor.Editor.CreateCachedEditor(this.profile, null, ref this.profileEditor);
                 this.profileEditor.OnInspectorGUI();
             }
             EasyGUILayout.EndRegion();
