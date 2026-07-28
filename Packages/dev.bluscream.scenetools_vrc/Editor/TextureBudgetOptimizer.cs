@@ -301,14 +301,27 @@ namespace Bluscream.TextureCompressor
                 double bestScore = double.NegativeInfinity;
                 long bestVram = 0, bestDisk = 0;
 
+                int bestLevelIndex = -1;
+
                 foreach (TexEntry e in entries)
                 {
-                    if (e.LevelIndex + 1 >= e.Ladder.Count) continue;
+                    // The ladder is ordered by QUALITY, which is not monotonic in bytes: with a high
+                    // ResolutionPriority, "2048 ASTC 12x12" outranks "1024 ASTC 4x4" yet the latter is
+                    // larger. So scan forward for the nearest level that actually reduces a binding
+                    // budget instead of only considering LevelIndex + 1 (which would leave textures
+                    // stuck forever and falsely report the floor).
+                    int candidate = -1;
+                    long candVram = 0, candDisk = 0;
+                    for (int k = e.LevelIndex + 1; k < e.Ladder.Count; k++)
+                    {
+                        Measure(e, k, out long kv, out long kd);
+                        bool helps = (vramOver && kv < e.Vram) || (diskOver && kd < e.Disk);
+                        if (helps) { candidate = k; candVram = kv; candDisk = kd; break; }
+                    }
+                    if (candidate < 0) continue;
 
-                    Measure(e, e.LevelIndex + 1, out long nextVram, out long nextDisk);
-                    long vramSaved = e.Vram - nextVram;
-                    long diskSaved = e.Disk - nextDisk;
-                    if (vramSaved <= 0 && diskSaved <= 0) continue; // no relief (e.g. texture already below this resolution)
+                    long vramSaved = e.Vram - candVram;
+                    long diskSaved = e.Disk - candDisk;
 
                     // Only count savings against budgets that are actually exceeded
                     double relief = 0;
@@ -316,28 +329,27 @@ namespace Bluscream.TextureCompressor
                     if (diskOver) relief += (double)diskSaved / result.DiskBudgetBytes;
                     if (relief <= 0) continue;
 
-                    float qualityLost = Math.Max(0.01f, e.Ladder[e.LevelIndex].Score - e.Ladder[e.LevelIndex + 1].Score);
+                    float qualityLost = Math.Max(0.01f, e.Ladder[e.LevelIndex].Score - e.Ladder[candidate].Score);
                     double score = relief / qualityLost;
 
                     if (score > bestScore)
                     {
-                        bestScore = score; best = e; bestVram = nextVram; bestDisk = nextDisk;
+                        bestScore = score; best = e; bestVram = candVram; bestDisk = candDisk; bestLevelIndex = candidate;
                     }
                 }
 
                 if (best == null)
                 {
                     result.HitFloor = true;
-                    // With a 32px floor this means textures are now negligible: anything still over
-                    // budget is non-texture payload (meshes, animations, controllers).
-                    Debug.LogWarning($"[TextureBudget] Every texture is at the {hardMinRes}px floor and its most aggressive format — textures cannot account for any remaining overage. " +
+                    int atLastLevel = entries.Count(e => e.LevelIndex >= e.Ladder.Count - 1);
+                    Debug.LogWarning($"[TextureBudget] No further texture reduction is possible ({atLastLevel}/{entries.Count} at their final ladder level, floor {hardMinRes}px). " +
                                      $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
                     break;
                 }
 
                 totalVram += bestVram - best.Vram;
                 totalDisk += bestDisk - best.Disk;
-                best.LevelIndex++;
+                best.LevelIndex = bestLevelIndex;
                 best.Vram = bestVram;
                 best.Disk = bestDisk;
             }

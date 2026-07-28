@@ -146,8 +146,15 @@ namespace Bluscream.VRCAvatarOptimizer
             BudgetItem bundle = snapshot[AvatarBudgets.Bundle];
             if (bundle == null || bundle.Excess <= 0) return null;
 
+            // The raw estimate is in UNCOMPRESSED asset terms and badly overshoots what a compressed
+            // bundle actually stores (blendshape deltas especially). Meshes obviously cannot occupy
+            // more than the whole bundle, so clamp to the measured size — otherwise the computed cut
+            // is far too timid (183 MB "payload" for a 26 MB bundle yields a 9% cut per pass).
             long meshBytes = EstimateMeshBundleBytes(_avatar);
             if (meshBytes <= 0) return null;
+            BudgetItem bundleItem = snapshot[AvatarBudgets.Bundle];
+            if (bundleItem != null && bundleItem.Actual > 0)
+                meshBytes = Math.Min(meshBytes, bundleItem.Actual);
 
             // Convert the measured overage into a proportional triangle cut. Under-estimating mesh
             // bytes just means a smaller cut and another iteration — never an overshoot.
