@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -80,6 +81,11 @@ namespace Bluscream.VRCAvatarOptimizer
         public int MaxLights = int.MaxValue;
         public int MaxAudioSources = int.MaxValue;
 
+        // Component filtering — names are matched case-insensitively against component type names.
+        // Blacklist = forcibly removed; Whitelist = the only ones allowed (empty = allow all).
+        public List<string> ComponentBlacklist = new List<string>();
+        public List<string> ComponentWhitelist = new List<string>();
+
         /// <summary>Merge another ProfileLimitData on top of this one, overriding any fields that are not at their default unlimited value.</summary>
         public ProfileLimitData MergeWith(ProfileLimitData overlay)
         {
@@ -113,6 +119,13 @@ namespace Bluscream.VRCAvatarOptimizer
             r.MaxRigidbodies            = overlay.MaxRigidbodies            != int.MaxValue  ? overlay.MaxRigidbodies            : MaxRigidbodies;
             r.MaxLights                 = overlay.MaxLights                 != int.MaxValue  ? overlay.MaxLights                 : MaxLights;
             r.MaxAudioSources           = overlay.MaxAudioSources           != int.MaxValue  ? overlay.MaxAudioSources           : MaxAudioSources;
+            // Union blacklists, prefer overlay whitelist if non-empty
+            r.ComponentBlacklist = overlay.ComponentBlacklist?.Count > 0
+                ? new List<string>(ComponentBlacklist ?? new List<string>()).Union(overlay.ComponentBlacklist, StringComparer.OrdinalIgnoreCase).ToList()
+                : new List<string>(ComponentBlacklist ?? new List<string>());
+            r.ComponentWhitelist = overlay.ComponentWhitelist?.Count > 0
+                ? new List<string>(overlay.ComponentWhitelist)
+                : new List<string>(ComponentWhitelist ?? new List<string>());
             return r;
         }
     }

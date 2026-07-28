@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Bluscream/unity-editor-scripts/main/Packages/dev.bluscream.avataroptimizer_vrc/config.schema.json",
+  "title": "VRCAvatarOptimizer Config",
+  "description": "Configuration schema for dev.bluscream.avataroptimizer_vrc. Defines shader mapping rules and per-platform/rank avatar performance limits. Fetched at runtime from GitHub with local file fallback.",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version of this config file (e.g. '1.0.1'). Used for cache invalidation and change tracking.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "shaderMapping": {
+      "type": "object",
+      "description": "Rules that map PC/unknown shaders to VRChat Mobile-compatible Quest shaders.",
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "type": "array",
+          "description": "Ordered list of shader mapping rules. Rules are sorted by 'priority' ascending after load (lower = evaluated first). First matching rule wins.",
+          "items": { "$ref": "#/$defs/ShaderMappingRule" }
+        }
+      }
+    },
+    "platformProfiles": {
+      "type": "array",
+      "description": "Performance profiles per target platform (Android, iOS, PC). Each platform has base limits and per-rank overrides.",
+      "items": { "$ref": "#/$defs/PlatformProfile" }
+    }
+  },
+  "$defs": {
+    "ShaderMappingRule": {
+      "title": "ShaderMappingRule",
+      "description": "A single rule that maps a source shader name (or material property set) to a Quest-compatible target shader.",
+      "type": "object",
+      "required": ["targetShader"],
+      "additionalProperties": false,
+      "properties": {
+        "priority": {
+          "type": "integer",
+          "description": "Evaluation order. Lower values are checked first. Defaults to 100 when omitted. Use steps of 10 to leave room for insertion.",
+          "default": 100,
+          "minimum": 0
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable explanation of what this rule matches, why it was added, and which materials/commits it relates to."
+        },
+        "matchType": {
+          "type": "string",
+          "description": "How 'pattern' is compared against the original shader name.",
+          "enum": ["Exact", "StartsWith", "EndsWith", "Contains", "Regex"],
+          "default": "Contains"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The shader name pattern to match. Interpretation depends on 'matchType'. Can be empty string when matching via 'requiredProperties' only."
+        },
+        "targetShader": {
+          "type": "string",
+          "description": "Unity shader path to switch to when this rule matches (e.g. 'VRChat/Mobile/Toon Standard')."
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "description": "Whether 'pattern' matching is case-sensitive. Defaults to false.",
+          "default": false
+        },
+        "requiredProperties": {
+          "type": "array",
+          "description": "If non-empty, the material must expose ALL listed shader property names (via Material.HasProperty) for this rule to match. Useful for detecting locked/obfuscated shaders by their properties rather than their name.",
+          "items": {
+            "type": "string",
+            "description": "Shader property name (e.g. '_RefractionMap', '_DissolveTex', '_Particle')."
+          },
+          "default": []
+        }
+      }
+    },
+    "PlatformProfile": {
+      "title": "PlatformProfile",
+      "description": "Performance limits for a target platform. 'limits' defines the platform-wide baseline; each rank's 'limits' overrides fields on top of it.",
+      "type": "object",
+      "required": ["platform"],
+      "additionalProperties": false,
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "Target build platform identifier.",
+          "enum": ["Android", "iOS", "PC"]
+        },
+        "limits": {
+          "$ref": "#/$defs/ProfileLimitData",
+          "description": "Base limits that apply to ALL ranks on this platform. Rank-specific limits override individual fields. Fields absent here default to unlimited."
+        },
+        "ranks": {
+          "type": "array",
+          "description": "Per-rank limit overrides. Fields present here override the platform base limits; absent fields inherit from the platform base.",
+          "items": { "$ref": "#/$defs/RankProfile" }
+        }
+      }
+    },
+    "RankProfile": {
+      "title": "RankProfile",
+      "description": "Performance limits for a specific VRChat avatar performance rank within a platform.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "VRChat avatar performance rank identifier.",
+          "enum": ["Excellent", "Good", "Medium", "Poor", "VeryPoor"]
+        },
+        "limits": {
+          "$ref": "#/$defs/ProfileLimitData",
+          "description": "Limit overrides for this specific rank. Fields not set here inherit from the platform base 'limits'."
+        }
+      }
+    },
+    "ProfileLimitData": {
+      "title": "ProfileLimitData",
+      "description": "A complete set of VRChat avatar performance limits. All fields are optional; missing fields are treated as unlimited (int.MaxValue / no restriction).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "MaxTriangles": { "type": "integer", "minimum": 0, "description": "Maximum total polygon/triangle count across all meshes on the avatar." },
+        "MaxSkinnedMeshes": { "type": "integer", "minimum": 0, "description": "Maximum number of SkinnedMeshRenderer components." },
+        "MaxMeshRenderers": { "type": "integer", "minimum": 0, "description": "Maximum number of static MeshRenderer components." },
+        "MaxMaterialSlots": { "type": "integer", "minimum": 0, "description": "Maximum total number of material slots across all renderers." },
+        "MaxBones": { "type": "integer", "minimum": 0, "description": "Maximum number of bones (Transform nodes weighted in skinned meshes)." },
+        "MaxAnimators": { "type": "integer", "minimum": 0, "description": "Maximum number of Animator components (excluding the root animator)." },
+        "MaxTextureMemoryBytes": { "type": "integer", "minimum": 0, "description": "Maximum total VRAM usage for all textures in bytes. Common values: 10485760 (10 MB), 41943040 (40 MB), 157286400 (150 MB)." },
+        "MaxAssetBundleSizeBytes": { "type": "integer", "minimum": 0, "description": "Maximum compressed .vrca AssetBundle size in bytes. Read live from VRC.ValidationHelpers.GetAssetBundleSizeLimit when available." },
+        "MaxPhysBoneComponents": { "type": "integer", "minimum": 0, "description": "Maximum number of VRCPhysBone components." },
+        "MaxPhysBoneTransforms": { "type": "integer", "minimum": 0, "description": "Maximum number of transforms (bones) affected by VRCPhysBone components in total." },
+        "MaxPhysBoneColliders": { "type": "integer", "minimum": 0, "description": "Maximum number of VRCPhysBoneCollider components." },
+        "MaxPhysBoneCollisionChecks": { "type": "integer", "minimum": 0, "description": "Maximum number of PhysBone collision check operations per frame (physbone x collider pairs)." },
+        "MaxContacts": { "type": "integer", "minimum": 0, "description": "Maximum number of VRCContactReceiver + VRCContactSender components combined." },
+        "MaxParticleSystems": { "type": "integer", "minimum": 0, "description": "Maximum number of ParticleSystem components." },
+        "MaxActiveParticles": { "type": "integer", "minimum": 0, "description": "Maximum number of simultaneously active particles across all systems." },
+        "MaxMeshParticlePolyCount": { "type": "integer", "minimum": 0, "description": "Maximum total polygon count for mesh-based particle systems." },
+        "ParticleTrailsEnabledAllowed": { "type": "boolean", "default": true, "description": "Whether particle trail emission is allowed. Set false for mobile platforms." },
+        "ParticleCollisionEnabledAllowed": { "type": "boolean", "default": true, "description": "Whether particle collision is allowed. Set false for mobile platforms." },
+        "MaxTrailRenderers": { "type": "integer", "minimum": 0, "description": "Maximum number of TrailRenderer components." },
+        "MaxLineRenderers": { "type": "integer", "minimum": 0, "description": "Maximum number of LineRenderer components." },
+        "MaxConstraints": { "type": "integer", "minimum": 0, "description": "Maximum number of VRChat constraint components (VRCConstraint). Unity built-in constraints are not Quest-allowed and are removed via ComponentBlacklist." },
+        "MaxConstraintDepth": { "type": "integer", "minimum": 0, "description": "Maximum chain depth of chained VRChat constraints." },
+        "MaxClothComponents": { "type": "integer", "minimum": 0, "description": "Maximum number of Cloth components." },
+        "MaxClothVertices": { "type": "integer", "minimum": 0, "description": "Maximum total number of cloth-simulated vertices across all Cloth components." },
+        "MaxPhysicsColliders": { "type": "integer", "minimum": 0, "description": "Maximum number of physics Collider components (Box/Sphere/Capsule/Mesh)." },
+        "MaxRigidbodies": { "type": "integer", "minimum": 0, "description": "Maximum number of Rigidbody components." },
+        "MaxLights": { "type": "integer", "minimum": 0, "description": "Maximum number of Light components." },
+        "MaxAudioSources": { "type": "integer", "minimum": 0, "description": "Maximum number of AudioSource / VRCSpatialAudioSource components." },
+        "ComponentBlacklist": {
+          "type": "array",
+          "description": "Component type names that are forcibly stripped from the avatar during optimization. Names are matched case-insensitively against Component.GetType().Name. Platform-level and rank-level blacklists are unioned together.",
+          "items": { "type": "string", "description": "Unity component type name (e.g. 'Cloth', 'Light', 'DynamicBone', 'ParticleSystem')." },
+          "default": []
+        },
+        "ComponentWhitelist": {
+          "type": "array",
+          "description": "If non-empty, ONLY these component type names are kept; everything else is removed. Rank-level whitelist takes precedence over platform-level.",
+          "items": { "type": "string", "description": "Unity component type name." },
+          "default": []
+        }
+      }
+    }
+  }
+}
