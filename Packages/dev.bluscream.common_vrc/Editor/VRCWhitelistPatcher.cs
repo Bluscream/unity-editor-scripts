@@ -98,6 +98,87 @@ namespace Bluscream.VRC
             }
         }
 
+        /// <summary>
+        /// Retrieves the list of whitelisted component type names from the VRChat SDK.
+        /// If includePatched is true, includes custom types registered through VRCWhitelistPatcher as well as any patched directly in the SDK.
+        /// If includePatched is false, returns only the original SDK whitelisted component types (filtering out custom pending/patched types).
+        /// </summary>
+        public static List<string> GetWhitelistedComponentTypeNames(bool includePatched = true)
+        {
+            HashSet<string> result = new HashSet<string>();
+            try
+            {
+                Type vrcAvatarValType = Type.GetType("VRC.SDKBase.Validation.AvatarValidation, VRC.SDKBase.Editor")
+                    ?? AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
+                        .FirstOrDefault(t => t.FullName == "VRC.SDKBase.Validation.AvatarValidation");
+
+                if (vrcAvatarValType != null)
+                {
+                    FieldInfo commonListField = vrcAvatarValType.GetField("ComponentTypeWhiteListCommon", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    FieldInfo sdk3ListField   = vrcAvatarValType.GetField("ComponentTypeWhiteListSdk3", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+                    ExtractTypeNamesFromField(commonListField, result);
+                    ExtractTypeNamesFromField(sdk3ListField, result);
+                }
+
+                if (!includePatched)
+                {
+                    result.ExceptWith(_pendingTypesToWhitelist);
+                }
+                else
+                {
+                    result.UnionWith(_pendingTypesToWhitelist);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[VRCWhitelistPatcher] Exception while getting whitelisted component type names: {ex.Message}");
+            }
+
+            return result.OrderBy(t => t).ToList();
+        }
+
+        /// <summary>
+        /// Retrieves resolved System.Type instances for whitelisted components from the VRChat SDK.
+        /// </summary>
+        public static List<Type> GetWhitelistedComponentTypes(bool includePatched = true)
+        {
+            var typeNames = GetWhitelistedComponentTypeNames(includePatched);
+            List<Type> types = new List<Type>();
+
+            foreach (string name in typeNames)
+            {
+                Type resolved = Type.GetType(name)
+                    ?? AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
+                        .FirstOrDefault(t => t.FullName == name || t.Name == name);
+
+                if (resolved != null)
+                {
+                    types.Add(resolved);
+                }
+            }
+
+            return types;
+        }
+
+        private static void ExtractTypeNamesFromField(FieldInfo field, HashSet<string> destination)
+        {
+            if (field == null) return;
+            object val = field.GetValue(null);
+            if (val is string[] array)
+            {
+                foreach (string item in array)
+                    if (!string.IsNullOrEmpty(item)) destination.Add(item);
+            }
+            else if (val is IEnumerable<string> enumerable)
+            {
+                foreach (string item in enumerable)
+                    if (!string.IsNullOrEmpty(item)) destination.Add(item);
+            }
+        }
+
         private static bool AppendToWhitelistField(FieldInfo field, Type targetType, HashSet<string> typesToAdd)
         {
             if (typesToAdd == null || typesToAdd.Count == 0) return false;
