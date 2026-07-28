@@ -72,6 +72,7 @@ namespace Bluscream.VRCAvatarOptimizer
             (".*poiyomi.*toon.*", QUEST_TOON_STANDARD, false),
             (".*poiyomi.*unlit.*", QUEST_TOON_LIT, false),
             (".*poiyomi.*lit.*", QUEST_TOON_LIT, false),
+            (".*poiyomi.*", QUEST_TOON_STANDARD, false),
             (".*liltoon.*", QUEST_TOON_STANDARD, false),
 
             // Toon shader patterns
