@@ -40,6 +40,10 @@ namespace Bluscream.ShaderTest
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Shader Test", EditorStyles.boldLabel);
+            if (GUILayout.Button("Print All Shaders to Log", GUILayout.Width(170), GUILayout.Height(20)))
+            {
+                PrintAllShadersToLog();
+            }
             if (GUILayout.Button("Reload Shaders", GUILayout.Width(110), GUILayout.Height(20)))
             {
                 LoadShaders();
@@ -207,6 +211,21 @@ namespace Bluscream.ShaderTest
         {
             shadersByPath = Utils.GetShadersByPath();
             shadersLoaded = true;
+        }
+
+        private void PrintAllShadersToLog()
+        {
+            LoadShaders();
+            int totalShaders = shadersByPath.Values.Sum(list => list.Count);
+            Debug.Log($"<color=cyan><b>[ShaderTest] Printing {totalShaders} detected shader(s) across {shadersByPath.Count} category path(s):</b></color>");
+            foreach (var kvp in shadersByPath.OrderBy(k => k.Key))
+            {
+                Debug.Log($"<color=lime><b>[Category: {kvp.Key}]</b></color> ({kvp.Value.Count} shaders)");
+                foreach (Shader s in kvp.Value.OrderBy(s => s.name))
+                {
+                    Debug.Log($"  • {s.name}");
+                }
+            }
         }
 
         private void ApplyShader(Shader shader)
