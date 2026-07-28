@@ -24,7 +24,10 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool DuplicateAvatar = true;
             public bool AddPlatformSuffixes = true;
             public string AvatarSuffix = null; // null = use profile.PlatformSuffix
-            public bool RemoveIncompatibleComponents = true;
+            // Opt-in: the VRC SDK panel's Auto Fix already removes illegal components, converts
+            // DynamicBones -> PhysBones, and converts Unity constraints -> VRC constraints (conversion
+            // preserves behavior where our pass just deletes), so the destructive local pass is off by default.
+            public bool RemoveIncompatibleComponents = false;
             public bool ReplaceShaders = true;
             public bool OptimizeTextures = true;
             public int MaxTextureResolution = 2048; // 4096, 2048, 1024, 512, 256, 128

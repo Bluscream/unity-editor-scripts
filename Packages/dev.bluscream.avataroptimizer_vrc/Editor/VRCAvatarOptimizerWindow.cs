@@ -54,7 +54,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.CompressedAvatarHeadroomMB = EditorPrefs.GetFloat("VRCAvatarOptimizer_CompressedAvatarHeadroomMB", 1.5f);
             config.CrunchStepPercent = EditorPrefs.GetInt("VRCAvatarOptimizer_CrunchStepPercent", 10);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
-            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
+            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
@@ -216,7 +216,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
             config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
-            config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components", config.RemoveIncompatibleComponents);
+            config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components (SDK Auto Fix can do this)", config.RemoveIncompatibleComponents);
+            if (!config.RemoveIncompatibleComponents)
+            {
+                EditorGUILayout.HelpBox(
+                    "Off (recommended): the VRC SDK panel's Auto Fix removes illegal components, converts DynamicBones → PhysBones, and converts Unity constraints → VRC constraints (conversion preserves behavior — this pass would just delete them). " +
+                    "Enable only if you want everything stripped locally before upload.",
+                    MessageType.None
+                );
+            }
 
             EditorGUIUtility.labelWidth = prevLabelWidth;
 
