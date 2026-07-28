@@ -192,44 +192,69 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
+        private static PlatformProfile ApplyConfigLimits(PlatformProfile profile)
+        {
+            if (profile == null || OptimizerConfig.ActiveConfig?.platformProfiles == null) return profile;
+
+            string platStr = profile.Platform.ToString();
+            string rankStr = profile.Rank.ToString();
+
+            if (OptimizerConfig.ActiveConfig.platformProfiles.TryGetValue(platStr, out var ranks) &&
+                ranks.TryGetValue(rankStr, out ProfileLimitData data))
+            {
+                if (data.MaxTriangles > 0) profile.MaxTriangles = data.MaxTriangles;
+                if (data.MaxMaterialSlots > 0) profile.MaxMaterialSlots = data.MaxMaterialSlots;
+                if (data.MaxPhysBoneComponents >= 0) profile.MaxPhysBoneComponents = data.MaxPhysBoneComponents;
+                if (data.MaxPhysBoneTransforms >= 0) profile.MaxPhysBoneTransforms = data.MaxPhysBoneTransforms;
+                if (data.MaxPhysBoneColliders >= 0) profile.MaxPhysBoneColliders = data.MaxPhysBoneColliders;
+                if (data.MaxPhysBoneCollisionChecks >= 0) profile.MaxPhysBoneCollisionChecks = data.MaxPhysBoneCollisionChecks;
+                if (data.MaxTextureMemoryBytes > 0) profile.MaxTextureMemoryBytes = data.MaxTextureMemoryBytes;
+            }
+
+            return profile;
+        }
+
         public static PlatformProfile GetProfile(TargetPlatform platform, AvatarPerformanceRank rank)
         {
+            PlatformProfile profile = null;
             if (platform == TargetPlatform.PC)
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_PC_Excellent();
-                    case AvatarPerformanceRank.Good: return new PlatformProfile_PC_Good();
-                    case AvatarPerformanceRank.Medium: return new PlatformProfile_PC_Medium();
-                    case AvatarPerformanceRank.Poor: return new PlatformProfile_PC_Poor();
+                    case AvatarPerformanceRank.Excellent: profile = new PlatformProfile_PC_Excellent(); break;
+                    case AvatarPerformanceRank.Good: profile = new PlatformProfile_PC_Good(); break;
+                    case AvatarPerformanceRank.Medium: profile = new PlatformProfile_PC_Medium(); break;
+                    case AvatarPerformanceRank.Poor: profile = new PlatformProfile_PC_Poor(); break;
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new PlatformProfile_PC_VeryPoor();
+                    default: profile = new PlatformProfile_PC_VeryPoor(); break;
                 }
             }
             else if (platform == TargetPlatform.iOS)
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_iOS_Excellent();
-                    case AvatarPerformanceRank.Good: return new PlatformProfile_iOS_Good();
-                    case AvatarPerformanceRank.Medium: return new PlatformProfile_iOS_Medium();
-                    case AvatarPerformanceRank.Poor: return new PlatformProfile_iOS_Poor();
+                    case AvatarPerformanceRank.Excellent: profile = new PlatformProfile_iOS_Excellent(); break;
+                    case AvatarPerformanceRank.Good: profile = new PlatformProfile_iOS_Good(); break;
+                    case AvatarPerformanceRank.Medium: profile = new PlatformProfile_iOS_Medium(); break;
+                    case AvatarPerformanceRank.Poor: profile = new PlatformProfile_iOS_Poor(); break;
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new PlatformProfile_iOS_VeryPoor();
+                    default: profile = new PlatformProfile_iOS_VeryPoor(); break;
                 }
             }
             else
             {
                 switch (rank)
                 {
-                    case AvatarPerformanceRank.Excellent: return new PlatformProfile_Android_Excellent();
-                    case AvatarPerformanceRank.Good: return new PlatformProfile_Android_Good();
-                    case AvatarPerformanceRank.Medium: return new PlatformProfile_Android_Medium();
-                    case AvatarPerformanceRank.Poor: return new PlatformProfile_Android_Poor();
+                    case AvatarPerformanceRank.Excellent: profile = new PlatformProfile_Android_Excellent(); break;
+                    case AvatarPerformanceRank.Good: profile = new PlatformProfile_Android_Good(); break;
+                    case AvatarPerformanceRank.Medium: profile = new PlatformProfile_Android_Medium(); break;
+                    case AvatarPerformanceRank.Poor: profile = new PlatformProfile_Android_Poor(); break;
                     case AvatarPerformanceRank.VeryPoor:
-                    default: return new PlatformProfile_Android_VeryPoor();
+                    default: profile = new PlatformProfile_Android_VeryPoor(); break;
                 }
             }
+
+            return ApplyConfigLimits(profile);
         }
     }
 }

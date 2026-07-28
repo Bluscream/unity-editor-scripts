@@ -179,8 +179,25 @@ namespace Bluscream.VRCAvatarOptimizer
                 };
             }
 
-            // Try exact lookup first
-            if (ShaderLookupTable.TryGetValue(originalShaderName, out string exactMatch))
+            // Try exact lookup from OptimizerConfig JSON first, then static lookup table
+            string exactMatch = null;
+            if (OptimizerConfig.ActiveConfig?.shaderMapping?.lookupTable != null &&
+                OptimizerConfig.ActiveConfig.shaderMapping.lookupTable.TryGetValue(originalShaderName, out exactMatch))
+            {
+                Shader shader = Shader.Find(exactMatch);
+                if (shader != null)
+                {
+                    return new ShaderReplacementResult
+                    {
+                        Success = true,
+                        ReplacementShader = shader,
+                        ReplacementShaderName = exactMatch,
+                        MatchType = "Config JSON Exact lookup"
+                    };
+                }
+            }
+
+            if (ShaderLookupTable.TryGetValue(originalShaderName, out exactMatch))
             {
                 Shader shader = Shader.Find(exactMatch);
                 if (shader != null)
@@ -195,8 +212,34 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
             }
 
-            // Try pattern matching
+            // Try pattern matching from OptimizerConfig JSON first, then static rules
             string lowerName = originalShaderName.ToLowerInvariant();
+            if (OptimizerConfig.ActiveConfig?.shaderMapping?.patternRules != null)
+            {
+                foreach (var rule in OptimizerConfig.ActiveConfig.shaderMapping.patternRules)
+                {
+                    try
+                    {
+                        string nameToCheck = rule.caseSensitive ? originalShaderName : lowerName;
+                        if (System.Text.RegularExpressions.Regex.IsMatch(nameToCheck, rule.pattern))
+                        {
+                            Shader shader = Shader.Find(rule.replacement);
+                            if (shader != null)
+                            {
+                                return new ShaderReplacementResult
+                                {
+                                    Success = true,
+                                    ReplacementShader = shader,
+                                    ReplacementShaderName = rule.replacement,
+                                    MatchType = $"Config JSON Pattern: {rule.pattern}"
+                                };
+                            }
+                        }
+                    }
+                    catch { continue; }
+                }
+            }
+
             foreach (var (pattern, replacement, caseSensitive) in PatternRules)
             {
                 try
