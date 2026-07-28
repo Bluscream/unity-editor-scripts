@@ -128,17 +128,67 @@ namespace Bluscream.TextureCompressor
         };
 
         /// <summary>
+        /// Name fragments that reliably mark decoration rather than content. Only NEGATIVE keywords are
+        /// used: positive ones like "body" or "head" are ambiguous — this very avatar carries
+        /// "VRCOSC_Watch_Body_BaseColor" (a wristwatch) alongside "Bee Mayu/Body_Base_color" (the real
+        /// skin), so a positive rule would promote exactly the wrong textures. Being wrong about a
+        /// negative keyword is also cheap: a credits texture at low resolution is the correct outcome.
+        /// </summary>
+        private static readonly (string[] words, float penalty)[] NegativeNameRules =
+        {
+            (new[] { "credit", "watermark", "logo", "thumbnail", "preview", "banner", "splash",
+                     "unused", "backup", "placeholder", "sample", "_ref", "readme", "donotuse" }, 0.25f),
+            (new[] { "icon", "hud", "menu", "button", "cursor", "arrow", "ping", "crosshair", "toggle" }, 0.5f),
+        };
+
+        private static float NamePenalty(params string[] names)
+        {
+            float penalty = 1f;
+            foreach (string n in names)
+            {
+                if (string.IsNullOrEmpty(n)) continue;
+                string lower = n.ToLowerInvariant();
+                foreach (var (words, p) in NegativeNameRules)
+                    if (words.Any(w => lower.Contains(w))) penalty = Math.Min(penalty, p);
+            }
+            return penalty;
+        }
+
+        /// <summary>Rough world-space visual footprint of a renderer, used as a prominence proxy.</summary>
+        private static float RendererFootprint(Renderer r)
+        {
+            try
+            {
+                Vector3 s = r.bounds.size;
+                if (s == Vector3.zero) return 0f;
+                // Surface-area-ish measure: a body mesh dwarfs a wristwatch, without assuming any naming
+                return Mathf.Abs(s.x * s.y) + Mathf.Abs(s.y * s.z) + Mathf.Abs(s.x * s.z);
+            }
+            catch { return 0f; }
+        }
+
+        /// <summary>
         /// Maps every texture on the avatar to the shader properties it is bound to, so each one can be
-        /// classified. A texture used in several roles keeps the most protective classification.
+        /// classified. A texture used in several roles keeps the most protective classification, and the
+        /// role weight is then modulated by how visually prominent the largest renderer using it is, plus
+        /// a penalty for decoration-style names.
         /// </summary>
         private static Dictionary<string, (string role, float importance)> ClassifyTextures(GameObject avatarRoot)
         {
+            var roleOf = new Dictionary<string, (string role, float weight)>();
+            var footprintOf = new Dictionary<string, float>();
+            var nameOf = new Dictionary<string, string>();
             var result = new Dictionary<string, (string, float)>();
             if (avatarRoot == null) return result;
+
+            float maxFootprint = 0f;
 
             foreach (Renderer r in avatarRoot.GetComponentsInChildren<Renderer>(true))
             {
                 if (r == null) continue;
+                float footprint = RendererFootprint(r);
+                maxFootprint = Math.Max(maxFootprint, footprint);
+
                 foreach (Material m in r.sharedMaterials)
                 {
                     if (m == null || m.shader == null) continue;
@@ -152,18 +202,39 @@ namespace Bluscream.TextureCompressor
                         string path = AssetDatabase.GetAssetPath(tex);
                         if (string.IsNullOrEmpty(path)) continue;
 
+                        // Largest renderer wins: a texture shared by the body and a trinket counts as body
+                        footprintOf[path] = Math.Max(footprintOf.TryGetValue(path, out float f) ? f : 0f, footprint);
+                        // Remember the context names for the keyword check
+                        if (!nameOf.ContainsKey(path)) nameOf[path] = $"{path} {m.name} {r.gameObject.name}";
+
                         string propLower = prop.ToLowerInvariant();
-                        foreach (var (props, role, importance) in RoleRules)
+                        foreach (var (props, role, weight) in RoleRules)
                         {
                             if (!props.Any(p => propLower == p || propLower.EndsWith(p))) continue;
-                            // Keep the most protective role when a texture serves several purposes
-                            if (!result.TryGetValue(path, out var existing) || importance > existing.Item2)
-                                result[path] = (role, importance);
+                            if (!roleOf.TryGetValue(path, out var existing) || weight > existing.weight)
+                                roleOf[path] = (role, weight);
                             break;
                         }
                     }
                 }
             }
+
+            foreach (var kv in footprintOf)
+            {
+                string path = kv.Key;
+                var role = roleOf.TryGetValue(path, out var rr) ? rr : ("unknown", 1.0f);
+
+                // Prominence: 0.6 for a barely-visible trinket up to 1.4 for the largest mesh on the
+                // avatar. sqrt keeps mid-sized meshes from collapsing towards the floor.
+                float prominence = 1f;
+                if (maxFootprint > 0f)
+                    prominence = 0.6f + 0.8f * Mathf.Sqrt(Mathf.Clamp01(kv.Value / maxFootprint));
+
+                float penalty = NamePenalty(nameOf.TryGetValue(path, out string n) ? n : path);
+                float importance = Mathf.Clamp(role.Item2 * prominence * penalty, 0.15f, 3.0f);
+                result[path] = (role.Item1, importance);
+            }
+
             return result;
         }
 
@@ -505,8 +576,8 @@ namespace Bluscream.TextureCompressor
                     progressCallback?.Invoke($"Applying texture settings ({index}/{entries.Count}): {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
                     // Per-texture decisions are only visible here; log the important ones so the
                     // allocation can be audited without digging through .meta files.
-                    if (e.Importance >= 1.5f)
-                        Debug.Log($"[TextureBudget]   [{e.Role}] {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
+                    if (e.Importance >= 1.3f || e.Importance <= 0.5f)
+                        Debug.Log($"[TextureBudget]   [{e.Role} ×{e.Importance:F2}] {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
 
                     TextureImporterPlatformSettings s = e.Importer.GetPlatformTextureSettings(platformName);
                     s.overridden = true;
