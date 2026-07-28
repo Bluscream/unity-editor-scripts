@@ -760,6 +760,19 @@ namespace Bluscream.VRC
             Debug.Log($"<color=cyan><b>================================================================================</b></color>");
         }
 
+        /// <summary>
+        /// Expression-menu icon importers for this avatar; never throws, returns empty on any failure.
+        /// </summary>
+        public static List<UnityEditor.TextureImporter> CollectMenuIconImportersSafe(GameObject avatarRoot)
+        {
+            try { return VRCMenuIconCollector.CollectMenuIconImporters(avatarRoot); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Menu icon collection failed: {e.Message}");
+                return new List<UnityEditor.TextureImporter>();
+            }
+        }
+
         public const int MAX_BUNDLE_BUILD_TIMEOUT_SECONDS = 120;
 
         /// <summary>

@@ -42,6 +42,16 @@ namespace Bluscream.TextureCompressor
         public int CrunchQuality = 50;
         /// <summary>Target platform. Null = derive from the active build target.</summary>
         public TexturePlatform? Platform = null;
+
+        /// <summary>
+        /// Textures that belong to the avatar but hang off no Renderer — chiefly VRCExpressionsMenu
+        /// icons. They are still serialized into the bundle (and are often left as uncompressed RGBA32),
+        /// so they must be budgeted, but they are displayed as small menu thumbnails and so are cheap
+        /// to compress hard.
+        /// </summary>
+        public List<TextureImporter> ExtraTextures = new List<TextureImporter>();
+        public float ExtraTextureImportance = 0.3f;
+        public int ExtraTextureMaxResolution = 256;
     }
 
     public class TextureBudgetResult
@@ -334,6 +344,15 @@ namespace Bluscream.TextureCompressor
             string platformName = PlatformName(platform);
 
             HashSet<TextureImporter> importers = TextureCompressionEditor.GetUniqueTextureImporters(avatarRoot);
+
+            // Renderer-less textures (menu icons) are invisible to material walking but still ship in
+            // the bundle, so fold them in and remember which ones they are.
+            var extraSet = new HashSet<TextureImporter>();
+            foreach (TextureImporter extra in request.ExtraTextures ?? new List<TextureImporter>())
+            {
+                if (extra == null || importers.Contains(extra)) continue;
+                if (extraSet.Add(extra)) importers.Add(extra);
+            }
             if (importers.Count == 0) return result;
 
             List<Tier> tiers = platform == TexturePlatform.Standalone
@@ -361,9 +380,9 @@ namespace Bluscream.TextureCompressor
             // Two hard-ordered segments: every format/crunch combination at or above the preferred
             // resolution floor is exhausted before any sub-floor level is offered — but sub-floor levels
             // always exist, all the way down to the hard floor.
-            Func<int, List<Level>> buildLadder = nativeLongest =>
+            Func<int, int, List<Level>> buildLadder = (nativeLongest, perTextureCeiling) =>
             {
-                int top = Math.Min(nativeLongest, ceiling);
+                int top = Math.Min(nativeLongest, Math.Min(ceiling, perTextureCeiling));
                 var usable = standardResolutions.Where(r => r <= top && r >= hardMinRes).ToList();
                 if (usable.Count == 0) usable.Add(Mathf.Clamp(top, hardMinRes, 8192));
                 int topRes = usable.Max();
@@ -394,14 +413,19 @@ namespace Bluscream.TextureCompressor
                 bool hasAlpha = imp.DoesSourceTextureHaveAlpha();
                 bool isNormal = imp.textureType == TextureImporterType.NormalMap;
 
-                var ladder = buildLadder(Math.Max(1, Math.Max(nw, nh)))
+                bool isExtra = extraSet.Contains(imp);
+                int perTextureCeiling = isExtra ? request.ExtraTextureMaxResolution : int.MaxValue;
+
+                var ladder = buildLadder(Math.Max(1, Math.Max(nw, nh)), perTextureCeiling)
                     .Where(l => !(l.Tier.RequiresNoAlpha && hasAlpha))
                     .Where(l => !(isNormal && !l.Tier.SafeForNormalMaps))
                     .ToList();
                 if (ladder.Count == 0) continue;
 
                 // Normal maps flagged on the importer count as normals even if bound to an odd property
-                var role = roles.TryGetValue(imp.assetPath, out var cls) ? cls : (isNormal ? ("normal", 1.2f) : ("unknown", 1.0f));
+                var role = isExtra
+                    ? ("menu-icon", request.ExtraTextureImportance)
+                    : roles.TryGetValue(imp.assetPath, out var cls) ? cls : (isNormal ? ("normal", 1.2f) : ("unknown", 1.0f));
 
                 var e = new TexEntry
                 {

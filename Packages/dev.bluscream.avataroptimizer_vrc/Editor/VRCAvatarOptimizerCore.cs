@@ -81,10 +81,17 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         private static Bluscream.TextureCompressor.TextureBudgetRequest BuildTextureRequest(
-            ConversionConfig config, PlatformProfile profile, long vramBudget, long diskBudget)
+            ConversionConfig config, PlatformProfile profile, long vramBudget, long diskBudget, GameObject avatarRoot = null)
         {
+            // Expression menu icons live on ScriptableObjects, not renderers, so material walking never
+            // sees them — yet they are serialized into the bundle and are usually left uncompressed.
+            var menuIcons = avatarRoot != null
+                ? AvatarSDKEvaluator.CollectMenuIconImportersSafe(avatarRoot)
+                : new System.Collections.Generic.List<UnityEditor.TextureImporter>();
+
             return new Bluscream.TextureCompressor.TextureBudgetRequest
             {
+                ExtraTextures = menuIcons,
                 VramBudgetBytes = vramBudget,
                 DiskBudgetBytes = diskBudget,
                 MaxResolution = 0, // start every texture at its native resolution; the allocator decides
@@ -273,7 +280,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     textureResult = Bluscream.TextureCompressor.TextureBudgetOptimizer.Optimize(
                         targetAvatar,
-                        BuildTextureRequest(config, profile, textureVramBudget, textureDiskBudget),
+                        BuildTextureRequest(config, profile, textureVramBudget, textureDiskBudget, targetAvatar),
                         (msg) => progressCallback?.Invoke(msg, 0.70f)
                     );
 
@@ -406,7 +413,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     {
                         textureReducer = new TextureBudgetReducer(
                             targetAvatar,
-                            (vramBudget, diskBudget) => BuildTextureRequest(config, profile, vramBudget, diskBudget),
+                            (vramBudget, diskBudget) => BuildTextureRequest(config, profile, vramBudget, diskBudget, targetAvatar),
                             textureResult,
                             (msg) => progressCallback?.Invoke(msg, 0.98f));
                         reducers.Add(textureReducer);
