@@ -1,187 +1,8 @@
 {
   "$schema": "./config.schema.json",
-  "version": "1.0.1",
-  "shaderMapping": {
-    "rules": [
-      {
-        "priority": 10,
-        "description": "added in commit 6514f13 as part of the first comprehensive shader dump mapping pass; exact match avoids catching unrelated shaders that contain 'liltoon' in path.",
-        "matchType": "Exact",
-        "pattern": "lilToon",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 20,
-        "description": "same pass as above; Unity stores the shader with a full category prefix path so both 'lilToon' and 'lilToon/lilToon' must be mapped independently.",
-        "matchType": "Exact",
-        "pattern": "lilToon/lilToon",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 30,
-        "description": "cutout alpha mode hidden variant used by lilToon for alphatest materials. Added in 6514f13; maps to Toon Standard (no translucency needed on Quest).",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonCutout",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 40,
-        "description": "lilToon's gem/crystal transparency shader uses refraction. Maps to Particles/Multiply for transparent glass-like appearance on Quest. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonGem",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 50,
-        "description": "lilToon refraction shader (glass, water, distortion). Maps to Particles/Multiply for transparency on Quest. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonRefraction",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 60,
-        "description": "lilToon refraction with blur pass. Same reasoning as lilToonRefraction. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonRefractionBlur",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 70,
-        "description": "lightweight lilToon variant used for secondary/background meshes. Maps to Toon Standard. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonLite",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 80,
-        "description": "transparent pass of lilToon Lite. Maps to Particles/Additive for see-through rendering on Quest. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonLiteTransparent",
-        "targetShader": "VRChat/Mobile/Particles/Additive",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 90,
-        "description": "lilToon's transparent mode hidden pass. Maps to Particles/Additive for alpha transparency on Quest. Added in 6514f13.",
-        "matchType": "Exact",
-        "pattern": "Hidden/lilToonTransparent",
-        "targetShader": "VRChat/Mobile/Particles/Additive",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 100,
-        "description": "detects refraction/glass materials regardless of shader name (e.g. locked Poiyomi refraction with hashed name). Added when requiredProperties support was introduced in dfaee12 to survive shader locking obfuscation.",
-        "matchType": "Contains",
-        "pattern": "",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": [
-          "_RefractionMap"
-        ]
-      },
-      {
-        "priority": 110,
-        "description": "detects dissolve-effect materials regardless of shader name (locked Poiyomi dissolve variants). Added in dfaee12 alongside _RefractionMap to handle name-obfuscated locked shader variants.",
-        "matchType": "Contains",
-        "pattern": "",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": [
-          "_DissolveTex"
-        ]
-      },
-      {
-        "priority": 120,
-        "description": "catches Poiyomi shaders that also expose _Particle property, e.g. Poiyomi particle/additive variants used for wings, sparkles, and glow effects. Added in 6514f13. Must come before the generic Poiyomi catch-all at priority 130.",
-        "matchType": "Contains",
-        "pattern": "poiyomi",
-        "targetShader": "VRChat/Mobile/Particles/Additive",
-        "caseSensitive": false,
-        "requiredProperties": [
-          "_Particle"
-        ]
-      },
-      {
-        "priority": 130,
-        "description": "maps all remaining Poiyomi Pro/Toon/Locked variants to Toon Standard. Added as a fallback in commit 71f2580 specifically to handle Hidden/Locked/.poiyomi/... hashed variants that can't be matched by name. Must come after property-based Poiyomi rule at priority 120.",
-        "matchType": "Contains",
-        "pattern": "poiyomi",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 140,
-        "description": "catches any remaining lilToon variant paths not covered by exact rules (e.g. Hidden/lilToonFur, Hidden/lilToonOutline). Added in 6514f13 as a safety net after the specific exact rules at priorities 10-90.",
-        "matchType": "Contains",
-        "pattern": "lilToon",
-        "targetShader": "VRChat/Mobile/Toon Standard",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 150,
-        "description": "fixed in commit 2d88f38 after user reported 'Mayu Lenses (Android) [Very Poor]' was incorrectly mapped to Diffuse instead of Multiply. Lens/eye meshes need transparency for the iris/pupil overlay effect to look correct on Quest.",
-        "matchType": "Regex",
-        "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 160,
-        "description": "fixed across commits eb280a1/fc92cad/c67db47/3af5df5 after user tested each material: 'Fake_Volume 2' (flashlight cone needs transparency), visor/astral material, squishglass ('Dummy (Android) [Very Poor]'), PixelatePlane ('UnlitPixel'), and camera blocker visualizer all need Multiply for correct see-through rendering.",
-        "matchType": "Regex",
-        "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
-        "targetShader": "VRChat/Mobile/Particles/Multiply",
-        "caseSensitive": false,
-        "requiredProperties": []
-      },
-      {
-        "priority": 170,
-        "description": "catch-all from commit 760849e for any shader whose name contains 'transparent' and hasn't matched an earlier specific rule. Maps to Additive as a safe default for unknown transparent modes.",
-        "matchType": "Contains",
-        "pattern": "transparent",
-        "targetShader": "VRChat/Mobile/Particles/Additive",
-        "caseSensitive": false,
-        "requiredProperties": []
-      }
-    ]
-  },
   "platformProfiles": [
     {
       "limits": {
-        "MaxPhysBoneComponents": 8,
-        "MaxPhysBoneTransforms": 64,
-        "MaxPhysBoneColliders": 16,
-        "MaxPhysBoneCollisionChecks": 64,
-        "MaxContacts": 16,
-        "MaxParticleSystems": 0,
-        "MaxActiveParticles": 0,
-        "MaxMeshParticlePolyCount": 0,
-        "ParticleTrailsEnabledAllowed": false,
-        "ParticleCollisionEnabledAllowed": false,
-        "MaxTrailRenderers": 0,
-        "MaxLineRenderers": 0,
-        "MaxClothComponents": 0,
-        "MaxLights": 0,
-        "MaxAudioSources": 0,
         "ComponentBlacklist": [
           "Cloth",
           "Camera",
@@ -206,95 +27,95 @@
           "PostProcessVolume"
         ],
         "ComponentWhitelist": [],
-        "MaxAssetBundleSizeBytes": 10485760
+        "MaxActiveParticles": 0,
+        "MaxAssetBundleSizeBytes": 10485760,
+        "MaxAudioSources": 0,
+        "MaxClothComponents": 0,
+        "MaxContacts": 16,
+        "MaxLights": 0,
+        "MaxLineRenderers": 0,
+        "MaxMeshParticlePolyCount": 0,
+        "MaxParticleSystems": 0,
+        "MaxPhysBoneColliders": 16,
+        "MaxPhysBoneCollisionChecks": 64,
+        "MaxPhysBoneComponents": 8,
+        "MaxPhysBoneTransforms": 64,
+        "MaxTrailRenderers": 0,
+        "ParticleCollisionEnabledAllowed": false,
+        "ParticleTrailsEnabledAllowed": false
       },
+      "name": "Android",
       "ranks": [
         {
-          "name": "Excellent",
           "limits": {
-            "MaxTriangles": 10000,
-            "MaxSkinnedMeshes": 1,
-            "MaxMeshRenderers": 0,
-            "MaxMaterialSlots": 1,
-            "MaxBones": 75,
             "MaxAnimators": 0,
-            "MaxTextureMemoryBytes": 10485760,
+            "MaxBones": 75,
+            "MaxMaterialSlots": 1,
+            "MaxMeshRenderers": 0,
+            "MaxPhysBoneColliders": 0,
+            "MaxPhysBoneCollisionChecks": 0,
             "MaxPhysBoneComponents": 0,
             "MaxPhysBoneTransforms": 0,
-            "MaxPhysBoneColliders": 0,
-            "MaxPhysBoneCollisionChecks": 0
-          }
+            "MaxSkinnedMeshes": 1,
+            "MaxTextureMemoryBytes": 10485760,
+            "MaxTriangles": 10000
+          },
+          "name": "Excellent"
         },
         {
-          "name": "Good",
           "limits": {
-            "MaxTriangles": 15000,
-            "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 1,
-            "MaxMaterialSlots": 2,
-            "MaxBones": 150,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 15728640,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 2,
+            "MaxMeshRenderers": 1,
+            "MaxPhysBoneColliders": 1,
+            "MaxPhysBoneCollisionChecks": 16,
             "MaxPhysBoneComponents": 1,
             "MaxPhysBoneTransforms": 16,
-            "MaxPhysBoneColliders": 1,
-            "MaxPhysBoneCollisionChecks": 16
-          }
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 15728640,
+            "MaxTriangles": 15000
+          },
+          "name": "Good"
         },
         {
-          "name": "Medium",
           "limits": {
-            "MaxTriangles": 20000,
-            "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 2,
-            "MaxMaterialSlots": 4,
-            "MaxBones": 150,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 20971520,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxPhysBoneColliders": 2,
+            "MaxPhysBoneCollisionChecks": 32,
             "MaxPhysBoneComponents": 2,
             "MaxPhysBoneTransforms": 32,
-            "MaxPhysBoneColliders": 2,
-            "MaxPhysBoneCollisionChecks": 32
-          }
-        },
-        {
-          "name": "Poor",
-          "limits": {
-            "MaxTriangles": 20000,
             "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 2,
-            "MaxMaterialSlots": 4,
-            "MaxBones": 150,
-            "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 41943040
-          }
+            "MaxTextureMemoryBytes": 20971520,
+            "MaxTriangles": 20000
+          },
+          "name": "Medium"
         },
         {
-          "name": "VeryPoor",
+          "limits": {
+            "MaxAnimators": 1,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 41943040,
+            "MaxTriangles": 20000
+          },
+          "name": "Poor"
+        },
+        {
           "limits": {
             "MaxTextureMemoryBytes": 41943040
-          }
+          },
+          "name": "VeryPoor"
         }
-      ],
-      "name": "Android"
+      ]
     },
     {
       "limits": {
-        "MaxPhysBoneComponents": 8,
-        "MaxPhysBoneTransforms": 64,
-        "MaxPhysBoneColliders": 16,
-        "MaxPhysBoneCollisionChecks": 64,
-        "MaxContacts": 16,
-        "MaxParticleSystems": 0,
-        "MaxActiveParticles": 0,
-        "MaxMeshParticlePolyCount": 0,
-        "ParticleTrailsEnabledAllowed": false,
-        "ParticleCollisionEnabledAllowed": false,
-        "MaxTrailRenderers": 0,
-        "MaxLineRenderers": 0,
-        "MaxClothComponents": 0,
-        "MaxLights": 0,
-        "MaxAudioSources": 0,
         "ComponentBlacklist": [
           "Cloth",
           "Camera",
@@ -319,77 +140,92 @@
           "PostProcessVolume"
         ],
         "ComponentWhitelist": [],
-        "MaxAssetBundleSizeBytes": 10485760
+        "MaxActiveParticles": 0,
+        "MaxAssetBundleSizeBytes": 10485760,
+        "MaxAudioSources": 0,
+        "MaxClothComponents": 0,
+        "MaxContacts": 16,
+        "MaxLights": 0,
+        "MaxLineRenderers": 0,
+        "MaxMeshParticlePolyCount": 0,
+        "MaxParticleSystems": 0,
+        "MaxPhysBoneColliders": 16,
+        "MaxPhysBoneCollisionChecks": 64,
+        "MaxPhysBoneComponents": 8,
+        "MaxPhysBoneTransforms": 64,
+        "MaxTrailRenderers": 0,
+        "ParticleCollisionEnabledAllowed": false,
+        "ParticleTrailsEnabledAllowed": false
       },
+      "name": "iOS",
       "ranks": [
         {
-          "name": "Excellent",
           "limits": {
-            "MaxTriangles": 10000,
-            "MaxSkinnedMeshes": 1,
-            "MaxMeshRenderers": 0,
-            "MaxMaterialSlots": 1,
-            "MaxBones": 75,
             "MaxAnimators": 0,
-            "MaxTextureMemoryBytes": 10485760,
+            "MaxBones": 75,
+            "MaxMaterialSlots": 1,
+            "MaxMeshRenderers": 0,
+            "MaxPhysBoneColliders": 0,
+            "MaxPhysBoneCollisionChecks": 0,
             "MaxPhysBoneComponents": 0,
             "MaxPhysBoneTransforms": 0,
-            "MaxPhysBoneColliders": 0,
-            "MaxPhysBoneCollisionChecks": 0
-          }
+            "MaxSkinnedMeshes": 1,
+            "MaxTextureMemoryBytes": 10485760,
+            "MaxTriangles": 10000
+          },
+          "name": "Excellent"
         },
         {
-          "name": "Good",
           "limits": {
-            "MaxTriangles": 15000,
-            "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 1,
-            "MaxMaterialSlots": 2,
-            "MaxBones": 150,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 15728640,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 2,
+            "MaxMeshRenderers": 1,
+            "MaxPhysBoneColliders": 1,
+            "MaxPhysBoneCollisionChecks": 16,
             "MaxPhysBoneComponents": 1,
             "MaxPhysBoneTransforms": 16,
-            "MaxPhysBoneColliders": 1,
-            "MaxPhysBoneCollisionChecks": 16
-          }
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 15728640,
+            "MaxTriangles": 15000
+          },
+          "name": "Good"
         },
         {
-          "name": "Medium",
           "limits": {
-            "MaxTriangles": 20000,
-            "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 2,
-            "MaxMaterialSlots": 4,
-            "MaxBones": 150,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 20971520,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxPhysBoneColliders": 2,
+            "MaxPhysBoneCollisionChecks": 32,
             "MaxPhysBoneComponents": 2,
             "MaxPhysBoneTransforms": 32,
-            "MaxPhysBoneColliders": 2,
-            "MaxPhysBoneCollisionChecks": 32
-          }
-        },
-        {
-          "name": "Poor",
-          "limits": {
-            "MaxTriangles": 20000,
             "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 2,
-            "MaxMaterialSlots": 4,
-            "MaxBones": 150,
-            "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 41943040
-          }
+            "MaxTextureMemoryBytes": 20971520,
+            "MaxTriangles": 20000
+          },
+          "name": "Medium"
         },
         {
-          "name": "VeryPoor",
+          "limits": {
+            "MaxAnimators": 1,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 41943040,
+            "MaxTriangles": 20000
+          },
+          "name": "Poor"
+        },
+        {
           "limits": {
             "MaxTextureMemoryBytes": 41943040
-          }
+          },
+          "name": "VeryPoor"
         }
-      ],
-      "name": "iOS"
+      ]
     },
     {
       "limits": {
@@ -400,109 +236,273 @@
         "ComponentWhitelist": [],
         "MaxAssetBundleSizeBytes": 209715200
       },
+      "name": "PC",
       "ranks": [
         {
-          "name": "Excellent",
           "limits": {
-            "MaxTriangles": 32000,
-            "MaxSkinnedMeshes": 1,
-            "MaxMeshRenderers": 0,
-            "MaxMaterialSlots": 4,
-            "MaxBones": 75,
+            "MaxActiveParticles": 0,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 41943040,
-            "MaxPhysBoneComponents": 4,
-            "MaxPhysBoneTransforms": 32,
+            "MaxAudioSources": 0,
+            "MaxBones": 75,
+            "MaxClothComponents": 0,
+            "MaxContacts": 16,
+            "MaxLights": 0,
+            "MaxLineRenderers": 0,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 0,
+            "MaxParticleSystems": 0,
             "MaxPhysBoneColliders": 4,
             "MaxPhysBoneCollisionChecks": 32,
-            "MaxContacts": 16,
-            "MaxParticleSystems": 0,
-            "MaxActiveParticles": 0,
+            "MaxPhysBoneComponents": 4,
+            "MaxPhysBoneTransforms": 32,
+            "MaxSkinnedMeshes": 1,
+            "MaxTextureMemoryBytes": 41943040,
             "MaxTrailRenderers": 0,
-            "MaxLineRenderers": 0,
-            "MaxClothComponents": 0,
-            "MaxLights": 0,
-            "MaxAudioSources": 0
-          }
+            "MaxTriangles": 32000
+          },
+          "name": "Excellent"
         },
         {
-          "name": "Good",
           "limits": {
-            "MaxTriangles": 70000,
-            "MaxSkinnedMeshes": 2,
-            "MaxMeshRenderers": 2,
-            "MaxMaterialSlots": 8,
-            "MaxBones": 150,
+            "MaxActiveParticles": 200,
             "MaxAnimators": 1,
-            "MaxTextureMemoryBytes": 78643200,
-            "MaxPhysBoneComponents": 8,
-            "MaxPhysBoneTransforms": 64,
+            "MaxAudioSources": 4,
+            "MaxBones": 150,
+            "MaxClothComponents": 1,
+            "MaxContacts": 64,
+            "MaxLights": 0,
+            "MaxLineRenderers": 4,
+            "MaxMaterialSlots": 8,
+            "MaxMeshRenderers": 2,
+            "MaxParticleSystems": 8,
             "MaxPhysBoneColliders": 8,
             "MaxPhysBoneCollisionChecks": 64,
-            "MaxContacts": 64,
-            "MaxParticleSystems": 8,
-            "MaxActiveParticles": 200,
+            "MaxPhysBoneComponents": 8,
+            "MaxPhysBoneTransforms": 64,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 78643200,
             "MaxTrailRenderers": 4,
-            "MaxLineRenderers": 4,
-            "MaxClothComponents": 1,
-            "MaxLights": 0,
-            "MaxAudioSources": 4
-          }
+            "MaxTriangles": 70000
+          },
+          "name": "Good"
         },
         {
-          "name": "Medium",
           "limits": {
-            "MaxTriangles": 70000,
-            "MaxSkinnedMeshes": 8,
-            "MaxMeshRenderers": 8,
-            "MaxMaterialSlots": 16,
-            "MaxBones": 256,
+            "MaxActiveParticles": 1000,
             "MaxAnimators": 4,
-            "MaxTextureMemoryBytes": 157286400,
-            "MaxPhysBoneComponents": 16,
-            "MaxPhysBoneTransforms": 128,
+            "MaxAudioSources": 8,
+            "MaxBones": 256,
+            "MaxClothComponents": 1,
+            "MaxContacts": 128,
+            "MaxLights": 4,
+            "MaxLineRenderers": 8,
+            "MaxMaterialSlots": 16,
+            "MaxMeshRenderers": 8,
+            "MaxParticleSystems": 16,
             "MaxPhysBoneColliders": 16,
             "MaxPhysBoneCollisionChecks": 128,
-            "MaxContacts": 128,
-            "MaxParticleSystems": 16,
-            "MaxActiveParticles": 1000,
+            "MaxPhysBoneComponents": 16,
+            "MaxPhysBoneTransforms": 128,
+            "MaxSkinnedMeshes": 8,
+            "MaxTextureMemoryBytes": 157286400,
             "MaxTrailRenderers": 8,
-            "MaxLineRenderers": 8,
-            "MaxClothComponents": 1,
-            "MaxLights": 4,
-            "MaxAudioSources": 8
-          }
+            "MaxTriangles": 70000
+          },
+          "name": "Medium"
         },
         {
-          "name": "Poor",
           "limits": {
-            "MaxTriangles": 70000,
-            "MaxSkinnedMeshes": 16,
-            "MaxMeshRenderers": 16,
-            "MaxMaterialSlots": 32,
-            "MaxBones": 400,
+            "MaxActiveParticles": 2500,
             "MaxAnimators": 16,
-            "MaxTextureMemoryBytes": 314572800,
-            "MaxPhysBoneComponents": 32,
-            "MaxPhysBoneTransforms": 256,
+            "MaxAudioSources": 16,
+            "MaxBones": 400,
+            "MaxClothComponents": 4,
+            "MaxContacts": 256,
+            "MaxLights": 4,
+            "MaxLineRenderers": 16,
+            "MaxMaterialSlots": 32,
+            "MaxMeshRenderers": 16,
+            "MaxParticleSystems": 32,
             "MaxPhysBoneColliders": 32,
             "MaxPhysBoneCollisionChecks": 256,
-            "MaxContacts": 256,
-            "MaxParticleSystems": 32,
-            "MaxActiveParticles": 2500,
+            "MaxPhysBoneComponents": 32,
+            "MaxPhysBoneTransforms": 256,
+            "MaxSkinnedMeshes": 16,
+            "MaxTextureMemoryBytes": 314572800,
             "MaxTrailRenderers": 16,
-            "MaxLineRenderers": 16,
-            "MaxClothComponents": 4,
-            "MaxLights": 4,
-            "MaxAudioSources": 16
-          }
+            "MaxTriangles": 70000
+          },
+          "name": "Poor"
         },
         {
-          "name": "VeryPoor",
-          "limits": {}
+          "limits": {},
+          "name": "VeryPoor"
         }
-      ],
-      "name": "PC"
+      ]
     }
-  ]
+  ],
+  "shaderMapping": {
+    "rules": [
+      {
+        "caseSensitive": false,
+        "description": "added in commit 6514f13 as part of the first comprehensive shader dump mapping pass; exact match avoids catching unrelated shaders that contain 'liltoon' in path.",
+        "matchType": "Exact",
+        "pattern": "lilToon",
+        "priority": 10,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "same pass as above; Unity stores the shader with a full category prefix path so both 'lilToon' and 'lilToon/lilToon' must be mapped independently.",
+        "matchType": "Exact",
+        "pattern": "lilToon/lilToon",
+        "priority": 20,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "cutout alpha mode hidden variant used by lilToon for alphatest materials. Added in 6514f13; maps to Toon Standard (no translucency needed on Quest).",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonCutout",
+        "priority": 30,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "lilToon's gem/crystal transparency shader uses refraction. Maps to Particles/Multiply for transparent glass-like appearance on Quest. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonGem",
+        "priority": 40,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "lilToon refraction shader (glass, water, distortion). Maps to Particles/Multiply for transparency on Quest. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonRefraction",
+        "priority": 50,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "lilToon refraction with blur pass. Same reasoning as lilToonRefraction. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonRefractionBlur",
+        "priority": 60,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "lightweight lilToon variant used for secondary/background meshes. Maps to Toon Standard. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonLite",
+        "priority": 70,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "transparent pass of lilToon Lite. Maps to Particles/Additive for see-through rendering on Quest. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonLiteTransparent",
+        "priority": 80,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Additive"
+      },
+      {
+        "caseSensitive": false,
+        "description": "lilToon's transparent mode hidden pass. Maps to Particles/Additive for alpha transparency on Quest. Added in 6514f13.",
+        "matchType": "Exact",
+        "pattern": "Hidden/lilToonTransparent",
+        "priority": 90,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Additive"
+      },
+      {
+        "caseSensitive": false,
+        "description": "detects refraction/glass materials regardless of shader name (e.g. locked Poiyomi refraction with hashed name). Added when requiredProperties support was introduced in dfaee12 to survive shader locking obfuscation.",
+        "matchType": "Contains",
+        "pattern": "",
+        "priority": 100,
+        "requiredProperties": [
+          "_RefractionMap"
+        ],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "detects dissolve-effect materials regardless of shader name (locked Poiyomi dissolve variants). Added in dfaee12 alongside _RefractionMap to handle name-obfuscated locked shader variants.",
+        "matchType": "Contains",
+        "pattern": "",
+        "priority": 110,
+        "requiredProperties": [
+          "_DissolveTex"
+        ],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "catches Poiyomi shaders that also expose _Particle property, e.g. Poiyomi particle/additive variants used for wings, sparkles, and glow effects. Added in 6514f13. Must come before the generic Poiyomi catch-all at priority 130.",
+        "matchType": "Contains",
+        "pattern": "poiyomi",
+        "priority": 120,
+        "requiredProperties": [
+          "_Particle"
+        ],
+        "targetShader": "VRChat/Mobile/Particles/Additive"
+      },
+      {
+        "caseSensitive": false,
+        "description": "maps all remaining Poiyomi Pro/Toon/Locked variants to Toon Standard. Added as a fallback in commit 71f2580 specifically to handle Hidden/Locked/.poiyomi/... hashed variants that can't be matched by name. Must come after property-based Poiyomi rule at priority 120.",
+        "matchType": "Contains",
+        "pattern": "poiyomi",
+        "priority": 130,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "catches any remaining lilToon variant paths not covered by exact rules (e.g. Hidden/lilToonFur, Hidden/lilToonOutline). Added in 6514f13 as a safety net after the specific exact rules at priorities 10-90.",
+        "matchType": "Contains",
+        "pattern": "lilToon",
+        "priority": 140,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Toon Standard"
+      },
+      {
+        "caseSensitive": false,
+        "description": "fixed in commit 2d88f38 after user reported 'Mayu Lenses (Android) [Very Poor]' was incorrectly mapped to Diffuse instead of Multiply. Lens/eye meshes need transparency for the iris/pupil overlay effect to look correct on Quest.",
+        "matchType": "Regex",
+        "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
+        "priority": 150,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "fixed across commits eb280a1/fc92cad/c67db47/3af5df5 after user tested each material: 'Fake_Volume 2' (flashlight cone needs transparency), visor/astral material, squishglass ('Dummy (Android) [Very Poor]'), PixelatePlane ('UnlitPixel'), and camera blocker visualizer all need Multiply for correct see-through rendering.",
+        "matchType": "Regex",
+        "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
+        "priority": 160,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Multiply"
+      },
+      {
+        "caseSensitive": false,
+        "description": "catch-all from commit 760849e for any shader whose name contains 'transparent' and hasn't matched an earlier specific rule. Maps to Additive as a safe default for unknown transparent modes.",
+        "matchType": "Contains",
+        "pattern": "transparent",
+        "priority": 170,
+        "requiredProperties": [],
+        "targetShader": "VRChat/Mobile/Particles/Additive"
+      }
+    ]
+  },
+  "version": "1.0.1"
 }
