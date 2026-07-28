@@ -772,6 +772,18 @@ namespace Bluscream.VRC
             if (avatarRoot == null) throw new ArgumentNullException(nameof(avatarRoot), "[AvatarSDKEvaluator] BuildAvatarAssetBundle: avatarRoot is null.");
             DateTime buildStartTime = DateTime.Now.AddSeconds(-2);
 
+            // Preferred: drive the SDK's synchronous exporter directly (no SDK panel, no async
+            // orchestration, no main-thread deadlock). Falls back to the panel's async Build()
+            // machinery only when the exporter API can't be resolved.
+            try
+            {
+                return BuildAvatarAssetBundleSync(avatarRoot, out bundlePath, progressCallback, buildStartTime);
+            }
+            catch (MissingMemberException mm)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Synchronous SDK exporter unavailable ({mm.Message}) — falling back to async panel Build().");
+            }
+
             try
             {
                 Type builderType = Type.GetType("VRC.SDK3A.Editor.VRCSdkControlPanelAvatarBuilder, VRC.SDK3A.Editor")
@@ -913,6 +925,148 @@ namespace Bluscream.VRC
                 throw new InvalidOperationException($"[AvatarSDKEvaluator] ⚠️ CRITICAL: AssetBundle dry-run completed but no valid .vrca file was found in Unity's temp cache for '{avatarRoot.name}'. The SDK build may have been suppressed by VRCFury or another hook, or the output was not written to the expected location ('{Application.temporaryCachePath}').");
 
             return size;
+        }
+
+        /// <summary>
+        /// Synchronous dry-run build: replicates the essential steps of
+        /// VRCSdkControlPanelAvatarBuilder.Build() but drives VRC_SdkBuilder.RunExportAvatarBlueprint
+        /// directly. The export itself is synchronous — the SDK's async Build() only wraps it in
+        /// orchestration (delays + TaskCompletionSources) that deadlocks against a blocked main thread.
+        /// Throws MissingMemberException when the SDK exporter API cannot be resolved (caller falls back).
+        /// </summary>
+        private static long BuildAvatarAssetBundleSync(GameObject avatarRoot, out string bundlePath, Action<string> progressCallback, DateTime buildStartTime)
+        {
+            bundlePath = null;
+
+            Type sdkBuilderType = FindSdkType("VRC.SDKBase.Editor.VRC_SdkBuilder");
+            Type callbacksType = FindSdkType("VRC.SDKBase.Editor.BuildPipeline.VRCBuildPipelineCallbacks");
+            Type requestedBuildType = FindSdkType("VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType");
+            Type avatarBuilderInterface = FindSdkType("VRC.SDKBase.Editor.ISDKAvatarBuilder");
+
+            MethodInfo runExport = sdkBuilderType?.GetMethod("RunExportAvatarBlueprint", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (sdkBuilderType == null || callbacksType == null || requestedBuildType == null || avatarBuilderInterface == null || runExport == null)
+                throw new MissingMemberException("VRC_SdkBuilder.RunExportAvatarBlueprint or its supporting SDK types were not found");
+
+            Debug.Log($"[AvatarSDKEvaluator] Using synchronous SDK exporter (VRC_SdkBuilder.RunExportAvatarBlueprint) for '{avatarRoot.name}'.");
+            progressCallback?.Invoke("Running VRChat SDK export (synchronous)...");
+
+            // 1. Fire the SDK build-requested gate (build hooks like VRCFury can veto/prepare here)
+            object avatarBuildType = Enum.Parse(requestedBuildType, "Avatar");
+            MethodInfo onBuildRequested = callbacksType.GetMethod("OnVRCSDKBuildRequested", BindingFlags.Public | BindingFlags.Static);
+            if (onBuildRequested != null && onBuildRequested.Invoke(null, new[] { avatarBuildType }) is bool allowed && !allowed)
+                throw new InvalidOperationException("[AvatarSDKEvaluator] Build was blocked by an SDK build-requested callback.");
+
+            // 2. Shader stripping pref, same as the SDK's Build()
+            BuildTarget activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            EditorPrefs.SetBool("VRC.SDKBase_StripAllShaders", activeTarget == BuildTarget.Android || activeTarget == BuildTarget.iOS);
+
+            // 3. Ensure the avatar's PipelineManager has an id (the exporter derives cache paths from it)
+            try
+            {
+                Component pm = avatarRoot.GetComponent("PipelineManager");
+                if (pm != null)
+                {
+                    FieldInfo idField = pm.GetType().GetField("blueprintId", BindingFlags.Public | BindingFlags.Instance);
+                    if (idField != null && string.IsNullOrWhiteSpace(idField.GetValue(pm) as string))
+                    {
+                        MethodInfo assignId = pm.GetType().GetMethod("AssignId", BindingFlags.Public | BindingFlags.Instance);
+                        Type contentTypeEnum = pm.GetType().GetNestedType("ContentType");
+                        if (assignId != null && contentTypeEnum != null)
+                        {
+                            assignId.Invoke(pm, new[] { Enum.Parse(contentTypeEnum, "avatar") });
+                            Debug.Log("[AvatarSDKEvaluator] Assigned temporary blueprint id for dry-run export.");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Could not verify/assign PipelineManager blueprint id: {e.Message}");
+            }
+
+            // 4. Configure the static builder exactly like the SDK panel does
+            sdkBuilderType.GetField("shouldBuildUnityPackage", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, false);
+            MethodInfo setCurrentBuilder = sdkBuilderType.GetMethod("SetCurrentBuilder", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            setCurrentBuilder?.MakeGenericMethod(avatarBuilderInterface).Invoke(null, null);
+
+            MethodInfo clearCallbacks = sdkBuilderType.GetMethod("ClearCallbacks", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            clearCallbacks?.Invoke(null, null);
+
+            // 5. Capture success/error through the static builder callbacks
+            string builtPath = null;
+            string buildError = null;
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildProgressCallback", (s, msg) => { Debug.Log($"[VRChat SDK Sync] Build Progress: {msg}"); progressCallback?.Invoke(msg); });
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildErrorCallback", (s, err) => { Debug.LogError($"[VRChat SDK Sync] Build Error: {err}"); buildError = err; });
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildSuccessCallback", (s, path) => { Debug.Log($"[VRChat SDK Sync] Build Success: {path}"); builtPath = path; });
+
+            try
+            {
+                // 6. The actual synchronous export
+                runExport.Invoke(null, new object[] { avatarRoot });
+            }
+            catch (TargetInvocationException tie)
+            {
+                throw new InvalidOperationException($"[AvatarSDKEvaluator] SDK export threw: {tie.InnerException?.Message ?? tie.Message}", tie.InnerException ?? tie);
+            }
+            finally
+            {
+                clearCallbacks?.Invoke(null, null);
+            }
+
+            if (buildError != null)
+                throw new InvalidOperationException($"[AvatarSDKEvaluator] SDK export failed: {buildError}");
+
+            if (!string.IsNullOrEmpty(builtPath) && File.Exists(builtPath))
+            {
+                bundlePath = builtPath;
+                long size = new FileInfo(builtPath).Length;
+                Debug.Log($"[AvatarSDKEvaluator] Synchronous dry-run build complete: '{builtPath}' ({size / (1024.0 * 1024.0):F2} MB)");
+                return size;
+            }
+
+            // Success callback didn't fire with a usable path — fall back to scanning the temp cache
+            long scanned = GetBuiltBundleSize(out bundlePath, buildStartTime);
+            if (scanned <= 0)
+                throw new InvalidOperationException($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Synchronous export completed but no .vrca bundle was found for '{avatarRoot.name}'.");
+            return scanned;
+        }
+
+        private static Type FindSdkType(string fullName)
+        {
+            return Type.GetType($"{fullName}, VRCSDKBase-Editor")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
+                    .FirstOrDefault(t => t.FullName == fullName);
+        }
+
+        /// <summary>
+        /// Subscribes an (object, string) handler to a VRC_SdkBuilder.RegisterXCallback method,
+        /// adapting to whatever delegate type the SDK expects.
+        /// </summary>
+        private static void RegisterStaticCallback(Type sdkBuilderType, string registerMethodName, Action<object, string> handler)
+        {
+            try
+            {
+                MethodInfo register = sdkBuilderType.GetMethod(registerMethodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                if (register == null) return;
+
+                Type delType = register.GetParameters()[0].ParameterType;
+                MethodInfo invoke = delType.GetMethod("Invoke");
+                var pars = invoke.GetParameters();
+                if (pars.Length == 2 && pars[1].ParameterType == typeof(string))
+                {
+                    Delegate del = Delegate.CreateDelegate(delType, handler.Target, handler.Method);
+                    register.Invoke(null, new object[] { del });
+                }
+                else
+                {
+                    Debug.LogWarning($"[AvatarSDKEvaluator] {registerMethodName} has unexpected delegate shape ({delType.Name}) — skipping.");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AvatarSDKEvaluator] Could not subscribe {registerMethodName}: {e.Message}");
+            }
         }
 
         /// <summary>
