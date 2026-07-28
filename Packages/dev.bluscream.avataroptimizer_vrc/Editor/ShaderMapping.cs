@@ -168,6 +168,8 @@ namespace Bluscream.VRCAvatarOptimizer
                 };
             }
 
+            string lowerName = originalShaderName.ToLowerInvariant();
+
             // Check if already a Quest shader
             if (originalShaderName.StartsWith("VRChat/Mobile/", StringComparison.OrdinalIgnoreCase))
             {

@@ -422,25 +422,25 @@ namespace Bluscream.VRCAvatarOptimizer
 
                         if (p.MaxTriangles < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
                             p.MaxTriangles = 0;
                             warnings++;
                         }
                         if (p.MaxMaterialSlots < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
                             p.MaxMaterialSlots = 0;
                             warnings++;
                         }
                         if (p.MaxTextureMemoryBytes < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
                             p.MaxTextureMemoryBytes = 0;
                             warnings++;
                         }
                         if (p.MaxPhysBoneComponents < 0 || p.MaxPhysBoneComponents > 256)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.platform}/{rankData.name} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
+                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
                             p.MaxPhysBoneComponents = Mathf.Clamp(p.MaxPhysBoneComponents, 0, 256);
                             warnings++;
                         }

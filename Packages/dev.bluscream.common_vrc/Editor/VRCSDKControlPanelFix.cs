@@ -55,23 +55,15 @@ namespace Bluscream.VRC
             {
                 if (windowType == null) windowType = win.GetType();
 
-                FieldInfo selectedBuilderField = windowType.GetField("_selectedBuilder", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                FieldInfo sdkBuildersField = windowType.GetField("_sdkBuilders", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
-                if (selectedBuilderField != null && sdkBuildersField != null)
+                if (ReflectionHelper.TryGetFieldValue(win, "_selectedBuilder", out object selectedBuilder) && selectedBuilder == null)
                 {
-                    object selectedBuilder = selectedBuilderField.GetValue(win);
-                    if (selectedBuilder == null)
+                    if (ReflectionHelper.TryGetFieldValue(win, "_sdkBuilders", out Array sdkBuilders) && sdkBuilders != null && sdkBuilders.Length > 0)
                     {
-                        Array sdkBuilders = sdkBuildersField.GetValue(win) as Array;
-                        if (sdkBuilders != null && sdkBuilders.Length > 0)
+                        object fallbackBuilder = sdkBuilders.GetValue(0);
+                        if (fallbackBuilder != null)
                         {
-                            object fallbackBuilder = sdkBuilders.GetValue(0);
-                            if (fallbackBuilder != null)
-                            {
-                                selectedBuilderField.SetValue(win, fallbackBuilder);
-                                return true;
-                            }
+                            ReflectionHelper.TrySetFieldValue(win, "_selectedBuilder", fallbackBuilder);
+                            return true;
                         }
                     }
                 }

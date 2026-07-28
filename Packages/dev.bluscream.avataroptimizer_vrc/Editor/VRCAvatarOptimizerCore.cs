@@ -321,7 +321,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     progressCallback?.Invoke("Decimating avatar meshes to target triangle budget...", 0.92f);
                     string triLimitStr = profile.MaxTriangles == int.MaxValue ? "Unlimited" : profile.MaxTriangles.ToString("N0");
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 7] Decimating meshes — target triangle limit: {triLimitStr} (current: {summary.InitialStats.TriangleCount:N0}).");
-                    int finalTris = Bluscream.MobileDecimater.Editor.MobileDecimationProcessor.DecimateAvatarMeshesToTargetTris(
+                    int finalTris = UnityMeshDecimation.Editor.MeshDecimationProcessor.DecimateAvatarMeshesToTargetTris(
                         targetAvatar, 
                         profile.MaxTriangles, 
                         (msg) => progressCallback?.Invoke(msg, 0.92f)
@@ -795,7 +795,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 return questMat;
             }
 
-            var replacement = ShaderMapping.FindReplacementShader(originalShaderName, originalMat);
+            var replacement = ShaderMapping.FindReplacementShader(originalShaderName, srcMat);
             if (replacement.Success && replacement.ReplacementShader != null)
             {
                 Debug.Log($"[VRCAvatarOptimizerCore] Shader swap: '{originalShaderName}' → '{replacement.ReplacementShader.name}' on '{questMat.name}'");

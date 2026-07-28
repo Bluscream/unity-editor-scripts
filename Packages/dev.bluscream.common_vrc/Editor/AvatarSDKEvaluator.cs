@@ -632,7 +632,7 @@ namespace Bluscream.VRC
             if (avatarRoot == null) return alerts;
 
             AvatarStats stats = EvaluateAvatar(avatarRoot);
-            bool isMobile = VRCAvatarHelper.IsMobilePlatformActive();
+            bool isMobile = Utils.IsMobilePlatformActive();
 
             if (isMobile)
             {

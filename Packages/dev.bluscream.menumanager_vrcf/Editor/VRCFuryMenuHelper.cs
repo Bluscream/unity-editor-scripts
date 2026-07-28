@@ -14,7 +14,7 @@ namespace Bluscream.MenuManager
     {
         public static bool Initialize()
         {
-            return VRCFuryHelper.Initialize();
+            return Bluscream.VRCFury.Utils.TryInitialize();
         }
 
         public static VRCExpressionsMenu GetMergedMenu(GameObject avatarObj)
@@ -25,7 +25,7 @@ namespace Bluscream.MenuManager
         public static void ApplyMovesToAvatar(GameObject avatarObject, List<MenuMoveOperation> moves)
         {
             var commonMoves = moves.Select(m => new Bluscream.VRCFury.MenuMoveOperation(m.fromPath, m.toPath)).ToList();
-            VRCFuryFeatureHelper.ApplyMenuMoves(avatarObject, commonMoves);
+            Bluscream.VRCFury.Utils.ApplyMenuMoves(avatarObject, commonMoves);
         }
     }
 }

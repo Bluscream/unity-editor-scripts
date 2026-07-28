@@ -1,0 +1,23 @@
+{
+  "name": "dev.bluscream.backup",
+  "version": "1.0.0",
+  "displayName": "Bluscream Backup System",
+  "description": "Flexible, automated backup and restore system for Unity assets, GameObjects, components, materials, and textures.",
+  "unity": "2019.4",
+  "dependencies": {
+    "dev.bluscream.common": "1.2.1"
+  },
+  "vpmDependencies": {
+    "dev.bluscream.common": "1.2.1"
+  },
+  "author": {
+    "name": "Bluscream"
+  },
+  "keywords": [
+    "backup",
+    "restore",
+    "unity",
+    "assets",
+    "gameobject"
+  ]
+}

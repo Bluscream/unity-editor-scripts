@@ -294,7 +294,7 @@ namespace Bluscream.TextureCompressor
         }
 
         /// <summary>
-        /// Legacy entry point kept for compatibility — forwards to TextureBudgetOptimizer, which
+        /// Entry point — forwards to TextureBudgetOptimizer, which
         /// allocates a per-texture resolution/format against BOTH the VRAM and disk budgets.
         /// Returns the number of textures processed.
         /// </summary>

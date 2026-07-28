@@ -311,6 +311,18 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         /// <summary>
+        /// Renders a helpbox summarizing all active target profile limits.
+        /// </summary>
+        private static void DrawProfileLimitsBox(PlatformProfile profile)
+        {
+            if (profile == null) return;
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField($"Active Target Profile: {profile.Platform} [{profile.Rank}]", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(profile.ToString(), MessageType.None);
+            EditorGUILayout.EndVertical();
+        }
+
+        /// <summary>
         /// Checks for a VRC Avatar Descriptor by type name so this window has no hard SDK dependency.
         /// </summary>
         private static bool HasAvatarDescriptor(GameObject go)

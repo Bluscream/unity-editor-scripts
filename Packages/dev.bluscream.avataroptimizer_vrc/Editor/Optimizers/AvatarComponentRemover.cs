@@ -170,7 +170,7 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         /// <summary>
-        /// Legacy overload for backward compatibility
+        /// Convenience overload using default Mobile profile.
         /// </summary>
         public static List<RemovedComponent> RemoveIncompatibleComponents(GameObject avatarRoot, Action<string> progressCallback = null)
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using Bluscream;
 
 namespace Bluscream.VRCFury
 {
@@ -34,20 +35,20 @@ namespace Bluscream.VRCFury
     {
         public static VRCExpressionsMenu GetMergedMenu(GameObject avatarObj)
         {
-            if (avatarObj == null || !VRCFuryHelper.Initialize()) return null;
+            if (avatarObj == null || !Utils.TryInitialize()) return null;
 
             try
             {
-                var implicitMethod = VRCFuryHelper.VFGameObjectType.GetMethod("op_Implicit", new Type[] { typeof(GameObject) });
-                if (implicitMethod == null) return null;
+                if (!ReflectionHelper.TryInvokeMethod(Utils.VFGameObjectType, "op_Implicit", out object vfGameObject, avatarObj) || vfGameObject == null)
+                    return null;
 
-                object vfGameObject = implicitMethod.Invoke(null, new object[] { avatarObj });
-                if (vfGameObject == null) return null;
+                if (!Utils.EstimateMethod.TryInvoke(null, out object menuManager, vfGameObject) || menuManager == null)
+                    return null;
 
-                object menuManager = VRCFuryHelper.EstimateMethod?.Invoke(null, new object[] { vfGameObject });
-                if (menuManager == null) return null;
+                if (Utils.GetRawMethod.TryInvoke(menuManager, out VRCExpressionsMenu rawMenu))
+                    return rawMenu;
 
-                return VRCFuryHelper.GetRawMethod?.Invoke(menuManager, null) as VRCExpressionsMenu;
+                return null;
             }
             catch (Exception ex)
             {

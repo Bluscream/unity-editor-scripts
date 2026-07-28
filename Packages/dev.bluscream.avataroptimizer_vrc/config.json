@@ -2,119 +2,7 @@
   "$schema": "./config.schema.json",
   "platformProfiles": [
     {
-      "limits": {
-        "ComponentBlacklist": [
-          "Cloth",
-          "Camera",
-          "Light",
-          "AudioSource",
-          "Rigidbody",
-          "BoxCollider",
-          "SphereCollider",
-          "CapsuleCollider",
-          "MeshCollider",
-          "Joint",
-          "SpringJoint",
-          "HingeJoint",
-          "FixedJoint",
-          "CharacterJoint",
-          "ConfigurableJoint",
-          "ParticleSystem",
-          "DynamicBone",
-          "DynamicBoneCollider",
-          "VRCSpatialAudioSource",
-          "PostProcessLayer",
-          "PostProcessVolume"
-        ],
-        "ComponentWhitelist": [],
-        "MaxActiveParticles": 0,
-        "MaxAssetBundleSizeBytes": 10485760,
-        "MaxAudioSources": 0,
-        "MaxClothComponents": 0,
-        "MaxContacts": 16,
-        "MaxLights": 0,
-        "MaxLineRenderers": 0,
-        "MaxMeshParticlePolyCount": 0,
-        "MaxParticleSystems": 0,
-        "MaxPhysBoneColliders": 16,
-        "MaxPhysBoneCollisionChecks": 64,
-        "MaxPhysBoneComponents": 8,
-        "MaxPhysBoneTransforms": 64,
-        "MaxTrailRenderers": 0,
-        "ParticleCollisionEnabledAllowed": false,
-        "ParticleTrailsEnabledAllowed": false
-      },
       "name": "Android",
-      "ranks": [
-        {
-          "limits": {
-            "MaxAnimators": 0,
-            "MaxBones": 75,
-            "MaxMaterialSlots": 1,
-            "MaxMeshRenderers": 0,
-            "MaxPhysBoneColliders": 0,
-            "MaxPhysBoneCollisionChecks": 0,
-            "MaxPhysBoneComponents": 0,
-            "MaxPhysBoneTransforms": 0,
-            "MaxSkinnedMeshes": 1,
-            "MaxTextureMemoryBytes": 10485760,
-            "MaxTriangles": 10000
-          },
-          "name": "Excellent"
-        },
-        {
-          "limits": {
-            "MaxAnimators": 1,
-            "MaxBones": 150,
-            "MaxMaterialSlots": 2,
-            "MaxMeshRenderers": 1,
-            "MaxPhysBoneColliders": 1,
-            "MaxPhysBoneCollisionChecks": 16,
-            "MaxPhysBoneComponents": 1,
-            "MaxPhysBoneTransforms": 16,
-            "MaxSkinnedMeshes": 2,
-            "MaxTextureMemoryBytes": 15728640,
-            "MaxTriangles": 15000
-          },
-          "name": "Good"
-        },
-        {
-          "limits": {
-            "MaxAnimators": 1,
-            "MaxBones": 150,
-            "MaxMaterialSlots": 4,
-            "MaxMeshRenderers": 2,
-            "MaxPhysBoneColliders": 2,
-            "MaxPhysBoneCollisionChecks": 32,
-            "MaxPhysBoneComponents": 2,
-            "MaxPhysBoneTransforms": 32,
-            "MaxSkinnedMeshes": 2,
-            "MaxTextureMemoryBytes": 20971520,
-            "MaxTriangles": 20000
-          },
-          "name": "Medium"
-        },
-        {
-          "limits": {
-            "MaxAnimators": 1,
-            "MaxBones": 150,
-            "MaxMaterialSlots": 4,
-            "MaxMeshRenderers": 2,
-            "MaxSkinnedMeshes": 2,
-            "MaxTextureMemoryBytes": 41943040,
-            "MaxTriangles": 20000
-          },
-          "name": "Poor"
-        },
-        {
-          "limits": {
-            "MaxTextureMemoryBytes": 41943040
-          },
-          "name": "VeryPoor"
-        }
-      ]
-    },
-    {
       "limits": {
         "ComponentBlacklist": [
           "Cloth",
@@ -139,7 +27,6 @@
           "PostProcessLayer",
           "PostProcessVolume"
         ],
-        "ComponentWhitelist": [],
         "MaxActiveParticles": 0,
         "MaxAssetBundleSizeBytes": 10485760,
         "MaxAudioSources": 0,
@@ -157,9 +44,9 @@
         "ParticleCollisionEnabledAllowed": false,
         "ParticleTrailsEnabledAllowed": false
       },
-      "name": "iOS",
       "ranks": [
         {
+          "name": "Excellent",
           "limits": {
             "MaxAnimators": 0,
             "MaxBones": 75,
@@ -172,10 +59,10 @@
             "MaxSkinnedMeshes": 1,
             "MaxTextureMemoryBytes": 10485760,
             "MaxTriangles": 10000
-          },
-          "name": "Excellent"
+          }
         },
         {
+          "name": "Good",
           "limits": {
             "MaxAnimators": 1,
             "MaxBones": 150,
@@ -188,10 +75,10 @@
             "MaxSkinnedMeshes": 2,
             "MaxTextureMemoryBytes": 15728640,
             "MaxTriangles": 15000
-          },
-          "name": "Good"
+          }
         },
         {
+          "name": "Medium",
           "limits": {
             "MaxAnimators": 1,
             "MaxBones": 150,
@@ -204,10 +91,10 @@
             "MaxSkinnedMeshes": 2,
             "MaxTextureMemoryBytes": 20971520,
             "MaxTriangles": 20000
-          },
-          "name": "Medium"
+          }
         },
         {
+          "name": "Poor",
           "limits": {
             "MaxAnimators": 1,
             "MaxBones": 150,
@@ -216,29 +103,140 @@
             "MaxSkinnedMeshes": 2,
             "MaxTextureMemoryBytes": 41943040,
             "MaxTriangles": 20000
-          },
-          "name": "Poor"
+          }
         },
         {
+          "name": "VeryPoor",
           "limits": {
             "MaxTextureMemoryBytes": 41943040
-          },
-          "name": "VeryPoor"
+          }
         }
       ]
     },
     {
+      "name": "iOS",
+      "limits": {
+        "ComponentBlacklist": [
+          "Cloth",
+          "Camera",
+          "Light",
+          "AudioSource",
+          "Rigidbody",
+          "BoxCollider",
+          "SphereCollider",
+          "CapsuleCollider",
+          "MeshCollider",
+          "Joint",
+          "SpringJoint",
+          "HingeJoint",
+          "FixedJoint",
+          "CharacterJoint",
+          "ConfigurableJoint",
+          "ParticleSystem",
+          "DynamicBone",
+          "DynamicBoneCollider",
+          "VRCSpatialAudioSource",
+          "PostProcessLayer",
+          "PostProcessVolume"
+        ],
+        "MaxActiveParticles": 0,
+        "MaxAssetBundleSizeBytes": 10485760,
+        "MaxAudioSources": 0,
+        "MaxClothComponents": 0,
+        "MaxContacts": 16,
+        "MaxLights": 0,
+        "MaxLineRenderers": 0,
+        "MaxMeshParticlePolyCount": 0,
+        "MaxParticleSystems": 0,
+        "MaxPhysBoneColliders": 16,
+        "MaxPhysBoneCollisionChecks": 64,
+        "MaxPhysBoneComponents": 8,
+        "MaxPhysBoneTransforms": 64,
+        "MaxTrailRenderers": 0,
+        "ParticleCollisionEnabledAllowed": false,
+        "ParticleTrailsEnabledAllowed": false
+      },
+      "ranks": [
+        {
+          "name": "Excellent",
+          "limits": {
+            "MaxAnimators": 0,
+            "MaxBones": 75,
+            "MaxMaterialSlots": 1,
+            "MaxMeshRenderers": 0,
+            "MaxPhysBoneColliders": 0,
+            "MaxPhysBoneCollisionChecks": 0,
+            "MaxPhysBoneComponents": 0,
+            "MaxPhysBoneTransforms": 0,
+            "MaxSkinnedMeshes": 1,
+            "MaxTextureMemoryBytes": 10485760,
+            "MaxTriangles": 10000
+          }
+        },
+        {
+          "name": "Good",
+          "limits": {
+            "MaxAnimators": 1,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 2,
+            "MaxMeshRenderers": 1,
+            "MaxPhysBoneColliders": 1,
+            "MaxPhysBoneCollisionChecks": 16,
+            "MaxPhysBoneComponents": 1,
+            "MaxPhysBoneTransforms": 16,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 15728640,
+            "MaxTriangles": 15000
+          }
+        },
+        {
+          "name": "Medium",
+          "limits": {
+            "MaxAnimators": 1,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxPhysBoneColliders": 2,
+            "MaxPhysBoneCollisionChecks": 32,
+            "MaxPhysBoneComponents": 2,
+            "MaxPhysBoneTransforms": 32,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 20971520,
+            "MaxTriangles": 20000
+          }
+        },
+        {
+          "name": "Poor",
+          "limits": {
+            "MaxAnimators": 1,
+            "MaxBones": 150,
+            "MaxMaterialSlots": 4,
+            "MaxMeshRenderers": 2,
+            "MaxSkinnedMeshes": 2,
+            "MaxTextureMemoryBytes": 41943040,
+            "MaxTriangles": 20000
+          }
+        },
+        {
+          "name": "VeryPoor",
+          "limits": {
+            "MaxTextureMemoryBytes": 41943040
+          }
+        }
+      ]
+    },
+    {
+      "name": "PC",
       "limits": {
         "ComponentBlacklist": [
           "DynamicBone",
           "DynamicBoneCollider"
         ],
-        "ComponentWhitelist": [],
         "MaxAssetBundleSizeBytes": 209715200
       },
-      "name": "PC",
       "ranks": [
         {
+          "name": "Excellent",
           "limits": {
             "MaxActiveParticles": 0,
             "MaxAnimators": 1,
@@ -259,10 +257,10 @@
             "MaxTextureMemoryBytes": 41943040,
             "MaxTrailRenderers": 0,
             "MaxTriangles": 32000
-          },
-          "name": "Excellent"
+          }
         },
         {
+          "name": "Good",
           "limits": {
             "MaxActiveParticles": 200,
             "MaxAnimators": 1,
@@ -283,10 +281,10 @@
             "MaxTextureMemoryBytes": 78643200,
             "MaxTrailRenderers": 4,
             "MaxTriangles": 70000
-          },
-          "name": "Good"
+          }
         },
         {
+          "name": "Medium",
           "limits": {
             "MaxActiveParticles": 1000,
             "MaxAnimators": 4,
@@ -307,10 +305,10 @@
             "MaxTextureMemoryBytes": 157286400,
             "MaxTrailRenderers": 8,
             "MaxTriangles": 70000
-          },
-          "name": "Medium"
+          }
         },
         {
+          "name": "Poor",
           "limits": {
             "MaxActiveParticles": 2500,
             "MaxAnimators": 16,
@@ -331,12 +329,11 @@
             "MaxTextureMemoryBytes": 314572800,
             "MaxTrailRenderers": 16,
             "MaxTriangles": 70000
-          },
-          "name": "Poor"
+          }
         },
         {
-          "limits": {},
-          "name": "VeryPoor"
+          "name": "VeryPoor",
+          "limits": {}
         }
       ]
     }
@@ -349,7 +346,6 @@
         "matchType": "Exact",
         "pattern": "lilToon",
         "priority": 10,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -358,7 +354,6 @@
         "matchType": "Exact",
         "pattern": "lilToon/lilToon",
         "priority": 20,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -367,7 +362,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonCutout",
         "priority": 30,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -376,7 +370,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonGem",
         "priority": 40,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Multiply"
       },
       {
@@ -385,7 +378,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefraction",
         "priority": 50,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Multiply"
       },
       {
@@ -394,7 +386,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonRefractionBlur",
         "priority": 60,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Multiply"
       },
       {
@@ -403,7 +394,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLite",
         "priority": 70,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -412,7 +402,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonLiteTransparent",
         "priority": 80,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Additive"
       },
       {
@@ -421,7 +410,6 @@
         "matchType": "Exact",
         "pattern": "Hidden/lilToonTransparent",
         "priority": 90,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Additive"
       },
       {
@@ -463,7 +451,6 @@
         "matchType": "Contains",
         "pattern": "poiyomi",
         "priority": 130,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -472,7 +459,6 @@
         "matchType": "Contains",
         "pattern": "lilToon",
         "priority": 140,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Toon Standard"
       },
       {
@@ -481,7 +467,6 @@
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:lens|lenses|glass|eye|eyes)(?:[\\W_]|$).*",
         "priority": 150,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Multiply"
       },
       {
@@ -490,7 +475,6 @@
         "matchType": "Regex",
         "pattern": ".*(?:^|[\\W_])(?:volume|cone|visor|censor|pixelate|squish)(?:[\\W_]|$).*",
         "priority": 160,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Multiply"
       },
       {
@@ -499,7 +483,6 @@
         "matchType": "Contains",
         "pattern": "transparent",
         "priority": 170,
-        "requiredProperties": [],
         "targetShader": "VRChat/Mobile/Particles/Additive"
       }
     ]

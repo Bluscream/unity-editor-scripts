@@ -17,7 +17,7 @@ Once the repository is added, the packages below appear in VCC and can be added 
 | Package | Description |
 | --- | --- |
 | `dev.bluscream.common` | Common utilities shared by the other packages. |
-| `dev.bluscream.backupsystem` | Backup & restore for assets, GameObjects, and components. |
+| `dev.bluscream.backup` | Backup & restore for assets, GameObjects, components, materials, and textures. |
 | `dev.bluscream.cleanup` | Smart cleanup of unused assets. |
 | `dev.bluscream.componentremover` | Find & remove missing scripts from GameObjects. |
 | `dev.bluscream.menumanager` | Mass re-organize & visually edit VRChat avatar menus (VRCFury). |
@@ -25,6 +25,7 @@ Once the repository is added, the packages below appear in VCC and can be added 
 | `dev.bluscream.replacer` | Replace GameObjects with other objects or prefabs. |
 | `dev.bluscream.shadertest` | Quick shader preview / testing tool. |
 | `dev.bluscream.texturecompressor` | Apply texture compression settings in bulk. |
+| `dev.crescent3983.unitymeshdecimation` | High-performance MIT-licensed mesh decimation library for Unity. |
 
 ## How the listing is built
 

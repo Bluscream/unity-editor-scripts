@@ -168,7 +168,7 @@ namespace Bluscream.VRCAvatarOptimizer
             _progress?.Invoke($"Decimating meshes {_currentTriangles:N0} → {targetTris:N0} triangles...");
             Debug.Log($"[MeshDecimationReducer] Bundle over by {bundle.Excess / (1024.0 * 1024.0):F2} MB; estimated mesh payload ~{meshBytes / (1024.0 * 1024.0):F2} MB → cutting {removeFraction * 100:F0}% of triangles ({_currentTriangles:N0} → {targetTris:N0}, floor {floorTris:N0}).");
 
-            int finalTris = Bluscream.MobileDecimater.Editor.MobileDecimationProcessor.DecimateAvatarMeshesToTargetTris(
+            int finalTris = UnityMeshDecimation.Editor.MeshDecimationProcessor.DecimateAvatarMeshesToTargetTris(
                 _avatar, targetTris, _progress);
 
             int achieved = finalTris > 0 ? finalTris : CountTriangles(_avatar);

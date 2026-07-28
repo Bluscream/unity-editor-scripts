@@ -167,14 +167,9 @@ namespace Bluscream.VRC
 
         private static object GetMemberValue(object target, string name)
         {
-            if (target == null) return null;
-            Type t = target.GetType();
-
-            FieldInfo f = t.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (f != null) return f.GetValue(target);
-
-            PropertyInfo p = t.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            return p != null ? p.GetValue(target) : null;
+            if (ReflectionHelper.TryGetFieldValue(target, name, out object val) || ReflectionHelper.TryGetPropertyValue(target, name, out val))
+                return val;
+            return null;
         }
     }
 }

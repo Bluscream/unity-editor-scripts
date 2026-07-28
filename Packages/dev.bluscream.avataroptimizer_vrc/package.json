@@ -5,16 +5,18 @@
   "description": "Automated tool to convert and optimize VRChat avatars across platforms (PC, Android/Quest & iOS) according to SDK performance limits and profiles.",
   "unity": "2022.3",
   "dependencies": {
-    "dev.bluscream.common": "1.2.0",
-    "dev.bluscream.common_vrc": "1.2.0",
-    "dev.bluscream.scenetools_vrc": "1.2.0",
-    "dev.bluscream.mobiledecimater_vrc": "1.2.0"
+    "dev.bluscream.common": "1.2.1",
+    "dev.bluscream.backup": "1.0.0",
+    "dev.bluscream.common_vrc": "1.2.1",
+    "dev.bluscream.scenetools_vrc": "1.2.1",
+    "dev.crescent3983.unitymeshdecimation": "1.0.0"
   },
   "vpmDependencies": {
-    "dev.bluscream.common": "1.2.0",
-    "dev.bluscream.common_vrc": "1.2.0",
-    "dev.bluscream.scenetools_vrc": "1.2.0",
-    "dev.bluscream.mobiledecimater_vrc": "1.2.0"
+    "dev.bluscream.common": "1.2.1",
+    "dev.bluscream.backup": "1.0.0",
+    "dev.bluscream.common_vrc": "1.2.1",
+    "dev.bluscream.scenetools_vrc": "1.2.1",
+    "dev.crescent3983.unitymeshdecimation": "1.0.0"
   },
   "author": {
     "name": "Bluscream"

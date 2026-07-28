@@ -37,7 +37,7 @@ namespace Bluscream.MenuManager
             serializedObject.Update();
             
             EditorGUILayout.BeginVertical();
-            GUILayout.Label("VRCFury Menu Manager (Legacy UI)", EditorStyles.boldLabel);
+            GUILayout.Label("VRCFury Menu Manager", EditorStyles.boldLabel);
             
             using (new EditorGUILayout.HorizontalScope()) {
                 EditorGUILayout.PropertyField(avatarObjectProperty, new GUIContent("Avatar Root"));
