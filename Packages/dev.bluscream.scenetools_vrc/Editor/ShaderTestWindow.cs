@@ -38,10 +38,16 @@ namespace Bluscream.ShaderTest
 
         private void OnGUI()
         {
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Shader Test", EditorStyles.boldLabel);
+            if (GUILayout.Button("Reload Shaders", GUILayout.Width(110), GUILayout.Height(20)))
+            {
+                LoadShaders();
+            }
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(5);
 
-            // Material/GameObject drag and drop field with inline reset & reload buttons
+            // Material/GameObject drag and drop field with inline reset button
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField("Material / GameObject", EditorStyles.boldLabel);
             
@@ -81,15 +87,9 @@ namespace Bluscream.ShaderTest
                 }
             }
 
-            // Reload Shaders button inline
-            if (GUILayout.Button("Reload Shaders", GUILayout.Width(110), GUILayout.Height(20)))
-            {
-                LoadShaders();
-            }
-
             // Reset button inline
             EditorGUI.BeginDisabledGroup(targetMaterial == null || currentShader == originalShader);
-            if (GUILayout.Button("Reset Shader", GUILayout.Width(100), GUILayout.Height(20)))
+            if (GUILayout.Button("Reset", GUILayout.Width(60), GUILayout.Height(20)))
             {
                 ResetShader();
             }
@@ -130,9 +130,7 @@ namespace Bluscream.ShaderTest
             }
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Available Shaders", EditorStyles.boldLabel);
-            EditorGUILayout.EndHorizontal();
 
             // Auto-reload shaders if list became empty (e.g. after domain reload / package recompile)
             if (shadersByPath == null || shadersByPath.Count == 0)
