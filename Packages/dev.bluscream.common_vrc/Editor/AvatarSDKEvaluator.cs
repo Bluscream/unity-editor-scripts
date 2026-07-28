@@ -820,9 +820,37 @@ namespace Bluscream.VRC
                     // pump the context ourselves — otherwise Build() stalls at its first await, this
                     // loop times out, and the queued build runs *after* the conversion finishes.
                     var syncContext = System.Threading.SynchronizationContext.Current;
-                    MethodInfo syncExec = syncContext?.GetType().GetMethod("Exec", BindingFlags.NonPublic | BindingFlags.Instance);
+                    MethodInfo syncExec = null;
+                    object pumpTarget = null;
+                    if (syncContext != null)
+                    {
+                        // Walk the type hierarchy — private 'Exec' lives on UnitySynchronizationContext,
+                        // but Current may be a derived/wrapped context.
+                        for (Type t = syncContext.GetType(); t != null && syncExec == null; t = t.BaseType)
+                            syncExec = t.GetMethod("Exec", BindingFlags.NonPublic | BindingFlags.Instance);
+                        pumpTarget = syncContext;
+                    }
+
+                    // Fallback: static pump entry points on UnityEngine.UnitySynchronizationContext
+                    MethodInfo staticPump = null;
+                    object[] staticPumpArgs = null;
                     if (syncExec == null)
-                        Debug.LogWarning("[AvatarSDKEvaluator] Could not resolve UnitySynchronizationContext.Exec — async SDK build continuations may not run until the editor idles.");
+                    {
+                        Type unityCtxType = typeof(UnityEngine.Object).Assembly.GetType("UnityEngine.UnitySynchronizationContext");
+                        MethodInfo execPending = unityCtxType?.GetMethod("ExecutePendingTasks", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                        MethodInfo execTasks = unityCtxType?.GetMethod("ExecuteTasks", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                        if (execPending != null)
+                        {
+                            staticPump = execPending;
+                            staticPumpArgs = execPending.GetParameters().Length == 1 ? new object[] { 10L } : null;
+                        }
+                        else if (execTasks != null)
+                        {
+                            staticPump = execTasks;
+                        }
+                        Debug.LogWarning($"[AvatarSDKEvaluator] Instance sync-context pump unavailable (Current = {(syncContext == null ? "null" : syncContext.GetType().FullName)}). " +
+                                         $"Falling back to {(staticPump != null ? $"UnitySynchronizationContext.{staticPump.Name}" : "no pump — async SDK build continuations may not run until the editor idles")}.");
+                    }
 
                     try
                     {
@@ -838,7 +866,11 @@ namespace Bluscream.VRC
                             progressCallback?.Invoke($"Building VRChat AssetBundle dry-run... (elapsed {elapsedSec}s / up to {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS}s)");
 
                             // Pump queued async continuations so the SDK build actually advances
-                            try { syncExec?.Invoke(syncContext, null); }
+                            try
+                            {
+                                if (syncExec != null) syncExec.Invoke(pumpTarget, null);
+                                else staticPump?.Invoke(null, staticPumpArgs);
+                            }
                             catch (Exception pumpEx) { Debug.LogWarning($"[AvatarSDKEvaluator] Sync context pump threw: {pumpEx.InnerException?.Message ?? pumpEx.Message}"); }
 
                             UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
