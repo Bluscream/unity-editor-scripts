@@ -814,6 +814,16 @@ namespace Bluscream.VRC
                 {
                     double startWait = UnityEditor.EditorApplication.timeSinceStartup;
 
+                    // The SDK's async Build() posts its continuations (e.g. after 'await Task.Delay')
+                    // to Unity's SynchronizationContext, which only runs when the main thread idles.
+                    // Since this wait loop BLOCKS the main thread, the build cannot proceed unless we
+                    // pump the context ourselves — otherwise Build() stalls at its first await, this
+                    // loop times out, and the queued build runs *after* the conversion finishes.
+                    var syncContext = System.Threading.SynchronizationContext.Current;
+                    MethodInfo syncExec = syncContext?.GetType().GetMethod("Exec", BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (syncExec == null)
+                        Debug.LogWarning("[AvatarSDKEvaluator] Could not resolve UnitySynchronizationContext.Exec — async SDK build continuations may not run until the editor idles.");
+
                     try
                     {
                         while (!task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
@@ -827,7 +837,10 @@ namespace Bluscream.VRC
                             int elapsedSec = (int)elapsed;
                             progressCallback?.Invoke($"Building VRChat AssetBundle dry-run... (elapsed {elapsedSec}s / up to {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS}s)");
 
-                            // Pump Editor main loop ticks allowing async tasks/coroutines to execute
+                            // Pump queued async continuations so the SDK build actually advances
+                            try { syncExec?.Invoke(syncContext, null); }
+                            catch (Exception pumpEx) { Debug.LogWarning($"[AvatarSDKEvaluator] Sync context pump threw: {pumpEx.InnerException?.Message ?? pumpEx.Message}"); }
+
                             UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
                             System.Threading.Thread.Sleep(5);
 
@@ -988,6 +1001,10 @@ namespace Bluscream.VRC
             {
                 Type builderType = builderInstance.GetType();
 
+                // The panel's avatar builder is a long-lived instance: unhook any handlers we added on a
+                // previous call first, otherwise every build re-subscribes and events fire multiple times.
+                UnregisterPreviousBuildCallbacks();
+
                 if (onProgress != null)
                 {
                     EventInfo evtProgress = builderType.GetEvent("OnSdkBuildProgress", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -995,6 +1012,7 @@ namespace Bluscream.VRC
                     {
                         EventHandler<string> handler = (s, msg) => onProgress.Invoke(msg);
                         evtProgress.AddEventHandler(builderInstance, handler);
+                        _registeredBuildHandlers.Add((evtProgress, builderInstance, handler));
                     }
                 }
 
@@ -1005,6 +1023,7 @@ namespace Bluscream.VRC
                     {
                         EventHandler<string> handler = (s, err) => onError.Invoke(err);
                         evtError.AddEventHandler(builderInstance, handler);
+                        _registeredBuildHandlers.Add((evtError, builderInstance, handler));
                     }
                 }
 
@@ -1015,6 +1034,7 @@ namespace Bluscream.VRC
                     {
                         EventHandler<string> handler = (s, path) => onSuccess.Invoke(path);
                         evtSuccess.AddEventHandler(builderInstance, handler);
+                        _registeredBuildHandlers.Add((evtSuccess, builderInstance, handler));
                     }
                 }
 
@@ -1025,6 +1045,17 @@ namespace Bluscream.VRC
                 Debug.LogWarning($"[AvatarSDKEvaluator] Could not register VRCSdkControlPanelAvatarBuilder event handlers: {ex.Message}");
                 return false;
             }
+        }
+
+        private static readonly List<(EventInfo evt, object target, Delegate handler)> _registeredBuildHandlers = new List<(EventInfo, object, Delegate)>();
+
+        private static void UnregisterPreviousBuildCallbacks()
+        {
+            foreach (var (evt, target, handler) in _registeredBuildHandlers)
+            {
+                try { evt.RemoveEventHandler(target, handler); } catch { /* target may be gone */ }
+            }
+            _registeredBuildHandlers.Clear();
         }
 
         /// <summary>
