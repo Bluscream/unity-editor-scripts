@@ -943,8 +943,14 @@ namespace Bluscream.VRC
             Type requestedBuildType = FindSdkType("VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType");
             Type avatarBuilderInterface = FindSdkType("VRC.SDKBase.Editor.ISDKAvatarBuilder");
 
-            MethodInfo runExport = sdkBuilderType?.GetMethod("RunExportAvatarBlueprint", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            if (sdkBuilderType == null || callbacksType == null || requestedBuildType == null || avatarBuilderInterface == null || runExport == null)
+            // RunExportAvatarBlueprint is a static DELEGATE FIELD (Action<GameObject>) on VRC_SdkBuilder,
+            // not a method — accept either shape so SDK changes don't break us.
+            MethodInfo runExportMethod = sdkBuilderType?.GetMethod("RunExportAvatarBlueprint", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo runExportField = sdkBuilderType?.GetField("RunExportAvatarBlueprint", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            Delegate runExportDelegate = runExportField?.GetValue(null) as Delegate;
+
+            if (sdkBuilderType == null || callbacksType == null || requestedBuildType == null || avatarBuilderInterface == null
+                || (runExportMethod == null && runExportDelegate == null))
                 throw new MissingMemberException("VRC_SdkBuilder.RunExportAvatarBlueprint or its supporting SDK types were not found");
 
             Debug.Log($"[AvatarSDKEvaluator] Using synchronous SDK exporter (VRC_SdkBuilder.RunExportAvatarBlueprint) for '{avatarRoot.name}'.");
@@ -1001,8 +1007,19 @@ namespace Bluscream.VRC
 
             try
             {
-                // 6. The actual synchronous export
-                runExport.Invoke(null, new object[] { avatarRoot });
+                // 6. The actual synchronous export. Re-read the delegate field here: SetCurrentBuilder()
+                // above is what assigns it, so a value captured earlier may be stale/null.
+                if (runExportMethod != null)
+                {
+                    runExportMethod.Invoke(null, new object[] { avatarRoot });
+                }
+                else
+                {
+                    Delegate exportNow = runExportField.GetValue(null) as Delegate ?? runExportDelegate;
+                    if (exportNow == null)
+                        throw new MissingMemberException("VRC_SdkBuilder.RunExportAvatarBlueprint delegate was null after SetCurrentBuilder");
+                    exportNow.DynamicInvoke(avatarRoot);
+                }
             }
             catch (TargetInvocationException tie)
             {
