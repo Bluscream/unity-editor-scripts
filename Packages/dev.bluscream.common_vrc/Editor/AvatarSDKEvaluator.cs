@@ -46,6 +46,12 @@ namespace Bluscream.VRC
             public int AnimatorCount;
             public int BoneCount;
             public long TotalTextureMemoryBytes;
+            /// <summary>
+            /// True when <see cref="TotalTextureMemoryBytes"/> came from VRChat's own stats object rather
+            /// than from this package's reconstruction of the rule. Only the former is authoritative about
+            /// what counts toward the limit.
+            /// </summary>
+            public bool TextureMemoryFromSDK;
             public string RatingName = "Unknown";
         }
 
@@ -126,6 +132,16 @@ namespace Bluscream.VRC
             stats.AudioSourceCount = GetIntProp(t, perfStatsObj, "audioSourceCount");
             stats.AnimatorCount = GetIntProp(t, perfStatsObj, "animatorCount");
             stats.BoneCount = GetIntProp(t, perfStatsObj, "boneCount");
+
+            // VRChat reports texture memory as megabytes on the stats object. Reading it settles what
+            // actually counts toward the limit — our own CalculateTextureMemory is only a reconstruction of
+            // that rule and is used solely when the SDK does not supply the figure.
+            float textureMb = GetFloatProp(t, perfStatsObj, "textureMegabytes", "textureMemoryMegabytes");
+            if (textureMb > 0f)
+            {
+                stats.TotalTextureMemoryBytes = (long)(textureMb * 1024 * 1024);
+                stats.TextureMemoryFromSDK = true;
+            }
         }
 
         private static int GetIntProp(Type t, object obj, params string[] propNames)
@@ -146,6 +162,32 @@ namespace Bluscream.VRC
                 }
             }
             return 0;
+        }
+
+        /// <summary>
+        /// Reads a numeric member as a float, accepting the int/long/double forms the SDK has used across
+        /// versions so a type change does not silently read as zero.
+        /// </summary>
+        private static float GetFloatProp(Type t, object obj, params string[] propNames)
+        {
+            foreach (string name in propNames)
+            {
+                foreach (object val in new[]
+                {
+                    t.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(obj),
+                    t.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(obj)
+                })
+                {
+                    switch (val)
+                    {
+                        case float f: return f;
+                        case double d: return (float)d;
+                        case int i: return i;
+                        case long l: return l;
+                    }
+                }
+            }
+            return 0f;
         }
 
         private static void CalculateFallbackStats(GameObject avatarRoot, AvatarStats stats)
@@ -178,7 +220,9 @@ namespace Bluscream.VRC
             stats.SkinnedMeshCount = skinned;
             stats.MeshRendererCount = renderers;
             stats.MaterialSlotCount = matSlots;
-            stats.TotalTextureMemoryBytes = CalculateTextureMemory(avatarRoot);
+            // Only reconstruct when the SDK did not report it — see ExtractSDKPerfStats.
+            if (!stats.TextureMemoryFromSDK)
+                stats.TotalTextureMemoryBytes = CalculateTextureMemory(avatarRoot);
 
             CalculatePhysBoneStats(avatarRoot, stats);
 

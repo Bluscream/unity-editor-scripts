@@ -72,9 +72,9 @@ namespace Bluscream.TextureCompressor
         public int TexturesProcessed;
         public long EstimatedVramBytes;
         public long EstimatedDiskBytes;
-        /// <summary>Portion of <see cref="EstimatedVramBytes"/> from textures reachable via renderer materials — the set the SDK's stat measures.</summary>
+        /// <summary>Portion of <see cref="EstimatedVramBytes"/> from textures reachable via renderer materials.</summary>
         public long EstimatedRendererVramBytes;
-        /// <summary>Portion from expression menu icons and other non-renderer references, which the SDK stat does not report.</summary>
+        /// <summary>Portion from expression menu icons and other non-renderer references.</summary>
         public long EstimatedExtraVramBytes;
         public int ExtraTextureCount;
         public long VramBudgetBytes;
@@ -139,8 +139,8 @@ namespace Bluscream.TextureCompressor
             public string Role = "unknown";
             /// <summary>
             /// True when the texture was supplied as an extra (expression menu icon or other referenced
-            /// asset) rather than found on a renderer material. The SDK's texture-memory stat only walks
-            /// renderer materials, so these are budgeted here but never appear in that figure.
+            /// asset) rather than found on a renderer material. These are budgeted like any other texture;
+            /// the flag exists so the prediction can be split and compared against a real measurement.
             /// </summary>
             public bool IsExtra;
         }
@@ -662,10 +662,11 @@ namespace Bluscream.TextureCompressor
             result.EstimatedVramBytes = totalVram;
             result.EstimatedDiskBytes = totalDisk;
 
-            // The SDK's texture-memory stat only walks renderer materials, so extra textures (expression
-            // menu icons and other referenced assets) are budgeted here but never appear in that number.
-            // Reporting the split stops the two figures looking like a contradiction: the allocator is
-            // constraining against a superset of what the evaluator measures.
+            // Report the renderer / non-renderer split so the prediction can be compared against a real
+            // measurement under both rules. Whether VRChat counts non-renderer textures (expression menu
+            // icons and other referenced assets) toward its texture-memory limit is NOT established here —
+            // they certainly occupy memory and certainly land in the AssetBundle, so they are budgeted;
+            // the split exists to identify the rule empirically, not to assert one.
             long extraVram = entries.Where(e => e.IsExtra).Sum(e => e.Vram);
             int extraCount = entries.Count(e => e.IsExtra);
             result.EstimatedRendererVramBytes = totalVram - extraVram;
@@ -676,7 +677,7 @@ namespace Bluscream.TextureCompressor
             {
                 Log.Info($"VRAM split: {(totalVram - extraVram) / (1024.0 * 1024.0):F1} MB across {entries.Count - extraCount} renderer texture(s) " +
                          $"+ {extraVram / (1024.0 * 1024.0):F1} MB across {extraCount} non-renderer texture(s) (menu icons and other referenced assets). " +
-                         $"Only the renderer figure appears in the SDK's texture memory stat.");
+                         $"Both are budgeted; the caller compares each against the measured figure to determine which set the limit counts.");
             }
             result.TexturesBelowPreferredResolution = entries.Count(e => e.Ladder[e.LevelIndex].Resolution < preferredMinRes);
             result.WentBelowPreferredResolution = result.TexturesBelowPreferredResolution > 0;

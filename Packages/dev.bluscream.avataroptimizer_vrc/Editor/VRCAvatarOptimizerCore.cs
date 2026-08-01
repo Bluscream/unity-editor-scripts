@@ -411,26 +411,44 @@ namespace Bluscream.VRCAvatarOptimizer
                     summary.texturesOptimized = textureResult.TexturesProcessed;
                     Log.Info($"[Step 5] Texture budget allocated: {textureResult.Describe()}");
 
-                    // The allocator predicts VRAM from importer settings; AvatarSDKEvaluator measures what
-                    // the SDK will report. They cover different texture sets and different formulas, and a
-                    // silent divergence means the allocator is aiming at the wrong number — either leaving
-                    // quality unspent or overshooting the cap. Reconcile them here rather than letting the
-                    // two figures sit in the log looking like a contradiction.
-                    long measuredVram = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar).TotalTextureMemoryBytes;
-                    long predictedRendererVram = textureResult.EstimatedRendererVramBytes > 0
+                    // The allocator predicts VRAM from importer settings across every texture it was given.
+                    // Compare that against what the avatar actually measures — preferring VRChat's own
+                    // figure when the SDK supplies it, since only that is authoritative about which
+                    // textures count toward the limit.
+                    AvatarSDKEvaluator.AvatarStats postTextureStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+                    long measuredVram = postTextureStats.TotalTextureMemoryBytes;
+                    string measuredSource = postTextureStats.TextureMemoryFromSDK ? "VRChat SDK" : "local reconstruction";
+
+                    long predictedTotal = textureResult.EstimatedVramBytes;
+                    long predictedRenderer = textureResult.EstimatedRendererVramBytes > 0
                         ? textureResult.EstimatedRendererVramBytes
-                        : textureResult.EstimatedVramBytes;
+                        : predictedTotal;
 
-                    double driftMb = (predictedRendererVram - measuredVram) / (1024.0 * 1024.0);
-                    double driftPct = measuredVram > 0 ? 100.0 * (predictedRendererVram - measuredVram) / measuredVram : 0;
+                    Log.Info($"[Step 5] VRAM reconciliation ({measuredSource}): measured {measuredVram / (1024.0 * 1024.0):F1} MB. " +
+                             $"Allocator predicted {predictedTotal / (1024.0 * 1024.0):F1} MB across all {textureResult.TexturesProcessed} texture(s), " +
+                             $"of which {predictedRenderer / (1024.0 * 1024.0):F1} MB is on renderer materials " +
+                             $"({textureResult.ExtraTextureCount} non-renderer texture(s) account for the rest).");
 
-                    Log.Info($"[Step 5] VRAM reconciliation: allocator predicts {predictedRendererVram / (1024.0 * 1024.0):F1} MB for renderer textures, " +
-                             $"evaluator measures {measuredVram / (1024.0 * 1024.0):F1} MB (drift {driftMb:+0.0;-0.0} MB, {driftPct:+0.0;-0.0}%).");
+                    // Which prediction should match depends on whether VRChat counts non-renderer textures
+                    // (expression menu icons and the like). Report the drift against both rather than
+                    // assuming; whichever tracks the measurement identifies the rule.
+                    double driftTotalPct = measuredVram > 0 ? 100.0 * (predictedTotal - measuredVram) / measuredVram : 0;
+                    double driftRendererPct = measuredVram > 0 ? 100.0 * (predictedRenderer - measuredVram) / measuredVram : 0;
 
-                    if (Math.Abs(driftPct) > 10.0)
+                    Log.Info($"[Step 5] Drift vs measured: all-textures {driftTotalPct:+0.0;-0.0}%, renderer-only {driftRendererPct:+0.0;-0.0}%. " +
+                             $"The closer figure indicates which set VRChat counts.");
+
+                    if (Math.Min(Math.Abs(driftTotalPct), Math.Abs(driftRendererPct)) > 10.0)
                     {
-                        summary.AddWarning($"Texture VRAM model drift {driftPct:+0.0;-0.0}% — the allocator aimed at {predictedRendererVram / (1024.0 * 1024.0):F1} MB but the avatar measures {measuredVram / (1024.0 * 1024.0):F1} MB. " +
-                                           $"Quality is being {(driftPct > 0 ? "given away" : "overspent")} against the {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB cap.");
+                        summary.AddWarning($"Texture VRAM prediction does not match the measurement under either rule " +
+                                           $"(all-textures {driftTotalPct:+0.0;-0.0}%, renderer-only {driftRendererPct:+0.0;-0.0}%), measured via {measuredSource}. " +
+                                           $"The allocator is aiming at the wrong number against the {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB cap.");
+                    }
+
+                    if (!postTextureStats.TextureMemoryFromSDK)
+                    {
+                        Log.Warn($"[Step 5] VRChat's SDK did not supply a texture memory figure, so the budget is being checked against this package's reconstruction of the rule. " +
+                                 $"Whether expression menu icons and other non-renderer textures count toward the limit is unverified — treat the VRAM headroom as approximate.");
                     }
                     if (textureResult.WentBelowPreferredResolution)
                         summary.AddWarning($"{textureResult.TexturesBelowPreferredResolution} texture(s) had to be downscaled below the preferred {TextureAutoTuning.PreferredMinResolution}px floor to meet the budget.");
