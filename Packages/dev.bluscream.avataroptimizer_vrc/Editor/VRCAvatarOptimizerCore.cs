@@ -410,6 +410,28 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     summary.texturesOptimized = textureResult.TexturesProcessed;
                     Log.Info($"[Step 5] Texture budget allocated: {textureResult.Describe()}");
+
+                    // The allocator predicts VRAM from importer settings; AvatarSDKEvaluator measures what
+                    // the SDK will report. They cover different texture sets and different formulas, and a
+                    // silent divergence means the allocator is aiming at the wrong number — either leaving
+                    // quality unspent or overshooting the cap. Reconcile them here rather than letting the
+                    // two figures sit in the log looking like a contradiction.
+                    long measuredVram = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar).TotalTextureMemoryBytes;
+                    long predictedRendererVram = textureResult.EstimatedRendererVramBytes > 0
+                        ? textureResult.EstimatedRendererVramBytes
+                        : textureResult.EstimatedVramBytes;
+
+                    double driftMb = (predictedRendererVram - measuredVram) / (1024.0 * 1024.0);
+                    double driftPct = measuredVram > 0 ? 100.0 * (predictedRendererVram - measuredVram) / measuredVram : 0;
+
+                    Log.Info($"[Step 5] VRAM reconciliation: allocator predicts {predictedRendererVram / (1024.0 * 1024.0):F1} MB for renderer textures, " +
+                             $"evaluator measures {measuredVram / (1024.0 * 1024.0):F1} MB (drift {driftMb:+0.0;-0.0} MB, {driftPct:+0.0;-0.0}%).");
+
+                    if (Math.Abs(driftPct) > 10.0)
+                    {
+                        summary.AddWarning($"Texture VRAM model drift {driftPct:+0.0;-0.0}% — the allocator aimed at {predictedRendererVram / (1024.0 * 1024.0):F1} MB but the avatar measures {measuredVram / (1024.0 * 1024.0):F1} MB. " +
+                                           $"Quality is being {(driftPct > 0 ? "given away" : "overspent")} against the {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB cap.");
+                    }
                     if (textureResult.WentBelowPreferredResolution)
                         summary.AddWarning($"{textureResult.TexturesBelowPreferredResolution} texture(s) had to be downscaled below the preferred {TextureAutoTuning.PreferredMinResolution}px floor to meet the budget.");
                     if (!textureResult.VramBudgetMet)
@@ -758,9 +780,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
                     // Rig hygiene deliberately rewrites the shared model importer; those paths are the
                     // only sanctioned source-side edits.
-                    IEnumerable<string> expected = (config.UnmapJawBone || config.EnableLegacyBlendShapeNormals)
-                        ? SourceIntegrityGuard.CollectModelImporterPaths(avatarRoot)
-                        : null;
+                    var expected = new List<string>();
+
+                    if (config.UnmapJawBone || config.EnableLegacyBlendShapeNormals)
+                        expected.AddRange(SourceIntegrityGuard.CollectModelImporterPaths(avatarRoot));
+
+                    // The texture pass rewrites platform import overrides on the original texture assets
+                    // rather than copying them, so those .meta changes are expected rather than defects.
+                    if (config.OptimizeTextures)
+                        expected.AddRange(SourceIntegrityGuard.CollectTexturePaths(avatarRoot));
 
                     SourceIntegrityGuard.Verify(avatarRoot, sourceSnapshot, summary, expected);
                 }

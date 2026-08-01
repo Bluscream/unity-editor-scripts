@@ -145,6 +145,44 @@ namespace Bluscream.VRCAvatarOptimizer
         }
 
         /// <summary>
+        /// Texture asset paths the texture budget pass rewrites the importer settings of.
+        ///
+        /// Textures are deliberately NOT copied — per-platform import overrides are the mechanism VRChat
+        /// expects, and duplicating every texture would bloat the project — so this pass edits the original
+        /// .meta files. That is a real source-side change and has to be declared, or the integrity check
+        /// would either miss it (when a previous run already wrote identical settings) or report it as a
+        /// defect.
+        /// </summary>
+        public static IEnumerable<string> CollectTexturePaths(GameObject avatarRoot)
+        {
+            var paths = new HashSet<string>(StringComparer.Ordinal);
+            if (avatarRoot == null) return paths;
+
+            foreach (Renderer r in avatarRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                foreach (Material m in r.sharedMaterials)
+                {
+                    if (m == null || m.shader == null) continue;
+
+                    int count = ShaderUtil.GetPropertyCount(m.shader);
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (ShaderUtil.GetPropertyType(m.shader, i) != ShaderUtil.ShaderPropertyType.TexEnv) continue;
+
+                        Texture tex = m.GetTexture(ShaderUtil.GetPropertyName(m.shader, i));
+                        if (tex == null) continue;
+
+                        string path = AssetDatabase.GetAssetPath(tex);
+                        if (!string.IsNullOrEmpty(path)) paths.Add(path);
+                    }
+                }
+            }
+
+            return paths;
+        }
+
+        /// <summary>
         /// Asset paths the rig hygiene passes are expected to rewrite, so they can be excluded from the
         /// integrity check when those passes are enabled.
         /// </summary>

@@ -72,6 +72,11 @@ namespace Bluscream.TextureCompressor
         public int TexturesProcessed;
         public long EstimatedVramBytes;
         public long EstimatedDiskBytes;
+        /// <summary>Portion of <see cref="EstimatedVramBytes"/> from textures reachable via renderer materials — the set the SDK's stat measures.</summary>
+        public long EstimatedRendererVramBytes;
+        /// <summary>Portion from expression menu icons and other non-renderer references, which the SDK stat does not report.</summary>
+        public long EstimatedExtraVramBytes;
+        public int ExtraTextureCount;
         public long VramBudgetBytes;
         public long DiskBudgetBytes;
         public bool HitFloor;
@@ -132,6 +137,12 @@ namespace Bluscream.TextureCompressor
             /// <summary>Multiplier on the cost of degrading this texture. >1 protects, &lt;1 sacrifices first.</summary>
             public float Importance = 1f;
             public string Role = "unknown";
+            /// <summary>
+            /// True when the texture was supplied as an extra (expression menu icon or other referenced
+            /// asset) rather than found on a renderer material. The SDK's texture-memory stat only walks
+            /// renderer materials, so these are budgeted here but never appear in that figure.
+            /// </summary>
+            public bool IsExtra;
         }
 
         /// <summary>
@@ -455,7 +466,8 @@ namespace Bluscream.TextureCompressor
                     Ladder = ladder,
                     LevelIndex = 0,
                     Role = role.Item1,
-                    Importance = role.Item2
+                    Importance = role.Item2,
+                    IsExtra = spec != null
                 };
                 Measure(e);
                 entries.Add(e);
@@ -649,6 +661,23 @@ namespace Bluscream.TextureCompressor
             result.TexturesProcessed = entries.Count;
             result.EstimatedVramBytes = totalVram;
             result.EstimatedDiskBytes = totalDisk;
+
+            // The SDK's texture-memory stat only walks renderer materials, so extra textures (expression
+            // menu icons and other referenced assets) are budgeted here but never appear in that number.
+            // Reporting the split stops the two figures looking like a contradiction: the allocator is
+            // constraining against a superset of what the evaluator measures.
+            long extraVram = entries.Where(e => e.IsExtra).Sum(e => e.Vram);
+            int extraCount = entries.Count(e => e.IsExtra);
+            result.EstimatedRendererVramBytes = totalVram - extraVram;
+            result.ExtraTextureCount = extraCount;
+            result.EstimatedExtraVramBytes = extraVram;
+
+            if (extraCount > 0)
+            {
+                Log.Info($"VRAM split: {(totalVram - extraVram) / (1024.0 * 1024.0):F1} MB across {entries.Count - extraCount} renderer texture(s) " +
+                         $"+ {extraVram / (1024.0 * 1024.0):F1} MB across {extraCount} non-renderer texture(s) (menu icons and other referenced assets). " +
+                         $"Only the renderer figure appears in the SDK's texture memory stat.");
+            }
             result.TexturesBelowPreferredResolution = entries.Count(e => e.Ladder[e.LevelIndex].Resolution < preferredMinRes);
             result.WentBelowPreferredResolution = result.TexturesBelowPreferredResolution > 0;
 

@@ -410,16 +410,27 @@ namespace Bluscream.VRC
                                         int maxRes = settings.maxTextureSize;
                                         float bpp = GetFormatBPP(settings.format, (tex is Texture2D t2d2) ? t2d2.format : TextureFormat.RGBA32);
 
-                                        int w = Math.Min(tex.width, maxRes > 0 ? maxRes : tex.width);
-                                        int h = Math.Min(tex.height, maxRes > 0 ? maxRes : tex.height);
+                                        // maxTextureSize caps the LONGEST edge and Unity scales the other
+                                        // proportionally. Clamping each axis independently made every
+                                        // non-square texture look bigger than it is — a 2048x1024 capped at
+                                        // 512 is 512x256, not 512x512.
+                                        int longest = Math.Max(tex.width, tex.height);
+                                        double scale = (maxRes > 0 && longest > maxRes) ? (double)maxRes / longest : 1.0;
+                                        int w = Math.Max(1, (int)Math.Round(tex.width * scale));
+                                        int h = Math.Max(1, (int)Math.Round(tex.height * scale));
 
                                         long texBytes = 0;
-                                        int mipCount = tex.mipmapCount > 0 ? tex.mipmapCount : 1;
-                                        for (int mLevel = 0; mLevel < mipCount; mLevel++)
+                                        // The mip chain has to be derived from the capped dimensions. Using
+                                        // the loaded texture's mipmapCount counted levels that do not exist
+                                        // at this resolution, or stopped short when it was already reduced.
+                                        bool hasMips = tex.mipmapCount > 1;
+                                        int mw = w, mh = h;
+                                        while (true)
                                         {
-                                            int mipW = Math.Max(1, w >> mLevel);
-                                            int mipH = Math.Max(1, h >> mLevel);
-                                            texBytes += (long)Math.Max(1, (mipW * mipH * bpp) / 8.0f);
+                                            texBytes += (long)Math.Max(1, (mw * (long)mh * bpp) / 8.0f);
+                                            if (!hasMips || (mw == 1 && mh == 1)) break;
+                                            mw = Math.Max(1, mw >> 1);
+                                            mh = Math.Max(1, mh >> 1);
                                         }
 
                                         if (tex is Cubemap) texBytes *= 6;
