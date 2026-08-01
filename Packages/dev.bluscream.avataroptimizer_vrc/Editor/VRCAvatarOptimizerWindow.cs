@@ -220,6 +220,12 @@ namespace Bluscream.VRCAvatarOptimizer
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
             config.OptimizeFXLayer = EditorGUILayout.ToggleLeft("Optimize FX Layer (Direct Blend Tree combining)", config.OptimizeFXLayer);
             config.UseNaNimationToggles = EditorGUILayout.ToggleLeft("Use NaNimation Toggles for Skinned Meshes", config.UseNaNimationToggles);
+            if (config.UseNaNimationToggles)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("Lets meshes that are animated on/off still be merged: each gets a zero-weight toggle bone whose scale animates to NaN, discarding its triangles, and its active-state curves are rewritten to drive that bone. Meshes whose vertices already use four bones are left unmerged rather than losing skinning influence. With this off, animated-toggle meshes are excluded from merging entirely.", MessageType.None);
+                EditorGUI.indentLevel--;
+            }
             config.BakeNonAnimatedBlendshapes = EditorGUILayout.ToggleLeft("Bake Non-Animated Blendshapes", config.BakeNonAnimatedBlendshapes);
             if (config.BakeNonAnimatedBlendshapes)
             {

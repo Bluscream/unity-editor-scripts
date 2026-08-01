@@ -183,16 +183,27 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
+        private static readonly Dictionary<(TargetPlatform, AvatarPerformanceRank), ProfileLimitData> _sdkLimitsCache = new Dictionary<(TargetPlatform, AvatarPerformanceRank), ProfileLimitData>();
+
         /// <summary>
         /// Attempts to extract performance rank limits directly from the VRChat SDK at runtime via Reflection.
         /// Returns true if limits were successfully fetched from the VRChat SDK.
         /// </summary>
         public static bool TryGetLimitsFromSDK(TargetPlatform platform, AvatarPerformanceRank rank, out ProfileLimitData sdkLimits)
         {
+            var key = (platform, rank);
+            if (_sdkLimitsCache.TryGetValue(key, out sdkLimits))
+            {
+                return sdkLimits != null;
+            }
+
             sdkLimits = null;
             string sdkPlatformName = platform == TargetPlatform.PC ? "PC" : "Android";
             if (!VRCSDKReflectionHelper.TryGetPerformanceRatingStats(sdkPlatformName, rank.ToString(), out object ratingStatsObj))
+            {
+                _sdkLimitsCache[key] = null;
                 return false;
+            }
 
             sdkLimits = new ProfileLimitData();
             bool isMobile = platform == TargetPlatform.Android || platform == TargetPlatform.iOS;
@@ -239,9 +250,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (VRCSDKReflectionHelper.TryGetIntStat(ratingStatsObj, "raycastCount", out int ray) || VRCSDKReflectionHelper.TryGetIntStat(ratingStatsObj, "maxRaycasts", out ray))
                 sdkLimits.MaxRaycasts = ray;
 
-            if (isMobile && VRCSDKReflectionHelper.TryGetForbiddenComponents(out var blackList) && blackList.Count > 0)
-                sdkLimits.ComponentBlacklist = blackList;
-
+            _sdkLimitsCache[key] = sdkLimits;
             return true;
         }
 

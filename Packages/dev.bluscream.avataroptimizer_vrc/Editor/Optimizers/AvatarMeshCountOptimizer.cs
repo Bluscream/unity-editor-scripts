@@ -19,7 +19,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// MeshRenderer/MeshFilter components are removed) so children, PhysBones, and other
         /// components survive.
         /// </summary>
-        public static void OptimizeMeshCount(GameObject avatarRoot, int maxSkinnedMeshes, int maxMeshRenderers, string assetOutputDirectory = null, Action<string> progressCallback = null)
+        public static void OptimizeMeshCount(GameObject avatarRoot, int maxSkinnedMeshes, int maxMeshRenderers, string assetOutputDirectory = null, Action<string> progressCallback = null, bool useNaNimationToggles = false)
         {
             if (avatarRoot == null) return;
 
@@ -28,7 +28,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (maxSkinnedMeshes < int.MaxValue && skinnedCount > maxSkinnedMeshes)
             {
                 progressCallback?.Invoke($"Combining Skinned Mesh Renderers ({skinnedCount} -> max {maxSkinnedMeshes})...");
-                CombineSkinnedMeshes(avatarRoot, skinnedRenderers, maxSkinnedMeshes, assetOutputDirectory);
+                CombineSkinnedMeshes(avatarRoot, skinnedRenderers, maxSkinnedMeshes, assetOutputDirectory, useNaNimationToggles);
             }
 
             MeshRenderer[] meshRenderers = avatarRoot.GetComponentsInChildren<MeshRenderer>(true);
@@ -145,10 +145,17 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
-        private static void CombineSkinnedMeshes(GameObject avatarRoot, SkinnedMeshRenderer[] smrs, int maxSkinnedMeshes, string assetOutputDirectory)
+        private static void CombineSkinnedMeshes(GameObject avatarRoot, SkinnedMeshRenderer[] smrs, int maxSkinnedMeshes, string assetOutputDirectory, bool useNaNimationToggles = false)
         {
             var activeSmrs = smrs.Where(s => s != null && s.enabled && s.gameObject.activeInHierarchy && s.sharedMesh != null && !AvatarPenetratorDetector.IsPenetratorRenderer(s)).ToList();
             if (activeSmrs.Count <= maxSkinnedMeshes) return;
+
+            // A mesh whose GameObject is toggled by an animation normally cannot be merged — merging
+            // destroys the object the toggle animates. NaNimation preserves the toggle by driving a
+            // zero-weight bone's scale to NaN instead, so those meshes become mergeable.
+            Dictionary<Renderer, string> toggledRenderers = useNaNimationToggles
+                ? AvatarNaNimationOptimizer.CollectToggledRenderers(avatarRoot)
+                : new Dictionary<Renderer, string>();
 
             // Prefer not to merge the main body/face renderer or DPS/SPS penetrators.
             var candidatesToMerge = activeSmrs
@@ -156,6 +163,10 @@ namespace Bluscream.VRCAvatarOptimizer
                          && s.name.IndexOf("face", StringComparison.OrdinalIgnoreCase) != 0
                          && !AvatarPenetratorDetector.IsPenetratorRenderer(s))
                 .ToList();
+
+            // Without NaNimation, a toggled mesh must keep its own GameObject.
+            if (!useNaNimationToggles)
+                candidatesToMerge = candidatesToMerge.Where(s => !IsToggledByAnimation(avatarRoot, s)).ToList();
 
             if (candidatesToMerge.Count < 2) candidatesToMerge = activeSmrs;
 
@@ -196,6 +207,33 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 Mesh mesh = smr.sharedMesh;
                 if (mesh == null) continue;
+
+                // NaNimation is resolved before anything is appended: if this mesh cannot take a toggle
+                // bone we skip it entirely, and a partially written vertex block would corrupt the merge.
+                int toggleBoneIndex = -1;
+                if (toggledRenderers.TryGetValue(smr, out string togglePath))
+                {
+                    if (!AvatarNaNimationOptimizer.CanTakeToggleBone(mesh))
+                    {
+                        Debug.LogWarning($"[AvatarMeshCountOptimizer] '{smr.name}' is animated on/off but every vertex already uses four bones, so no zero-weight toggle bone can be added without changing deformation. Merging would break the toggle — leaving this renderer alone.");
+                        continue;
+                    }
+
+                    Transform toggleBone = AvatarNaNimationOptimizer.GetOrCreateNaNToggleBone(avatarRoot, smr.name);
+                    if (toggleBone == null)
+                    {
+                        Debug.LogWarning($"[AvatarMeshCountOptimizer] Could not create a NaNimation toggle bone for '{smr.name}' — leaving this renderer alone.");
+                        continue;
+                    }
+
+                    toggleBoneIndex = allBones.Count;
+                    allBones.Add(toggleBone);
+                    // Weight 0 makes the bindpose numerically irrelevant, but it must stay finite.
+                    bindPoses.Add(Matrix4x4.identity);
+
+                    string toggleBonePath = AnimationUtility.CalculateTransformPath(toggleBone, avatarRoot.transform);
+                    AvatarNaNimationOptimizer.RewriteToggleCurves(avatarRoot, togglePath, toggleBonePath);
+                }
 
                 int vertexOffset = vertices.Count;
                 vertexOffsets.Add(vertexOffset);
@@ -254,12 +292,21 @@ namespace Bluscream.VRCAvatarOptimizer
                         if (bw.weight1 > 0) bw.boneIndex1 = boneMap[Mathf.Clamp(bw.boneIndex1, 0, boneMap.Length - 1)];
                         if (bw.weight2 > 0) bw.boneIndex2 = boneMap[Mathf.Clamp(bw.boneIndex2, 0, boneMap.Length - 1)];
                         if (bw.weight3 > 0) bw.boneIndex3 = boneMap[Mathf.Clamp(bw.boneIndex3, 0, boneMap.Length - 1)];
+
+                        if (toggleBoneIndex >= 0)
+                        {
+                            bw.boneIndex3 = toggleBoneIndex;
+                            bw.weight3 = 0f;
+                        }
+
                         boneWeights.Add(bw);
                     }
                     else
                     {
                         // Unskinned vertex: bind it rigidly to this mesh's first bone.
-                        boneWeights.Add(new BoneWeight { boneIndex0 = boneMap.Length > 0 ? boneMap[0] : 0, weight0 = 1f });
+                        var bw = new BoneWeight { boneIndex0 = boneMap.Length > 0 ? boneMap[0] : 0, weight0 = 1f };
+                        if (toggleBoneIndex >= 0) { bw.boneIndex3 = toggleBoneIndex; bw.weight3 = 0f; }
+                        boneWeights.Add(bw);
                     }
                 }
 
@@ -330,6 +377,23 @@ namespace Bluscream.VRCAvatarOptimizer
                       $"(bones: {allBones.Count}, vertices: {combinedMesh.vertexCount}, submeshes: {materialOrder.Count}, blendshapes: {shapesTransferred})" +
                       $"{(savedPath != null ? $" (mesh saved: {savedPath})" : "")}.");
         }
+
+        /// <summary>
+        /// True when this renderer's GameObject active state is driven by an animation curve, in which
+        /// case merging it away would destroy the object the toggle animates.
+        /// </summary>
+        private static bool IsToggledByAnimation(GameObject avatarRoot, Renderer renderer)
+        {
+            if (_toggledCache == null || _toggledCacheRoot != avatarRoot)
+            {
+                _toggledCacheRoot = avatarRoot;
+                _toggledCache = AvatarNaNimationOptimizer.CollectToggledRenderers(avatarRoot);
+            }
+            return _toggledCache.ContainsKey(renderer);
+        }
+
+        private static GameObject _toggledCacheRoot;
+        private static Dictionary<Renderer, string> _toggledCache;
 
         /// <summary>
         /// Rebuilds every source mesh's blendshapes on the combined mesh. Each source contributes deltas

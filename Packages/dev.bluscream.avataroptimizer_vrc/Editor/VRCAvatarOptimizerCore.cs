@@ -443,7 +443,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         summary.AddSuccess($"Atlased materials, eliminating {slotsAtlased} material slot(s).");
                 }
 
-                AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f), config.UseNaNimationToggles);
 
                 // Must follow every mesh merge and atlas: those leave bounds and probe anchors wrong.
                 if (config.FixRendererBounds)

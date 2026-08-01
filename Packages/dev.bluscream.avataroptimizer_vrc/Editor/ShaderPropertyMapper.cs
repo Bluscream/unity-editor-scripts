@@ -276,6 +276,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                 }
 
+                EnsureMainTextureFallback(sourceMaterial, targetMaterial, result);
                 result.Success = true;
             }
             catch (Exception e)
@@ -416,6 +417,46 @@ namespace Bluscream.VRCAvatarOptimizer
                 return exactName;
 
             return null;
+        }
+
+        private static readonly string[] MainTextureFallbackProperties = new string[]
+        {
+            "_PoiyomiMainTex",
+            "_MainColorTex",
+            "_BaseMap",
+            "_BaseColorMap",
+            "_DecalTex",
+            "_Decal0Tex",
+            "_Decal1Tex",
+            "_FaceTex",
+            "_EyeTex",
+            "_DetailAlbedoMap",
+            "_DetailTex",
+            "_EmissionMap",
+            "_MainEmissionTex"
+        };
+
+        private static void EnsureMainTextureFallback(Material source, Material target, PropertyTransferResult result)
+        {
+            if (source == null || target == null || !target.HasProperty("_MainTex")) return;
+
+            if (target.GetTexture("_MainTex") != null) return;
+
+            foreach (string prop in MainTextureFallbackProperties)
+            {
+                if (source.HasProperty(prop))
+                {
+                    Texture fallbackTex = source.GetTexture(prop);
+                    if (fallbackTex != null)
+                    {
+                        target.SetTexture("_MainTex", fallbackTex);
+                        Debug.Log($"[ShaderPropertyMapper] Assigned fallback texture '{fallbackTex.name}' from source property '{prop}' to _MainTex on target material '{target.name}'.");
+                        result.TransferredProperties.Add($"{prop} (fallback) → _MainTex");
+                        result.PropertiesTransferred++;
+                        return;
+                    }
+                }
+            }
         }
 
         private static void TransferPropertyValue(
