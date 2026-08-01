@@ -20,6 +20,8 @@ namespace Bluscream.VRCAvatarOptimizer
         private string progressMessage = "";
         private float progressValue = 0f;
         private Vector2 scrollPosition;
+        private bool cachedHasDescriptor = false;
+        private PlatformProfile cachedProfile;
 
         [MenuItem("Bluscream/VRChat/Avatar Optimizer")]
         public static void ShowWindow()
@@ -29,9 +31,17 @@ namespace Bluscream.VRCAvatarOptimizer
             window.Show();
         }
 
+        private System.Diagnostics.Stopwatch guiStopwatch = new System.Diagnostics.Stopwatch();
+
         private void OnEnable()
         {
+            Debug.Log("[VRCAvatarOptimizerWindow] OnEnable called.");
             LoadPreferences();
+        }
+
+        private void OnDisable()
+        {
+            Debug.Log("[VRCAvatarOptimizerWindow] OnDisable called.");
         }
 
         private void LoadPreferences()
@@ -46,19 +56,29 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DuplicateAvatar = EditorPrefs.GetBool("VRCAvatarOptimizer_DuplicateAvatar", true);
             config.AddPlatformSuffixes = EditorPrefs.GetBool("VRCAvatarOptimizer_AddPlatformSuffixes", true);
             config.RemapAnimationsAndVRCFury = EditorPrefs.GetBool("VRCAvatarOptimizer_RemapAnimationsAndVRCFury", true);
+            config.OptimizeFXLayer = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeFXLayer", true);
+            config.UseNaNimationToggles = EditorPrefs.GetBool("VRCAvatarOptimizer_UseNaNimationToggles", true);
+            config.BakeNonAnimatedBlendshapes = EditorPrefs.GetBool("VRCAvatarOptimizer_BakeNonAnimatedBlendshapes", true);
+            config.KeepMMDBlendshapes = EditorPrefs.GetBool("VRCAvatarOptimizer_KeepMMDBlendshapes", true);
+            config.DeleteUnusedGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteUnusedGameObjects", true);
+            config.MergeSiblingPhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_MergeSiblingPhysBones", true);
+            config.CleanExpressionParametersWhenOverBudget = EditorPrefs.GetBool("VRCAvatarOptimizer_CleanExpressionParametersWhenOverBudget", true);
+            config.ForceCleanExpressionParameters = EditorPrefs.GetBool("VRCAvatarOptimizer_ForceCleanExpressionParameters", false);
             config.ReplaceShaders = EditorPrefs.GetBool("VRCAvatarOptimizer_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
-            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", false);
+            config.RemoveIncompatibleComponents = EditorPrefs.GetBool("VRCAvatarOptimizer_RemoveIncompatibleComponents", true);
             config.SkipDryRunBundleBuild = EditorPrefs.GetBool("VRCAvatarOptimizer_SkipDryRunBundleBuild", false);
             config.MaxSizeConvergenceAttempts = EditorPrefs.GetInt("VRCAvatarOptimizer_MaxSizeConvergenceAttempts", 3);
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
+            cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
         }
 
         private void SavePreferences()
         {
+            Debug.Log("[VRCAvatarOptimizerWindow] SavePreferences called.");
             EditorPrefs.SetInt("VRCAvatarOptimizer_Platform", (int)config.Platform);
             EditorPrefs.SetInt("VRCAvatarOptimizer_TargetRank", (int)config.TargetRank);
             EditorPrefs.SetInt("VRCAvatarOptimizer_PlacementLocation", (int)config.PlacementLocation);
@@ -66,6 +86,14 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DuplicateAvatar", config.DuplicateAvatar);
             EditorPrefs.SetBool("VRCAvatarOptimizer_AddPlatformSuffixes", config.AddPlatformSuffixes);
             EditorPrefs.SetBool("VRCAvatarOptimizer_RemapAnimationsAndVRCFury", config.RemapAnimationsAndVRCFury);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeFXLayer", config.OptimizeFXLayer);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_UseNaNimationToggles", config.UseNaNimationToggles);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_BakeNonAnimatedBlendshapes", config.BakeNonAnimatedBlendshapes);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_KeepMMDBlendshapes", config.KeepMMDBlendshapes);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteUnusedGameObjects", config.DeleteUnusedGameObjects);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_MergeSiblingPhysBones", config.MergeSiblingPhysBones);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_CleanExpressionParametersWhenOverBudget", config.CleanExpressionParametersWhenOverBudget);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_ForceCleanExpressionParameters", config.ForceCleanExpressionParameters);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
@@ -79,12 +107,19 @@ namespace Bluscream.VRCAvatarOptimizer
 
         private void OnGUI()
         {
+            guiStopwatch.Restart();
+            EventType currentEventType = Event.current != null ? Event.current.type : EventType.Ignore;
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
 
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Avatar Optimizer (VRChat)", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Optimize VRChat avatars for target platforms (PC & Android) according to SDK performance rank limits. Automatically duplicates materials, remaps VRCFury toggles & material swaps, optimizes texture memory budgets, decimates meshes, and prunes PhysBones to hit target performance ranks.", MessageType.Info);
             EditorGUILayout.Space(10);
+
+            long tHeader = sw.ElapsedMilliseconds;
 
             // Avatar Root Selection
             EditorGUILayout.LabelField("1. Avatar Root Selection", EditorStyles.boldLabel);
@@ -102,18 +137,20 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (newRoot != avatarRoot)
                 {
                     avatarRoot = newRoot;
-                    UpdateStats();
+                    cachedHasDescriptor = HasAvatarDescriptor(avatarRoot);
                 }
                 if (GUILayout.Button("Clear", GUILayout.Width(60)))
                 {
                     avatarRoot = null;
-                    currentStats = null;
+                    cachedHasDescriptor = false;
                 }
                 EditorGUILayout.EndHorizontal();
             }
             
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
+
+            long tSelection = sw.ElapsedMilliseconds - tHeader;
 
             // Target Performance Level & Options
             EditorGUILayout.LabelField("2. Conversion Preferences", EditorStyles.boldLabel);
@@ -128,7 +165,10 @@ namespace Bluscream.VRCAvatarOptimizer
             config.Platform = (TargetPlatform)EditorGUILayout.EnumPopup("Target Platform", config.Platform);
             config.TargetRank = (AvatarPerformanceRank)EditorGUILayout.EnumPopup("Target Performance Rank", config.TargetRank);
 
-            PlatformProfile currentProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
+            if (cachedProfile == null)
+            {
+                cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
+            }
 
             EditorGUILayout.Space(5);
             config.DuplicateAvatar = EditorGUILayout.ToggleLeft("Duplicate Avatar GameObject", config.DuplicateAvatar);
@@ -168,21 +208,43 @@ namespace Bluscream.VRCAvatarOptimizer
 
             EditorGUILayout.Space(5);
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);
+            config.OptimizeFXLayer = EditorGUILayout.ToggleLeft("Optimize FX Layer (Direct Blend Tree combining)", config.OptimizeFXLayer);
+            config.UseNaNimationToggles = EditorGUILayout.ToggleLeft("Use NaNimation Toggles for Skinned Meshes", config.UseNaNimationToggles);
+            config.BakeNonAnimatedBlendshapes = EditorGUILayout.ToggleLeft("Bake Non-Animated Blendshapes", config.BakeNonAnimatedBlendshapes);
+            if (config.BakeNonAnimatedBlendshapes)
+            {
+                EditorGUI.indentLevel++;
+                config.KeepMMDBlendshapes = EditorGUILayout.ToggleLeft("Protect MMD & Viseme Facial Blendshapes", config.KeepMMDBlendshapes);
+                EditorGUI.indentLevel--;
+            }
+            config.DeleteUnusedGameObjects = EditorGUILayout.ToggleLeft("Delete Unused & Unweighted GameObjects", config.DeleteUnusedGameObjects);
+
+            config.CleanExpressionParametersWhenOverBudget = EditorGUILayout.ToggleLeft("Clean Expression Parameters When Over Budget", config.CleanExpressionParametersWhenOverBudget);
+            if (config.CleanExpressionParametersWhenOverBudget)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("Only acts when the avatar exceeds VRChat's 256-bit synced parameter budget, and only removes parameters nothing references. Stops as soon as the avatar is back under the cap; parameters still in use are never deleted.", MessageType.None);
+                config.ForceCleanExpressionParameters = EditorGUILayout.ToggleLeft("Always Clean (even when under budget)", config.ForceCleanExpressionParameters);
+                if (config.ForceCleanExpressionParameters)
+                    EditorGUILayout.HelpBox("Dead parameters will be removed even when the avatar already fits. Parameters driven only by external tooling (VRCFury, Modular Avatar, OSC) can look unused to static analysis — verify your menus after enabling this.", MessageType.Warning);
+                EditorGUI.indentLevel--;
+            }
             config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
             config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
             if (config.OptimizeTextures)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.HelpBox(
-                    $"Fully automatic. Resolution, format (ASTC block size), and crunch are chosen per texture to land just under the {currentProfile.Rank} limits: " +
-                    $"{currentProfile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB VRAM" +
-                    (currentProfile.MaxAssetBundleSizeBytes == long.MaxValue ? "" : $" and {currentProfile.MaxAssetBundleSizeBytes / (1024.0 * 1024.0):F0} MB bundle") +
-                    ". Large atlases keep their resolution and absorb the budget through stronger compression; the real bundle size is measured and the allocation corrected until it fits.",
-                    MessageType.None
-                );
+                EditorGUILayout.HelpBox("Automatically optimizes resolution, format, and compression per texture to hit VRAM and AssetBundle budget caps.", MessageType.None);
                 EditorGUI.indentLevel--;
             }
 
+            config.MergeSiblingPhysBones = EditorGUILayout.ToggleLeft("Merge Sibling PhysBone Chains", config.MergeSiblingPhysBones);
+            if (config.MergeSiblingPhysBones)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("Collapses sibling PhysBones with identical settings into one component rooted at their shared parent (using Ignore Transforms), costing 1 extra affected transform per merge. Runs before pruning so chains are consolidated rather than deleted.", MessageType.None);
+                EditorGUI.indentLevel--;
+            }
             config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
             config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components (SDK Auto Fix can do this)", config.RemoveIncompatibleComponents);
@@ -220,32 +282,26 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (EditorGUI.EndChangeCheck())
             {
+                cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
                 SavePreferences();
             }
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
 
-            // The conversion runs synchronously with a modal progress bar, so no in-window
-            // progress section is needed.
+            long tPrefs = sw.ElapsedMilliseconds - tHeader - tSelection;
 
             // Avatar Descriptor validation
-            bool hasDescriptor = avatarRoot != null && HasAvatarDescriptor(avatarRoot);
-            if (avatarRoot != null && !hasDescriptor)
+            if (avatarRoot != null && !cachedHasDescriptor)
             {
                 EditorGUILayout.HelpBox($"'{avatarRoot.name}' has no VRC Avatar Descriptor component. Select the avatar root GameObject.", MessageType.Error);
             }
 
             // Action Button
-            EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null || !hasDescriptor);
+            EditorGUI.BeginDisabledGroup(isConverting || avatarRoot == null || !cachedHasDescriptor);
 
             if (GUILayout.Button($"Optimize Avatar for {config.Platform}", GUILayout.Height(38)))
             {
-                // Run outside OnGUI: modal dialogs/progress bars during the layout pass corrupt
-                // IMGUI layout state ("EndLayoutGroup: BeginLayoutGroup must be called first").
-                // isConverting is NOT set here: a domain reload between queuing and running would drop
-                // the callback and leave the flag stuck on, disabling the button and forcing this
-                // window to Repaint() every frame forever. StartConversion sets it instead.
                 EditorApplication.delayCall += StartConversion;
             }
 
@@ -253,24 +309,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             EditorGUILayout.Space(10);
 
-            // Active Profile Limits Display Box (placed below button for clean layout)
-            DrawProfileLimitsBox(currentProfile);
-            EditorGUILayout.Space(10);
-
-            // Current Avatar Rating Estimate
-            if (avatarRoot != null && currentStats != null)
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.HelpBox(
-                    $"Current Avatar Rating Estimate: {currentStats.RatingName}\n" +
-                    $"• Poly Count: {currentStats.TriangleCount:N0} tris\n" +
-                    $"• Material Slots: {currentStats.MaterialSlotCount}\n" +
-                    $"• PhysBones: {currentStats.PhysBoneComponentCount} components ({currentStats.PhysBoneTransformCount} transforms)",
-                    MessageType.None
-                );
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(10);
-            }
+            long tButton = sw.ElapsedMilliseconds - tHeader - tSelection - tPrefs;
 
             // Summary Results
             if (summary != null)
@@ -280,9 +319,11 @@ namespace Bluscream.VRCAvatarOptimizer
 
             EditorGUILayout.EndScrollView();
 
-            if (isConverting)
+            sw.Stop();
+            long totalMs = sw.ElapsedMilliseconds;
+            if (totalMs > 2)
             {
-                Repaint();
+                Debug.LogWarning($"[VRCAvatarOptimizerWindow] OnGUI ({currentEventType}) Total: {totalMs} ms | Header: {tHeader} ms | Selection: {tSelection} ms | Prefs: {tPrefs} ms | Button: {tButton} ms | Summary/End: {totalMs - tHeader - tSelection - tPrefs - tButton} ms");
             }
         }
 
@@ -308,7 +349,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         if (candidate != null)
                         {
                             avatarRoot = candidate;
-                            UpdateStats();
+                            cachedHasDescriptor = HasAvatarDescriptor(avatarRoot);
                         }
                     }
 
@@ -328,32 +369,9 @@ namespace Bluscream.VRCAvatarOptimizer
             }
         }
 
-        /// <summary>
-        /// Renders a helpbox summarizing all active target profile limits.
-        /// </summary>
-        private static void DrawProfileLimitsBox(PlatformProfile profile)
-        {
-            if (profile == null) return;
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField($"Active Target Profile: {profile.Platform} [{profile.Rank}]", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(profile.ToString(), MessageType.None);
-            EditorGUILayout.EndVertical();
-        }
-
-        /// <summary>
-        /// Checks for a VRC Avatar Descriptor by type name so this window has no hard SDK dependency.
-        /// </summary>
         private static bool HasAvatarDescriptor(GameObject go)
         {
             return go != null && go.GetComponents<Component>().Any(c => c != null && c.GetType().Name.Contains("AvatarDescriptor"));
-        }
-
-        private void UpdateStats()
-        {
-            if (avatarRoot != null)
-            {
-                currentStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
-            }
         }
 
         private System.Diagnostics.Stopwatch conversionStopwatch = new System.Diagnostics.Stopwatch();

@@ -40,6 +40,19 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool OptimizeTextures = true;
             public bool DecimateMeshes = true;
             public bool RemapAnimationsAndVRCFury = true;
+            public bool OptimizeFXLayer = true;
+            public bool UseNaNimationToggles = true;
+            public bool BakeNonAnimatedBlendshapes = true;
+            public bool KeepMMDBlendshapes = true;
+            public bool DeleteUnusedGameObjects = true;
+            // Collapses sibling PhysBone chains into one component rooted at their shared parent, trading
+            // 1 extra affected transform for N-1 components. Runs before pruning so motion is kept where possible.
+            public bool MergeSiblingPhysBones = true;
+            // Expression parameters are left alone unless the avatar actually exceeds VRChat's synced
+            // parameter budget — a parameter that looks unused here may still be driven by external tooling.
+            public bool CleanExpressionParametersWhenOverBudget = true;
+            // Opt-in: clean dead parameters even when the avatar already fits the budget.
+            public bool ForceCleanExpressionParameters = false;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
             public bool ClearEditorLogBeforeConversion = false;
@@ -175,6 +188,16 @@ namespace Bluscream.VRCAvatarOptimizer
 
             Debug.Log($"[VRCAvatarOptimizerCore] Profile limits — Platform: {profile.Platform}, Rank: {profile.Rank}, Tris: {(profile.MaxTriangles == int.MaxValue ? "Unlimited" : profile.MaxTriangles.ToString("N0"))}, TexMem: {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F0} MB, PhysBones: {profile.MaxPhysBoneComponents}, Colliders: {profile.MaxPhysBoneColliders}, CollisionChecks: {profile.MaxPhysBoneCollisionChecks}");
 
+            var sceneRootSnapshot = avatarRoot != null && avatarRoot.scene.isLoaded
+                ? new HashSet<GameObject>(avatarRoot.scene.GetRootGameObjects())
+                : new HashSet<GameObject>();
+
+            var overallSw = System.Diagnostics.Stopwatch.StartNew();
+            var stepSw = System.Diagnostics.Stopwatch.StartNew();
+
+            double tStep1 = 0, tStep2 = 0, tStep3 = 0, tStep4 = 0, tStep5 = 0;
+            double tStep6 = 0, tStep7 = 0, tStep75 = 0, tStep8 = 0, tStep85 = 0;
+
             try
             {
                 // Step 1: Duplicate Avatar GameObject & Manage Platform Suffixes / Active State
@@ -198,27 +221,36 @@ namespace Bluscream.VRCAvatarOptimizer
                         }
                     }
 
-                    if (config.AddPlatformSuffixes)
-                    {
-                        Undo.RecordObject(avatarRoot, "Rename Original Avatar");
-                        avatarRoot.name = cleanName + (config.Platform == TargetPlatform.PC ? " (Original)" : " (PC)");
-                    }
-
-                    Undo.RecordObject(avatarRoot, "Disable Original Avatar");
-                    avatarRoot.SetActive(false);
-
+                    // Instantiate target clone directly from source avatar
                     targetAvatar = UnityEngine.Object.Instantiate(avatarRoot, avatarRoot.transform.parent);
                     targetAvatar.name = expectedTargetName;
                     targetAvatar.SetActive(true);
 
+                    // Unpack prefab completely if targetAvatar is part of any prefab instance
+                    if (PrefabUtility.IsPartOfAnyPrefab(targetAvatar))
+                    {
+                        Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Unpacking prefab instance for target avatar clone '{targetAvatar.name}'...");
+                        PrefabUtility.UnpackPrefabInstance(targetAvatar, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                    }
+
+                    // Ensure target avatar has exactly ONE VRCAvatarDescriptor on root and zero duplicates
+                    SanitizeAvatarDescriptors(targetAvatar);
+
+                    // Disable original avatar in scene so it does not overlap with the target clone
+                    Undo.RecordObject(avatarRoot, "Disable Original Avatar");
+                    avatarRoot.SetActive(false);
+
                     Undo.RegisterCreatedObjectUndo(targetAvatar, "Create Avatar Clone");
-                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Created clone: '{targetAvatar.name}'");
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Created isolated clone: '{targetAvatar.name}'");
                     summary.AddSuccess($"Created Avatar clone: {targetAvatar.name}", targetAvatar);
                 }
                 else
                 {
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Skipped duplication — editing '{targetAvatar.name}' in-place.");
                 }
+                tStep1 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Completed in {tStep1:F2}s.");
+                stepSw.Restart();
 
                 // Step 2: Remove Platform-Incompatible Components
                 if (config.RemoveIncompatibleComponents)
@@ -247,6 +279,9 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 2] Skipped incompatible component removal (disabled in config).");
                 }
+                tStep2 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 2] Completed in {tStep2:F2}s.");
+                stepSw.Restart();
 
                 // Step 3: Duplicate Materials & Remap Shaders
                 Dictionary<Material, Material> materialMap = new Dictionary<Material, Material>();
@@ -261,6 +296,9 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 3] Skipped material/shader replacement (disabled in config).");
                 }
+                tStep3 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 3] Completed in {tStep3:F2}s.");
+                stepSw.Restart();
 
                 // Step 4: Remap AnimatorControllers, AnimationClips, and VRCFury Components
                 if (config.RemapAnimationsAndVRCFury && materialMap.Count > 0)
@@ -275,6 +313,18 @@ namespace Bluscream.VRCAvatarOptimizer
                     );
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Animation rewrite complete.");
                 }
+
+                // Step 4.5: FX Layer Optimization (Direct Blend Tree combining & layer cleanup)
+                if (config.OptimizeFXLayer)
+                {
+                    progressCallback?.Invoke("Optimizing FX Animator Controller (Direct Blend Tree combining)...", 0.60f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 4.5] Optimizing FX layer animator controllers for '{targetAvatar.name}'...");
+                    AvatarAnimatorOptimizer.OptimizeAnimatorControllers(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.60f));
+                }
+
+                tStep4 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 4] Completed in {tStep4:F2}s.");
+                stepSw.Restart();
 
                 // Step 5: Texture budget allocation (VRAM + estimated bundle share).
                 // Budgets come straight from the profile's hard caps minus a small safety fraction —
@@ -304,6 +354,20 @@ namespace Bluscream.VRCAvatarOptimizer
                     if (!textureResult.VramBudgetMet)
                         summary.AddWarning($"Texture VRAM ({textureResult.EstimatedVramBytes / (1024.0 * 1024.0):F1} MB) still exceeds the budget after maximum compression — reduce texture count or resolution.");
                 }
+                tStep5 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 5] Completed in {tStep5:F2}s.");
+                stepSw.Restart();
+
+                // Step 5.5: PhysBone Consolidation — merge sibling chains before destroying any of them
+                if (config.MergeSiblingPhysBones)
+                {
+                    progressCallback?.Invoke("Merging sibling PhysBone chains...", 0.84f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5.5] Merging sibling PhysBones — target: ≤{profile.MaxPhysBoneComponents} components, ≤{profile.MaxPhysBoneTransforms} affected transforms.");
+                    int merged = AvatarPhysBoneMerger.MergePhysBones(targetAvatar, profile, (msg) => progressCallback?.Invoke(msg, 0.84f));
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 5.5] PhysBone merging complete: {merged} component(s) eliminated.");
+                    if (merged > 0)
+                        summary.AddSuccess($"Merged sibling PhysBone chains, eliminating {merged} component(s) without losing motion.");
+                }
 
                 // Step 6: PhysBone Budget Pruner
                 if (config.PruningStrategy != PhysBonePruningStrategy.Disabled)
@@ -314,6 +378,18 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 6] PhysBone pruning complete: {pruned} component(s)/collider(s) removed.");
                     summary.AddSuccess($"Pruned {pruned} PhysBone components/colliders to comply with rank '{profile.Rank}'.");
                 }
+
+                // Step 6.5: Non-Animated Blendshape Baking & Stripping
+                if (config.BakeNonAnimatedBlendshapes)
+                {
+                    progressCallback?.Invoke("Baking non-animated blendshapes...", 0.88f);
+                    Debug.Log($"[VRCAvatarOptimizerCore] [Step 6.5] Baking non-animated blendshapes for '{targetAvatar.name}'...");
+                    AvatarBlendShapeOptimizer.OptimizeBlendShapes(targetAvatar, config.KeepMMDBlendshapes, (msg) => progressCallback?.Invoke(msg, 0.88f));
+                }
+
+                tStep6 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 6] Completed in {tStep6:F2}s.");
+                stepSw.Restart();
 
                 // Step 7: Mesh Decimation to hit Target Poly Count Limit
                 if (config.DecimateMeshes)
@@ -329,17 +405,46 @@ namespace Bluscream.VRCAvatarOptimizer
                     Debug.Log($"[VRCAvatarOptimizerCore] [Step 7] Decimation complete. Final triangle count: {finalTris:N0} (target was {triLimitStr}).");
                     summary.AddSuccess($"Mesh decimation complete. Final triangle count: {finalTris:N0} (Target: {triLimitStr}).");
                 }
+                tStep7 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 7] Completed in {tStep7:F2}s.");
+                stepSw.Restart();
 
-                // Step 7.5: Material Slot Consolidation & Mesh Count Optimization
-                progressCallback?.Invoke("Consolidating material slots and mesh count...", 0.94f);
+                // Step 7.5: Material Slot Consolidation, Mesh Count Optimization, Light Limiting & Unused GameObject Pruning
+                progressCallback?.Invoke("Consolidating material slots, mesh counts & dynamic lights...", 0.94f);
                 string meshAssetDir = GetPlacementFolder(targetAvatar.name, config.PlacementLocation);
                 AvatarMaterialSlotOptimizer.OptimizeMaterialSlots(targetAvatar, profile.MaxMaterialSlots, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
                 AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                AvatarLightOptimizer.OptimizeLights(targetAvatar, profile.MaxLights, (msg) => progressCallback?.Invoke(msg, 0.94f));
+
+                if (config.DeleteUnusedGameObjects)
+                {
+                    AvatarComponentRemover.DeleteUnusedGameObjects(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                }
+
+                // Runs last of the hierarchy passes: object/component removal above is what orphans parameters.
+                // The pass self-gates — it does nothing unless the avatar is over the synced parameter budget.
+                if (config.CleanExpressionParametersWhenOverBudget || config.ForceCleanExpressionParameters)
+                {
+                    int paramsRemoved = AvatarExpressionParameterCleaner.CleanExpressionParameters(
+                        targetAvatar,
+                        meshAssetDir,
+                        config.ForceCleanExpressionParameters,
+                        (msg) => progressCallback?.Invoke(msg, 0.94f));
+                    if (paramsRemoved > 0)
+                        summary.AddSuccess($"Removed {paramsRemoved} unreferenced expression parameter(s) to fit the synced parameter budget.");
+                }
+
+                tStep75 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 7.5] Completed in {tStep75:F2}s.");
+                stepSw.Restart();
 
                 // Step 8: Platform-Specific Profile Conversions & Rule Validation
                 progressCallback?.Invoke("Executing platform-specific profile conversions & validation...", 0.95f);
                 profile.ExecutePlatformConversions(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.95f));
                 profile.ValidatePlatformRules(targetAvatar, summary);
+                tStep8 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8] Completed in {tStep8:F2}s.");
+                stepSw.Restart();
 
                 // Step 8.5: Fast Math Iterative AssetBundle Verification & Smart Quality Ladder
                 if (config.SkipDryRunBundleBuild)
@@ -472,6 +577,19 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
                 finally
                 {
+                    if (!string.IsNullOrEmpty(bundlePath) && File.Exists(bundlePath))
+                    {
+                        try
+                        {
+                            File.Delete(bundlePath);
+                            Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Deleted temporary dry-run AssetBundle file '{bundlePath}'.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[VRCAvatarOptimizerCore] [Step 8.5] Could not delete temp bundle file '{bundlePath}': {ex.Message}");
+                        }
+                    }
+
                     if (tempRemove)
                     {
                         Undo.RevertAllDownToGroup(tempRemoveUndoGroup);
@@ -497,22 +615,42 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                 }
                 } // end Step 8.5 (dry-run bundle verification)
+                tStep85 = stepSw.Elapsed.TotalSeconds;
+                Debug.Log($"[VRCAvatarOptimizerCore] [Step 8.5] Completed in {tStep85:F2}s.");
+
+                // Final sanity check: ensure targetAvatar hierarchy has exactly ONE VRCAvatarDescriptor on root
+                SanitizeAvatarDescriptors(targetAvatar);
+
+                overallSw.Stop();
 
                 AvatarSDKEvaluator.AvatarStats stats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
                 summary.FinalStats = stats;
 
                 Debug.Log($"<color=cyan><b>================================================================================</b></color>");
                 Debug.Log($"<color=cyan><b>[VRCAvatarOptimizerCore] BEFORE Conversion Report for '{avatarRoot.name}':</b></color>");
-                AvatarSDKEvaluator.PrintSDKAlertsToConsole(avatarRoot, summary.InitialStats);
+                AvatarSDKEvaluator.PrintSDKAlertsToConsole(avatarRoot, summary.InitialStats, profile.MaxTriangles, profile.MaxMaterialSlots);
 
                 Debug.Log($"<color=cyan><b>================================================================================</b></color>");
                 Debug.Log($"<color=cyan><b>[VRCAvatarOptimizerCore] AFTER Conversion Report for '{targetAvatar.name}':</b></color>");
-                AvatarSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats);
+                AvatarSDKEvaluator.PrintSDKAlertsToConsole(targetAvatar, stats, profile.MaxTriangles, profile.MaxMaterialSlots);
 
                 summary.PrintConsoleSummary(targetAvatar.name, profile);
 
+                Debug.Log($"<color=cyan><b>[VRCAvatarOptimizerCore] Step Execution Timing Breakdown for '{targetAvatar.name}':</b></color>");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 1 (Duplicate Avatar):       {tStep1:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 2 (Remove Incompatible):    {tStep2:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 3 (Material/Shader Remap):  {tStep3:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 4 (Animation/VRCFury Rewrite): {tStep4:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 5 (Texture Budget Alloc):   {tStep5:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 6 (PhysBone Pruning):       {tStep6:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 7 (Mesh Decimation):        {tStep7:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 7.5 (Mesh/Mat/Light Consolidation): {tStep75:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 8 (Platform Rules):         {tStep8:F2}s");
+                Debug.Log($"[VRCAvatarOptimizerCore]   • Step 8.5 (AssetBundle Dry-Run):   {tStep85:F2}s");
+                Debug.Log($"<color=cyan><b>[VRCAvatarOptimizerCore]   • TOTAL EXECUTION TIME:             {overallSw.Elapsed.TotalSeconds:F2}s</b></color>");
+
                 string bundleStr = summary.CompressedAvatarSizeBytes > 0 ? $" ({summary.CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB Compressed Avatar)" : "";
-                Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed =====");
+                Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed in {overallSw.Elapsed.TotalSeconds:F2}s =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
 
             }
@@ -528,6 +666,18 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             finally
             {
+                if (avatarRoot != null && avatarRoot.scene.isLoaded)
+                {
+                    foreach (var rootGo in avatarRoot.scene.GetRootGameObjects())
+                    {
+                        if (rootGo != null && rootGo != targetAvatar && rootGo != avatarRoot && !sceneRootSnapshot.Contains(rootGo))
+                        {
+                            Debug.Log($"[VRCAvatarOptimizerCore] Cleaning up generated scene-root object '{rootGo.name}'.");
+                            UnityEngine.Object.DestroyImmediate(rootGo);
+                        }
+                    }
+                }
+
                 // One Ctrl+Z reverts all scene changes of this conversion
                 Undo.CollapseUndoOperations(undoGroup);
             }
@@ -570,6 +720,36 @@ namespace Bluscream.VRCAvatarOptimizer
                 return "Assets/_AVATAROPTIMIZER/" + targetAvatarName;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Ensures the avatar hierarchy contains exactly ONE VRCAvatarDescriptor component on the avatar root
+        /// and destroys any duplicate descriptors on root or child GameObjects.
+        /// </summary>
+        public static void SanitizeAvatarDescriptors(GameObject avatar)
+        {
+            if (avatar == null) return;
+
+            Component[] descriptors = avatar.GetComponentsInChildren<Component>(true)
+                .Where(c => c != null && c.GetType().Name.Equals("VRCAvatarDescriptor", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (descriptors.Length <= 1) return;
+
+            Debug.LogWarning($"[VRCAvatarOptimizerCore] Found {descriptors.Length} VRCAvatarDescriptor components in '{avatar.name}' hierarchy. Cleaning up duplicates...");
+
+            // Prefer keeping the descriptor attached directly to the avatar root GameObject
+            Component rootDescriptor = descriptors.FirstOrDefault(c => c.gameObject == avatar) ?? descriptors[0];
+
+            for (int i = 0; i < descriptors.Length; i++)
+            {
+                Component d = descriptors[i];
+                if (d != null && d != rootDescriptor)
+                {
+                    Debug.Log($"[VRCAvatarOptimizerCore] Destroying duplicate VRCAvatarDescriptor on '{d.gameObject.name}'.");
+                    Undo.DestroyObjectImmediate(d);
+                }
+            }
         }
 
         public static void SwitchBuildTargetIfNeeded(TargetPlatform targetPlatform)
@@ -676,9 +856,11 @@ namespace Bluscream.VRCAvatarOptimizer
                     questMat = DuplicateMaterial(srcMat, config.PlacementLocation == AssetPlacementLocation.SameFolderAsOriginal, avatarRoot.name, profile.PlatformSuffix);
                     if (questMat != null)
                     {
-                        // ReplaceShaderOnMaterial may re-create the asset (Material Variant conversion),
-                        // so store the material it returns — not the possibly-destroyed input reference.
-                        questMat = ReplaceShaderOnMaterial(srcMat, questMat, summary);
+                        // ReplaceShaderOnMaterial swaps shaders to VRChat/Mobile/* shaders — execute ONLY on Mobile targets (Android / iOS)
+                        if (config.Platform != TargetPlatform.PC)
+                        {
+                            questMat = ReplaceShaderOnMaterial(srcMat, questMat, summary);
+                        }
                         materialMap[srcMat] = questMat;
                     }
                     else
