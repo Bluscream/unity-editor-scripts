@@ -78,6 +78,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DeletePlacementLocationBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", false);
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
+            config.VerifySourceUntouched = EditorPrefs.GetBool("VRCAvatarOptimizer_VerifySourceUntouched", true);
             cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
         }
 
@@ -113,6 +114,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeletePlacementLocationBeforeConversion", config.DeletePlacementLocationBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_VerifySourceUntouched", config.VerifySourceUntouched);
         }
 
         private void OnGUI()
@@ -218,6 +220,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
             EditorGUILayout.Space(5);
             OptimizerLog.Level = (OptimizerLogLevel)EditorGUILayout.EnumPopup("Log Verbosity", OptimizerLog.Level);
+            config.VerifySourceUntouched = EditorGUILayout.ToggleLeft("Verify Source Avatar Untouched", config.VerifySourceUntouched);
+            if (config.VerifySourceUntouched)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox(
+                    "Fingerprints the source avatar's hierarchy and every asset it references (contents and importer settings) before the run, then re-checks them afterwards. Any pass that edits an original instead of its clone is reported as an error. Rig hygiene edits to the shared model importer are expected and reported as information.",
+                    MessageType.None);
+                EditorGUI.indentLevel--;
+            }
             OptimizerLog.ValidateMeshes = EditorGUILayout.ToggleLeft("Validate Generated Meshes", OptimizerLog.ValidateMeshes);
             if (OptimizerLog.ValidateMeshes)
             {

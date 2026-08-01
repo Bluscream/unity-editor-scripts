@@ -66,6 +66,9 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
             public bool ClearEditorLogBeforeConversion = false;
+            // Fingerprints the source avatar and its assets before the run and re-checks them after, so a
+            // pass that edits an original instead of its clone is caught rather than silently shipping.
+            public bool VerifySourceUntouched = true;
         }
 
         /// <summary>
@@ -193,6 +196,13 @@ namespace Bluscream.VRCAvatarOptimizer
                     AssetDatabase.DeleteAsset(folderPath);
                     AssetDatabase.Refresh();
                 }
+            }
+
+            // Captured before anything runs, so the comparison covers the whole conversion.
+            SourceIntegrityGuard.Snapshot sourceSnapshot = null;
+            if (config.VerifySourceUntouched)
+            {
+                sourceSnapshot = SourceIntegrityGuard.Capture(avatarRoot, (msg) => progressCallback?.Invoke(msg, 0.02f));
             }
 
             summary.InitialStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
@@ -711,6 +721,21 @@ namespace Bluscream.VRCAvatarOptimizer
                 Debug.Log($"[VRCAvatarOptimizerCore]   • Step 8 (Platform Rules):         {tStep8:F2}s");
                 Debug.Log($"[VRCAvatarOptimizerCore]   • Step 8.5 (AssetBundle Dry-Run):   {tStep85:F2}s");
                 Debug.Log($"<color=cyan><b>[VRCAvatarOptimizerCore]   • TOTAL EXECUTION TIME:             {overallSw.Elapsed.TotalSeconds:F2}s</b></color>");
+
+                // Runs after everything, including the Step 8.5 dry-run builds and their component
+                // strip/restore, so it covers the entire conversion rather than a prefix of it.
+                if (sourceSnapshot != null)
+                {
+                    progressCallback?.Invoke("Verifying the source avatar was left untouched...", 0.995f);
+
+                    // Rig hygiene deliberately rewrites the shared model importer; those paths are the
+                    // only sanctioned source-side edits.
+                    IEnumerable<string> expected = (config.UnmapJawBone || config.EnableLegacyBlendShapeNormals)
+                        ? SourceIntegrityGuard.CollectModelImporterPaths(avatarRoot)
+                        : null;
+
+                    SourceIntegrityGuard.Verify(avatarRoot, sourceSnapshot, summary, expected);
+                }
 
                 string bundleStr = summary.CompressedAvatarSizeBytes > 0 ? $" ({summary.CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB Compressed Avatar)" : "";
                 Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed in {overallSw.Elapsed.TotalSeconds:F2}s =====");
