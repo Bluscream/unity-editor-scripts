@@ -64,6 +64,11 @@ namespace Bluscream.VRCAvatarOptimizer
             config.MergeSiblingPhysBones = EditorPrefs.GetBool("VRCAvatarOptimizer_MergeSiblingPhysBones", true);
             config.CleanExpressionParametersWhenOverBudget = EditorPrefs.GetBool("VRCAvatarOptimizer_CleanExpressionParametersWhenOverBudget", true);
             config.ForceCleanExpressionParameters = EditorPrefs.GetBool("VRCAvatarOptimizer_ForceCleanExpressionParameters", false);
+            config.FixRendererBounds = EditorPrefs.GetBool("VRCAvatarOptimizer_FixRendererBounds", true);
+            config.AnchorProbesToHips = EditorPrefs.GetBool("VRCAvatarOptimizer_AnchorProbesToHips", true);
+            config.AtlasMaterials = EditorPrefs.GetBool("VRCAvatarOptimizer_AtlasMaterials", false);
+            config.UnmapJawBone = EditorPrefs.GetBool("VRCAvatarOptimizer_UnmapJawBone", false);
+            config.EnableLegacyBlendShapeNormals = EditorPrefs.GetBool("VRCAvatarOptimizer_EnableLegacyBlendShapeNormals", false);
             config.ReplaceShaders = EditorPrefs.GetBool("VRCAvatarOptimizer_ReplaceShaders", true);
             config.OptimizeTextures = EditorPrefs.GetBool("VRCAvatarOptimizer_OptimizeTextures", true);
             config.DecimateMeshes = EditorPrefs.GetBool("VRCAvatarOptimizer_DecimateMeshes", true);
@@ -94,6 +99,11 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_MergeSiblingPhysBones", config.MergeSiblingPhysBones);
             EditorPrefs.SetBool("VRCAvatarOptimizer_CleanExpressionParametersWhenOverBudget", config.CleanExpressionParametersWhenOverBudget);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ForceCleanExpressionParameters", config.ForceCleanExpressionParameters);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_FixRendererBounds", config.FixRendererBounds);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_AnchorProbesToHips", config.AnchorProbesToHips);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_AtlasMaterials", config.AtlasMaterials);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_UnmapJawBone", config.UnmapJawBone);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_EnableLegacyBlendShapeNormals", config.EnableLegacyBlendShapeNormals);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ReplaceShaders", config.ReplaceShaders);
             EditorPrefs.SetBool("VRCAvatarOptimizer_OptimizeTextures", config.OptimizeTextures);
             EditorPrefs.SetBool("VRCAvatarOptimizer_DecimateMeshes", config.DecimateMeshes);
@@ -229,6 +239,27 @@ namespace Bluscream.VRCAvatarOptimizer
                     EditorGUILayout.HelpBox("Dead parameters will be removed even when the avatar already fits. Parameters driven only by external tooling (VRCFury, Modular Avatar, OSC) can look unused to static analysis — verify your menus after enabling this.", MessageType.Warning);
                 EditorGUI.indentLevel--;
             }
+            config.FixRendererBounds = EditorGUILayout.ToggleLeft("Fix Renderer Bounds & Probe Anchors", config.FixRendererBounds);
+            if (config.FixRendererBounds)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("Recalculates SkinnedMeshRenderer bounds after merging/atlasing, which otherwise leaves them too tight and makes the avatar cull incorrectly. Recommended.", MessageType.None);
+                config.AnchorProbesToHips = EditorGUILayout.ToggleLeft("Anchor Light Probes to Hips", config.AnchorProbesToHips);
+                EditorGUI.indentLevel--;
+            }
+
+            config.AtlasMaterials = EditorGUILayout.ToggleLeft("Atlas Materials into Shared Textures (experimental)", config.AtlasMaterials);
+            if (config.AtlasMaterials)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox(
+                    "Packs compatible materials' textures into one atlas and rewrites mesh UVs — the only way below a material slot limit that deduplication cannot reach. " +
+                    "Only groups that are provably safe are atlased: identical shader/queue/keywords, identical non-texture properties, UVs inside [0,1], and no vertices shared between submeshes. Everything else is skipped with a logged reason.",
+                    MessageType.None);
+                EditorGUILayout.HelpBox("Visually destructive and not reversible by re-running the optimizer. Verify the result before uploading.", MessageType.Warning);
+                EditorGUI.indentLevel--;
+            }
+
             config.ReplaceShaders = EditorGUILayout.ToggleLeft("Replace Shaders with Mobile Shaders", config.ReplaceShaders);
             config.OptimizeTextures = EditorGUILayout.ToggleLeft("Optimize Texture Memory Budget", config.OptimizeTextures);
             if (config.OptimizeTextures)
@@ -247,6 +278,15 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             config.PruningStrategy = (PhysBonePruningStrategy)EditorGUILayout.EnumPopup("PhysBone Pruning Strategy", config.PruningStrategy);
             config.DecimateMeshes = EditorGUILayout.ToggleLeft("Decimate Meshes to Poly Limit", config.DecimateMeshes);
+
+            config.UnmapJawBone = EditorGUILayout.ToggleLeft("Unmap Humanoid Jaw Bone", config.UnmapJawBone);
+            config.EnableLegacyBlendShapeNormals = EditorGUILayout.ToggleLeft("Enable Legacy Blend Shape Normals", config.EnableLegacyBlendShapeNormals);
+            if (config.UnmapJawBone || config.EnableLegacyBlendShapeNormals)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("These edit the shared model importer, so they affect every avatar using that FBX — not just the optimized clone. Neither is required for a successful upload.", MessageType.Warning);
+                EditorGUI.indentLevel--;
+            }
             config.RemoveIncompatibleComponents = EditorGUILayout.ToggleLeft("Remove Incompatible Components (SDK Auto Fix can do this)", config.RemoveIncompatibleComponents);
             if (!config.RemoveIncompatibleComponents)
             {

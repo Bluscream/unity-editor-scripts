@@ -53,6 +53,16 @@ namespace Bluscream.VRCAvatarOptimizer
             public bool CleanExpressionParametersWhenOverBudget = true;
             // Opt-in: clean dead parameters even when the avatar already fits the budget.
             public bool ForceCleanExpressionParameters = false;
+            // Repairs bounds/probe anchors that mesh merging and atlasing leave wrong. Not opt-in: merging
+            // without this produces renderers that cull incorrectly, which is a defect rather than a choice.
+            public bool FixRendererBounds = true;
+            public bool AnchorProbesToHips = true;
+            // Opt-in: atlasing is visually destructive and irreversible. It is the only way below a material
+            // slot limit that deduplication cannot reach.
+            public bool AtlasMaterials = false;
+            // Opt-in: both edit the shared model importer, affecting every avatar using that FBX.
+            public bool UnmapJawBone = false;
+            public bool EnableLegacyBlendShapeNormals = false;
             public bool DeletePlacementLocationBeforeConversion = false;
             public bool DeleteExistingTargetGameObjects = false;
             public bool ClearEditorLogBeforeConversion = false;
@@ -252,6 +262,17 @@ namespace Bluscream.VRCAvatarOptimizer
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 1] Completed in {tStep1:F2}s.");
                 stepSw.Restart();
 
+                // Step 1.5: Humanoid rig hygiene. Runs before any mesh is cloned, because both of these
+                // reimport the source model and would otherwise invalidate meshes generated later.
+                if (config.UnmapJawBone || config.EnableLegacyBlendShapeNormals)
+                {
+                    progressCallback?.Invoke("Applying humanoid rig fixes...", 0.12f);
+                    if (config.EnableLegacyBlendShapeNormals && AvatarRigOptimizer.EnableLegacyBlendShapeNormals(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.12f)))
+                        summary.AddSuccess("Enabled Legacy Blend Shape Normals on the source model.");
+                    if (config.UnmapJawBone && AvatarRigOptimizer.UnmapJawBone(targetAvatar, (msg) => progressCallback?.Invoke(msg, 0.12f)))
+                        summary.AddSuccess("Unmapped the humanoid jaw bone so VRChat's visemes drive the mouth.");
+                }
+
                 // Step 2: Remove Platform-Incompatible Components
                 if (config.RemoveIncompatibleComponents)
                 {
@@ -413,7 +434,22 @@ namespace Bluscream.VRCAvatarOptimizer
                 progressCallback?.Invoke("Consolidating material slots, mesh counts & dynamic lights...", 0.94f);
                 string meshAssetDir = GetPlacementFolder(targetAvatar.name, config.PlacementLocation);
                 AvatarMaterialSlotOptimizer.OptimizeMaterialSlots(targetAvatar, profile.MaxMaterialSlots, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
+
+                // Lossless deduplication runs first; atlasing only picks up what it could not reach.
+                if (config.AtlasMaterials)
+                {
+                    int slotsAtlased = AvatarTextureAtlaser.AtlasMaterials(targetAvatar, profile.MaxMaterialSlots, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                    if (slotsAtlased > 0)
+                        summary.AddSuccess($"Atlased materials, eliminating {slotsAtlased} material slot(s).");
+                }
+
                 AvatarMeshCountOptimizer.OptimizeMeshCount(targetAvatar, profile.MaxSkinnedMeshes, profile.MaxMeshRenderers, meshAssetDir, (msg) => progressCallback?.Invoke(msg, 0.94f));
+
+                // Must follow every mesh merge and atlas: those leave bounds and probe anchors wrong.
+                if (config.FixRendererBounds)
+                {
+                    AvatarBoundsOptimizer.FixBoundsAndAnchors(targetAvatar, config.AnchorProbesToHips, (msg) => progressCallback?.Invoke(msg, 0.94f));
+                }
                 AvatarLightOptimizer.OptimizeLights(targetAvatar, profile.MaxLights, (msg) => progressCallback?.Invoke(msg, 0.94f));
 
                 if (config.DeleteUnusedGameObjects)
