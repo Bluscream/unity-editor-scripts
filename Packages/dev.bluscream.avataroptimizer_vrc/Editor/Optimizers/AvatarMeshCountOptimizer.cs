@@ -356,7 +356,26 @@ namespace Bluscream.VRCAvatarOptimizer
             for (int i = 0; i < materialOrder.Count; i++)
                 combinedMesh.SetTriangles(trianglesByMaterial[materialOrder[i]], i);
 
+            // Report the blendshape situation unconditionally: "blendshapes: 0" is only correct if the
+            // sources genuinely had none, and that distinction is not visible after the fact.
+            int sourceShapeTotal = sourceMeshes.Sum(m => m != null ? m.blendShapeCount : 0);
+            Debug.Log($"[AvatarMeshCountOptimizer] Blendshapes across {sourceMeshes.Count} source mesh(es): " +
+                      string.Join(", ", sourceMeshes.Select(m => $"'{m.name}'={m.blendShapeCount}")));
+
             int shapesTransferred = TransferBlendShapes(combinedMesh, sourceMeshes, vertexOffsets, vertices.Count);
+
+            if (sourceShapeTotal == 0)
+            {
+                Debug.Log($"[AvatarMeshCountOptimizer] No source mesh had blendshapes — nothing to transfer.");
+            }
+            else if (shapesTransferred == 0)
+            {
+                Debug.LogError($"[AvatarMeshCountOptimizer] {sourceShapeTotal} blendshape(s) existed across the source meshes but NONE were transferred to the combined mesh. Visemes, blinks and toggles driven by these shapes are now broken.");
+            }
+            else
+            {
+                Debug.Log($"[AvatarMeshCountOptimizer] Transferred {shapesTransferred} unique blendshape name(s) from {sourceShapeTotal} source shape(s) (same-named shapes merge across meshes).");
+            }
 
             combinedMesh.RecalculateBounds();
 

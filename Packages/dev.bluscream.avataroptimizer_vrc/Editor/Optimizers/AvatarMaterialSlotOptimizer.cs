@@ -110,7 +110,9 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (finalSlots > maxMaterialSlots)
             {
-                Debug.LogWarning($"[AvatarMaterialSlotOptimizer] Avatar still has {finalSlots} material slots (limit {maxMaterialSlots}). Deduplication alone cannot reach the limit — distinct materials would need atlasing/merging.");
+                Debug.LogWarning($"[AvatarMaterialSlotOptimizer] Avatar still has {finalSlots} material slots (limit {maxMaterialSlots}). " +
+                                 $"Deduplication is lossless and cannot go further — the remaining {finalSlots} materials are genuinely distinct. " +
+                                 $"Reaching {maxMaterialSlots} requires atlasing, which is opt-in: enable 'Atlas Materials into Shared Textures' in the optimizer window.");
             }
         }
 

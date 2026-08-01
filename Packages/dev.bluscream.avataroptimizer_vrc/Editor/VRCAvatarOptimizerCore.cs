@@ -172,7 +172,11 @@ namespace Bluscream.VRCAvatarOptimizer
             Debug.Log($"[VRCAvatarOptimizerCore] ===== Starting Avatar Conversion for '{avatarRoot.name}' =====");
             Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, DeleteExistingTargetName={config.DeleteExistingTargetGameObjects}");
 
-            Debug.Log($"[VRCAvatarOptimizerCore] Diagnostics: log verbosity={OptimizerLog.Level}, mesh validation={(OptimizerLog.ValidateMeshes ? "on" : "OFF")}.");
+            // Unity attaches a stack trace to every Debug.Log; on a real run that turned ~740 messages into
+            // ~56,000 lines of Editor.log. Suppressed for the duration and restored in the finally below.
+            OptimizerLog.SuppressStackTraces();
+
+            Debug.Log($"[VRCAvatarOptimizerCore] Diagnostics: log verbosity={OptimizerLog.Level}, mesh validation={(OptimizerLog.ValidateMeshes ? "on" : "OFF")}, log stack traces suppressed.");
 
             // Step 0: Always switch active build target to match target platform as mandatory first step
             progressCallback?.Invoke($"Ensuring active build target is set to {config.Platform}...", 0.01f);
@@ -737,6 +741,37 @@ namespace Bluscream.VRCAvatarOptimizer
                     SourceIntegrityGuard.Verify(avatarRoot, sourceSnapshot, summary, expected);
                 }
 
+                // A run that finishes without reaching its rank target has not done what was asked, and the
+                // per-pass warnings are easy to miss in a long log. State it once, plainly, at the end.
+                {
+                    var missed = new List<string>();
+                    var finalStats = AvatarSDKEvaluator.EvaluateAvatar(targetAvatar);
+
+                    void CheckLimit(string name, long actual, long limit, string remedy)
+                    {
+                        if (limit != int.MaxValue && limit != long.MaxValue && actual > limit)
+                            missed.Add($"{name} {actual:N0} / {limit:N0}{(string.IsNullOrEmpty(remedy) ? "" : $" — {remedy}")}");
+                    }
+
+                    CheckLimit("Triangles", finalStats.TriangleCount, profile.MaxTriangles, "the decimator could not reach the requested ratio");
+                    CheckLimit("Material slots", finalStats.MaterialSlotCount, profile.MaxMaterialSlots,
+                               config.AtlasMaterials ? "atlasing ran but could not group enough materials" : "enable 'Atlas Materials' (opt-in)");
+                    CheckLimit("PhysBone components", finalStats.PhysBoneComponentCount, profile.MaxPhysBoneComponents, null);
+                    CheckLimit("Texture VRAM (MB)", finalStats.TotalTextureMemoryBytes / (1024 * 1024), profile.MaxTextureMemoryBytes / (1024 * 1024), null);
+
+                    if (missed.Count > 0)
+                    {
+                        string msg = $"Target rank '{profile.Rank}' NOT reached — {missed.Count} limit(s) still exceeded:\n  • " + string.Join("\n  • ", missed);
+                        Debug.LogWarning($"[VRCAvatarOptimizerCore] {msg}");
+                        summary.AddWarning(msg);
+                    }
+                    else
+                    {
+                        Debug.Log($"[VRCAvatarOptimizerCore] All '{profile.Rank}' rank limits met.");
+                        summary.AddSuccess($"All '{profile.Rank}' rank limits met.");
+                    }
+                }
+
                 string bundleStr = summary.CompressedAvatarSizeBytes > 0 ? $" ({summary.CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB Compressed Avatar)" : "";
                 Debug.Log($"[VRCAvatarOptimizerCore] ===== Conversion Complete for '{targetAvatar.name}'{bundleStr} — {summary.materialsReplaced} mats replaced, {summary.texturesOptimized} textures compressed, {summary.componentsRemoved} components removed in {overallSw.Elapsed.TotalSeconds:F2}s =====");
                 progressCallback?.Invoke("Conversion completed successfully!", 1.0f);
@@ -768,6 +803,10 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // One Ctrl+Z reverts all scene changes of this conversion
                 Undo.CollapseUndoOperations(undoGroup);
+
+                // Restored here rather than after the success path, so a cancel or an exception cannot
+                // leave the project's log settings changed.
+                OptimizerLog.RestoreStackTraces();
             }
 
             return summary;

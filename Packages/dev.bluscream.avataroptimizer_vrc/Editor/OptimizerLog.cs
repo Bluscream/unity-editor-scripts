@@ -77,6 +77,41 @@ namespace Bluscream.VRCAvatarOptimizer
             if (context != null) Debug.LogError($"[{tag}] {message}", context);
             else Debug.LogError($"[{tag}] {message}");
         }
+
+        private static StackTraceLogType _savedLogTrace;
+        private static StackTraceLogType _savedWarningTrace;
+        private static bool _tracesSuppressed;
+
+        /// <summary>
+        /// Suppresses Unity's stack trace on Log and Warning for the duration of a conversion.
+        ///
+        /// Unity attaches a full managed stack trace to every Debug.Log, which on a real run turned 742
+        /// optimizer messages into 55,812 lines of Editor.log and made postmortems impractical. Errors keep
+        /// their traces, since those are the ones worth tracing.
+        /// </summary>
+        public static void SuppressStackTraces()
+        {
+            if (_tracesSuppressed) return;
+
+            _savedLogTrace = Application.GetStackTraceLogType(LogType.Log);
+            _savedWarningTrace = Application.GetStackTraceLogType(LogType.Warning);
+
+            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.None);
+
+            _tracesSuppressed = true;
+        }
+
+        /// <summary>Restores whatever the project had configured. Safe to call when not suppressed.</summary>
+        public static void RestoreStackTraces()
+        {
+            if (!_tracesSuppressed) return;
+
+            Application.SetStackTraceLogType(LogType.Log, _savedLogTrace);
+            Application.SetStackTraceLogType(LogType.Warning, _savedWarningTrace);
+
+            _tracesSuppressed = false;
+        }
     }
 
     /// <summary>

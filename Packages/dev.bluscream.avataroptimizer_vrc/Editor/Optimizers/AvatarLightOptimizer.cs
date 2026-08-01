@@ -18,26 +18,31 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             if (avatarRoot == null || maxLights == int.MaxValue) return;
 
-            Light[] lights = avatarRoot.GetComponentsInChildren<Light>(true);
-            int currentLights = lights.Count(l => l != null && l.enabled);
+            Light[] lights = avatarRoot.GetComponentsInChildren<Light>(true).Where(l => l != null).ToArray();
 
-            if (currentLights <= maxLights) return;
+            // VRChat's performance stats count Light *components*, not enabled ones, so disabling a light
+            // does not move the metric. Components have to go for the avatar to meet the limit.
+            int componentCount = lights.Length;
+            if (componentCount <= maxLights) return;
 
-            progressCallback?.Invoke($"Optimizing dynamic lights ({currentLights} -> max {maxLights})...");
-            Debug.Log($"[AvatarLightOptimizer] Light count {currentLights} > max {maxLights}. Disabling excess lights.");
+            int toRemove = componentCount - maxLights;
+            progressCallback?.Invoke($"Removing excess dynamic lights ({componentCount} -> max {maxLights})...");
+            Debug.Log($"[AvatarLightOptimizer] Light components {componentCount} > max {maxLights}. Removing {toRemove} (deepest first).");
 
-            // Order by importance: enabled lights on lower depth/hierarchies prioritized
-            var lightsToDisable = lights
-                .Where(l => l != null && l.enabled)
+            // Deepest first: prop and accessory lights before anything near the avatar root.
+            var lightsToRemove = lights
                 .OrderByDescending(l => GetHierarchyDepth(l.transform))
-                .Take(currentLights - maxLights);
+                .Take(toRemove)
+                .ToList();
 
-            foreach (Light light in lightsToDisable)
+            foreach (Light light in lightsToRemove)
             {
-                Undo.RecordObject(light, "Disable Excess Light");
-                light.enabled = false;
-                Debug.Log($"[AvatarLightOptimizer] Disabled Light component on '{light.gameObject.name}'.");
+                Debug.Log($"[AvatarLightOptimizer] Removing Light component on '{light.gameObject.name}' (type {light.type}, {(light.enabled ? "enabled" : "disabled")}).");
+                Undo.DestroyObjectImmediate(light);
             }
+
+            int remaining = avatarRoot.GetComponentsInChildren<Light>(true).Count(l => l != null);
+            Debug.Log($"[AvatarLightOptimizer] Light components now {remaining} / {maxLights}.");
         }
 
         private static int GetHierarchyDepth(Transform t)
