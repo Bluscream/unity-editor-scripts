@@ -22,6 +22,9 @@ namespace Bluscream.VRCAvatarOptimizer
 
             List<Component> contactComps = avatarRoot.GetComponentsInChildren<Component>(true)
                 .Where(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")))
+                // Shallowest first: the loop below prunes the tail, so deep accessory/detail components
+                // are dropped before ones near the avatar root. Mirrors AvatarPhysBonePruner's ordering.
+                .OrderBy(c => c.transform.GetHierarchyDepth())
                 .ToList();
 
             if (contactComps.Count <= maxContacts) return 0;

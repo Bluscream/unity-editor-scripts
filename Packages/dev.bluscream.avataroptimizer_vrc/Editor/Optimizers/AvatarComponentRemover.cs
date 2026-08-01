@@ -207,6 +207,10 @@ namespace Bluscream.VRCAvatarOptimizer
             if (profile.WhitelistedComponentNames.Contains(typeName) || profile.WhitelistedComponentNames.Contains(typeFullName))
                 return false;
 
+            // DPS/SPS Penetrator components and tip lights are not supported on Mobile/Quest targets
+            if (profile.Platform != TargetPlatform.PC && (AvatarPenetratorDetector.IsPenetratorComponent(comp) || (comp is Light lightComp && AvatarPenetratorDetector.IsPenetratorLight(lightComp))))
+                return true;
+
             // 2. Blacklist check: If component is in profile blacklist, remove it
             if (profile.BlacklistedComponentNames.Contains(typeName) || profile.BlacklistedComponentNames.Contains(typeFullName))
                 return true;
@@ -244,5 +248,111 @@ namespace Bluscream.VRCAvatarOptimizer
             return false;
         }
 
+        /// <summary>
+        /// Deletes unused GameObjects that have no components, are not referenced by any bone or component,
+        /// and re-parents any remaining children to the parent transform.
+        /// </summary>
+        public static int DeleteUnusedGameObjects(GameObject avatarRoot, Action<string> progressCallback = null)
+        {
+            if (avatarRoot == null) return 0;
+
+            progressCallback?.Invoke("Searching for unused GameObjects...");
+
+            // Collect all referenced transforms (bones in SMRs, PhysBone targets, root)
+            HashSet<Transform> referencedTransforms = new HashSet<Transform> { avatarRoot.transform };
+
+            SkinnedMeshRenderer[] smrs = avatarRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            foreach (var smr in smrs)
+            {
+                if (smr == null) continue;
+                if (smr.rootBone != null) referencedTransforms.Add(smr.rootBone);
+                if (smr.bones != null)
+                {
+                    foreach (var b in smr.bones)
+                        if (b != null) referencedTransforms.Add(b);
+                }
+            }
+
+            Component[] allComps = avatarRoot.GetComponentsInChildren<Component>(true);
+            foreach (var c in allComps)
+            {
+                if (c != null && c.transform != null)
+                    referencedTransforms.Add(c.transform);
+            }
+
+            HashSet<string> animatedPaths = CollectAnimatedPaths(avatarRoot);
+
+            List<Transform> allTransforms = avatarRoot.GetComponentsInChildren<Transform>(true)
+                .Where(t => t != null && t.gameObject != avatarRoot)
+                .OrderByDescending(t => t.GetHierarchyDepth())
+                .ToList();
+
+            int deletedCount = 0;
+
+            foreach (Transform t in allTransforms)
+            {
+                if (t == null || referencedTransforms.Contains(t)) continue;
+
+                // Check if GameObject has components other than Transform
+                Component[] comps = t.GetComponents<Component>();
+                if (comps.Length > 1) continue; // Has active/disabled components
+
+                // Re-parenting would change every descendant's hierarchy path, and animation curves
+                // address objects by path string — the curves would silently stop resolving. Deleting is
+                // only safe once the transform is a leaf, which the deepest-first ordering above achieves
+                // for genuinely empty chains.
+                if (t.childCount > 0)
+                {
+                    Debug.Log($"[AvatarComponentRemover] Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it still has {t.childCount} child(ren), and re-parenting them would break animation paths.");
+                    continue;
+                }
+
+                // An object an animation curve targets is in use even with no components — a curve may
+                // toggle its active state.
+                if (animatedPaths.Contains(AnimationUtility.CalculateTransformPath(t, avatarRoot.transform)))
+                {
+                    Debug.Log($"[AvatarComponentRemover] Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it is targeted by an animation curve.");
+                    continue;
+                }
+
+                Debug.Log($"[AvatarComponentRemover] Deleting unused GameObject '{GetGameObjectPath(t.gameObject)}'");
+                Undo.DestroyObjectImmediate(t.gameObject);
+                deletedCount++;
+            }
+
+            if (deletedCount > 0)
+                Debug.Log($"[AvatarComponentRemover] Deleted {deletedCount} unused GameObject(s).");
+
+            return deletedCount;
+        }
+
+        /// <summary>
+        /// Every hierarchy path referenced by an animation curve on this avatar. Curves address objects by
+        /// path string, so anything listed here must keep both its name and its position in the hierarchy.
+        /// </summary>
+        private static HashSet<string> CollectAnimatedPaths(GameObject avatarRoot)
+        {
+            var paths = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (Animator anim in avatarRoot.GetComponentsInChildren<Animator>(true))
+            {
+                if (anim == null || anim.runtimeAnimatorController == null) continue;
+
+                AnimationClip[] clips = anim.runtimeAnimatorController.animationClips;
+                if (clips == null) continue;
+
+                foreach (AnimationClip clip in clips)
+                {
+                    if (clip == null) continue;
+
+                    foreach (EditorCurveBinding b in AnimationUtility.GetCurveBindings(clip))
+                        paths.Add(b.path);
+                    foreach (EditorCurveBinding b in AnimationUtility.GetObjectReferenceCurveBindings(clip))
+                        paths.Add(b.path);
+                }
+            }
+
+            return paths;
+        }
     }
 }

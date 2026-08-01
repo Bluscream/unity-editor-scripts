@@ -49,11 +49,13 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
             }
 
-            // 2. Process all MonoBehaviours (including VRCFury components) via SerializedObject
+            // 2. Process all MonoBehaviours (including VRCFury and Modular Avatar [MA] components) via SerializedObject
             Component[] components = avatarRoot.GetComponentsInChildren<Component>(true);
             foreach (Component comp in components)
             {
                 if (comp == null || comp is Transform || comp is Renderer || comp is Animator) continue;
+                string compTypeName = comp.GetType().Name;
+                bool isModularAvatar = comp.GetType().Namespace?.Contains("modular_avatar") == true || compTypeName.StartsWith("ModularAvatar");
 
                 try
                 {
@@ -70,7 +72,8 @@ namespace Bluscream.VRCAvatarOptimizer
                             {
                                 prop.objectReferenceValue = questMat;
                                 modified = true;
-                                progressCallback?.Invoke($"Remapped material reference on {comp.GetType().Name} ({comp.gameObject.name})");
+                                string label = isModularAvatar ? $"Modular Avatar ({compTypeName})" : compTypeName;
+                                progressCallback?.Invoke($"Remapped material reference on {label} ({comp.gameObject.name})");
                             }
                             // AnimationClip remap
                             else if (prop.objectReferenceValue is AnimationClip sourceClip)
@@ -80,7 +83,8 @@ namespace Bluscream.VRCAvatarOptimizer
                                 {
                                     prop.objectReferenceValue = questClip;
                                     modified = true;
-                                    progressCallback?.Invoke($"Remapped animation clip reference on {comp.GetType().Name} ({comp.gameObject.name})");
+                                    string label = isModularAvatar ? $"Modular Avatar ({compTypeName})" : compTypeName;
+                                    progressCallback?.Invoke($"Remapped animation clip reference on {label} ({comp.gameObject.name})");
                                 }
                             }
                             // AnimatorController remap
@@ -91,7 +95,8 @@ namespace Bluscream.VRCAvatarOptimizer
                                 {
                                     prop.objectReferenceValue = questController;
                                     modified = true;
-                                    progressCallback?.Invoke($"Remapped animator controller on {comp.GetType().Name} ({comp.gameObject.name})");
+                                    string label = isModularAvatar ? $"Modular Avatar ({compTypeName})" : compTypeName;
+                                    progressCallback?.Invoke($"Remapped animator controller on {label} ({comp.gameObject.name})");
                                 }
                             }
                         }

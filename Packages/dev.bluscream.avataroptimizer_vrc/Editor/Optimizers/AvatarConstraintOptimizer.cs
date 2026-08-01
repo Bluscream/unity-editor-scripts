@@ -22,6 +22,9 @@ namespace Bluscream.VRCAvatarOptimizer
 
             List<Component> constraintComps = avatarRoot.GetComponentsInChildren<Component>(true)
                 .Where(c => c != null && c.GetType().Name.ToLowerInvariant().Contains("constraint"))
+                // Shallowest first: the loop below prunes the tail, so deep accessory/detail components
+                // are dropped before ones near the avatar root. Mirrors AvatarPhysBonePruner's ordering.
+                .OrderBy(c => c.transform.GetHierarchyDepth())
                 .ToList();
 
             if (constraintComps.Count <= maxConstraints) return 0;
