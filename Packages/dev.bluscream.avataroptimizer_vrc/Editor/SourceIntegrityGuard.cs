@@ -28,9 +28,19 @@ namespace Bluscream.VRCAvatarOptimizer
         /// <summary>Files at or below this size are hashed; larger ones fall back to size + write time.</summary>
         private const long FullHashSizeLimit = 64L * 1024 * 1024;
 
+        /// <summary>How much of the project to fingerprint.</summary>
+        public enum IntegrityScope
+        {
+            /// <summary>Only assets reachable from the source avatar. Fast, but blind to stray writes elsewhere.</summary>
+            AvatarDependencies,
+            /// <summary>Every asset under Assets/. Catches files written anywhere, at the cost of hashing the project.</summary>
+            EntireProject
+        }
+
         public sealed class Snapshot
         {
             public string AvatarName;
+            public IntegrityScope Scope;
             /// <summary>Asset path → fingerprint of the file and of its .meta (importer settings).</summary>
             public Dictionary<string, string> AssetFingerprints = new Dictionary<string, string>(StringComparer.Ordinal);
             /// <summary>Transform path → the components on it, so added/removed components are caught.</summary>
@@ -38,97 +48,172 @@ namespace Bluscream.VRCAvatarOptimizer
             public int TransformCount;
         }
 
+        /// <summary>One file whose fingerprint changed between capture and verification.</summary>
+        public sealed class FileChange
+        {
+            public string Path;
+            public string Before;
+            public string After;
+            public ChangeKind Kind;
+            /// <summary>True when the run was configured to make this change.</summary>
+            public bool Expected;
+
+            public override string ToString()
+            {
+                switch (Kind)
+                {
+                    case ChangeKind.Added:    return $"{Path}\n        added   {After}";
+                    case ChangeKind.Deleted:  return $"{Path}\n        deleted (was {Before})";
+                    default:                  return $"{Path}\n        before  {Before}\n        after   {After}";
+                }
+            }
+        }
+
+        public enum ChangeKind { Modified, Added, Deleted }
+
         /// <summary>
         /// Fingerprints the source avatar and everything it references. Call before the conversion starts.
         /// </summary>
-        public static Snapshot Capture(GameObject sourceAvatar, Action<string> progressCallback = null)
+        public static Snapshot Capture(
+            GameObject sourceAvatar,
+            IntegrityScope scope = IntegrityScope.AvatarDependencies,
+            Action<string> progressCallback = null)
         {
-            var snapshot = new Snapshot();
+            var snapshot = new Snapshot { Scope = scope };
             if (sourceAvatar == null) return snapshot;
 
             snapshot.AvatarName = sourceAvatar.name;
-            progressCallback?.Invoke("Fingerprinting source avatar and its assets...");
+            progressCallback?.Invoke($"Fingerprinting {(scope == IntegrityScope.EntireProject ? "the project" : "the source avatar and its assets")}...");
 
-            foreach (string path in CollectReferencedAssetPaths(sourceAvatar))
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
+            IEnumerable<string> paths = scope == IntegrityScope.EntireProject
+                ? CollectAllProjectAssetPaths()
+                : CollectReferencedAssetPaths(sourceAvatar);
+
+            foreach (string path in paths)
                 snapshot.AssetFingerprints[path] = Fingerprint(path);
 
             CaptureHierarchy(sourceAvatar, snapshot);
 
-            Log.Info($"Captured source fingerprint for '{sourceAvatar.name}': " +
-                                   $"{snapshot.AssetFingerprints.Count} asset(s), {snapshot.TransformCount} transform(s).");
-            Log.Trace(() => "  assets:\n    " + string.Join("\n    ", snapshot.AssetFingerprints.Keys.OrderBy(p => p)));
+            Log.Info($"Captured {scope} fingerprint for '{sourceAvatar.name}': " +
+                     $"{snapshot.AssetFingerprints.Count} file(s), {snapshot.TransformCount} transform(s), in {sw.Elapsed.TotalSeconds:F1}s.");
+            Log.Trace(() => "  files:\n    " + string.Join("\n    ",
+                snapshot.AssetFingerprints.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key} = {kv.Value}")));
 
             return snapshot;
         }
 
         /// <summary>
-        /// Re-checks the snapshot after conversion and reports anything that changed.
+        /// Re-checks the snapshot after conversion and reports every file whose fingerprint moved, with the
+        /// before and after values so a change can be identified rather than merely noticed.
         /// </summary>
         /// <param name="expectedChangedPaths">
-        /// Asset paths the run was explicitly configured to modify — currently only the model importers
-        /// touched by <see cref="AvatarRigOptimizer"/>. Changes to these are reported as information
-        /// rather than errors; changes to anything else are defects.
+        /// Paths the run was configured to modify — model importers when rig hygiene is on, texture
+        /// importers when the texture pass is on. Changes to these are reported as information; changes to
+        /// anything else are defects.
         /// </param>
-        /// <returns>True when nothing outside the expected set changed.</returns>
+        /// <param name="expectedNewPathPrefixes">
+        /// Directories the run is allowed to create files in, normally the asset output folder. Additions
+        /// outside them are defects.
+        /// </param>
+        /// <returns>True when nothing outside the expected sets changed.</returns>
         public static bool Verify(
             GameObject sourceAvatar,
             Snapshot snapshot,
             ConversionSummary summary = null,
-            IEnumerable<string> expectedChangedPaths = null)
+            IEnumerable<string> expectedChangedPaths = null,
+            IEnumerable<string> expectedNewPathPrefixes = null)
         {
             if (snapshot == null) return true;
 
             var expected = new HashSet<string>(expectedChangedPaths ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            var newPrefixes = (expectedNewPathPrefixes ?? Enumerable.Empty<string>())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Select(p => p.Replace('\\', '/').TrimEnd('/') + "/")
+                .ToList();
 
-            var modified = new List<string>();
-            var deleted = new List<string>();
-            var expectedHits = new List<string>();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var changes = new List<FileChange>();
 
+            // Modified and deleted
             foreach (var kvp in snapshot.AssetFingerprints)
             {
                 string path = kvp.Key;
 
                 if (!File.Exists(path))
                 {
-                    deleted.Add(path);
+                    changes.Add(new FileChange { Path = path, Before = kvp.Value, After = "(absent)", Kind = ChangeKind.Deleted });
                     continue;
                 }
 
-                if (Fingerprint(path) == kvp.Value) continue;
+                string now = Fingerprint(path);
+                if (now == kvp.Value) continue;
 
-                if (expected.Contains(path)) expectedHits.Add(path);
-                else modified.Add(path);
+                changes.Add(new FileChange
+                {
+                    Path = path,
+                    Before = kvp.Value,
+                    After = now,
+                    Kind = ChangeKind.Modified,
+                    Expected = expected.Contains(path)
+                });
+            }
+
+            // Added — only detectable when the whole project was fingerprinted, since a
+            // dependency-scoped snapshot has no view of files that did not exist yet.
+            if (snapshot.Scope == IntegrityScope.EntireProject)
+            {
+                foreach (string path in CollectAllProjectAssetPaths())
+                {
+                    if (snapshot.AssetFingerprints.ContainsKey(path)) continue;
+
+                    bool inExpectedDir = newPrefixes.Any(prefix =>
+                        path.Replace('\\', '/').StartsWith(prefix, StringComparison.Ordinal));
+
+                    changes.Add(new FileChange
+                    {
+                        Path = path,
+                        Before = "(absent)",
+                        After = Fingerprint(path),
+                        Kind = ChangeKind.Added,
+                        Expected = inExpectedDir
+                    });
+                }
             }
 
             var hierarchyIssues = VerifyHierarchy(sourceAvatar, snapshot);
 
-            foreach (string path in expectedHits)
-                Log.Info($"Source asset '{path}' changed as configured (rig hygiene edits the shared model importer).");
+            var unexpected = changes.Where(c => !c.Expected).ToList();
+            var sanctioned = changes.Where(c => c.Expected).ToList();
 
-            bool clean = modified.Count == 0 && deleted.Count == 0 && hierarchyIssues.Count == 0;
-
-            if (clean)
+            if (sanctioned.Count > 0)
             {
-                Log.Info($"Source integrity verified: '{snapshot.AvatarName}' and all {snapshot.AssetFingerprints.Count} referenced asset(s) are unchanged.");
-                summary?.AddSuccess($"Source avatar and its {snapshot.AssetFingerprints.Count} referenced asset(s) verified unchanged.");
+                Log.Info($"{sanctioned.Count} expected change(s) — the run was configured to make these:");
+                foreach (FileChange c in sanctioned.Take(50)) Log.Info($"    {c}");
+                if (sanctioned.Count > 50) Log.Info($"    ... and {sanctioned.Count - 50} more");
+            }
+
+            if (unexpected.Count == 0 && hierarchyIssues.Count == 0)
+            {
+                Log.Info($"Source integrity verified: '{snapshot.AvatarName}' and all {snapshot.AssetFingerprints.Count} " +
+                         $"fingerprinted file(s) are unchanged apart from {sanctioned.Count} expected edit(s). Checked in {sw.Elapsed.TotalSeconds:F1}s.");
+                summary?.AddSuccess($"Source integrity verified — {snapshot.AssetFingerprints.Count} file(s) checked, no unexpected changes.");
                 return true;
             }
 
             var report = new StringBuilder();
-            report.AppendLine($"The conversion modified the source avatar or its assets. This breaks the non-destructive guarantee — the ORIGINAL avatar has been changed, not just the optimized copy.");
+            report.AppendLine("The conversion changed files it should not have. This breaks the non-destructive guarantee — " +
+                              "something other than the optimized copy was modified.");
 
-            if (deleted.Count > 0)
+            foreach (ChangeKind kind in new[] { ChangeKind.Deleted, ChangeKind.Modified, ChangeKind.Added })
             {
-                report.AppendLine($"  Deleted ({deleted.Count}):");
-                foreach (string p in deleted.Take(20)) report.AppendLine($"    - {p}");
-                if (deleted.Count > 20) report.AppendLine($"    ... and {deleted.Count - 20} more");
-            }
+                var group = unexpected.Where(c => c.Kind == kind).ToList();
+                if (group.Count == 0) continue;
 
-            if (modified.Count > 0)
-            {
-                report.AppendLine($"  Modified ({modified.Count}):");
-                foreach (string p in modified.Take(20)) report.AppendLine($"    - {p}");
-                if (modified.Count > 20) report.AppendLine($"    ... and {modified.Count - 20} more");
+                report.AppendLine($"  {kind} ({group.Count}):");
+                foreach (FileChange c in group.Take(50)) report.AppendLine($"    {c}");
+                if (group.Count > 50) report.AppendLine($"    ... and {group.Count - 50} more");
             }
 
             if (hierarchyIssues.Count > 0)
@@ -139,9 +224,34 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             Log.Error(report.ToString(), sourceAvatar);
-            summary?.AddError($"Source integrity check FAILED: {modified.Count} asset(s) modified, {deleted.Count} deleted, {hierarchyIssues.Count} hierarchy change(s). See console — the original avatar was altered.");
+            summary?.AddError($"Source integrity check FAILED: {unexpected.Count(c => c.Kind == ChangeKind.Modified)} modified, " +
+                              $"{unexpected.Count(c => c.Kind == ChangeKind.Deleted)} deleted, " +
+                              $"{unexpected.Count(c => c.Kind == ChangeKind.Added)} unexpected new file(s), " +
+                              $"{hierarchyIssues.Count} hierarchy change(s). See console for paths and hashes.");
 
             return false;
+        }
+
+        /// <summary>Every asset file under Assets/, excluding .meta (folded into each asset's fingerprint).</summary>
+        private static IEnumerable<string> CollectAllProjectAssetPaths()
+        {
+            var paths = new List<string>();
+            try
+            {
+                foreach (string guid in AssetDatabase.FindAssets(string.Empty))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (string.IsNullOrEmpty(path)) continue;
+                    if (!path.StartsWith("Assets/", StringComparison.Ordinal)) continue;
+                    if (!File.Exists(path)) continue; // folders
+                    paths.Add(path);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warn($"Project-wide asset enumeration failed: {e.Message}. The integrity check will be incomplete.");
+            }
+            return paths.Distinct(StringComparer.Ordinal);
         }
 
         /// <summary>

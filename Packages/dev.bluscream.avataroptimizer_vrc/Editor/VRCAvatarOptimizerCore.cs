@@ -71,6 +71,10 @@ namespace Bluscream.VRCAvatarOptimizer
             // Fingerprints the source avatar and its assets before the run and re-checks them after, so a
             // pass that edits an original instead of its clone is caught rather than silently shipping.
             public bool VerifySourceUntouched = true;
+            // Fingerprint every asset under Assets/ rather than only the avatar's dependencies. Slower —
+            // it hashes the project — but it is the only way to catch a stray write somewhere unrelated,
+            // and the only scope in which newly created files can be detected at all.
+            public bool VerifyEntireProject = false;
             // Tees every logger to its own file under the placement folder, so a run can be archived or
             // parsed later without sifting it out of Unity's Editor.log.
             public bool WriteRunLogFiles = false;
@@ -230,7 +234,12 @@ namespace Bluscream.VRCAvatarOptimizer
             SourceIntegrityGuard.Snapshot sourceSnapshot = null;
             if (config.VerifySourceUntouched)
             {
-                sourceSnapshot = SourceIntegrityGuard.Capture(avatarRoot, (msg) => progressCallback?.Invoke(msg, 0.02f));
+                sourceSnapshot = SourceIntegrityGuard.Capture(
+                    avatarRoot,
+                    config.VerifyEntireProject
+                        ? SourceIntegrityGuard.IntegrityScope.EntireProject
+                        : SourceIntegrityGuard.IntegrityScope.AvatarDependencies,
+                    (msg) => progressCallback?.Invoke(msg, 0.02f));
             }
 
             summary.InitialStats = AvatarSDKEvaluator.EvaluateAvatar(avatarRoot);
@@ -808,7 +817,12 @@ namespace Bluscream.VRCAvatarOptimizer
                     if (config.OptimizeTextures)
                         expected.AddRange(SourceIntegrityGuard.CollectTexturePaths(avatarRoot));
 
-                    SourceIntegrityGuard.Verify(avatarRoot, sourceSnapshot, summary, expected);
+                    // The output folder is where the run is supposed to create assets, so additions there
+                    // are expected rather than defects.
+                    var expectedNewDirs = new List<string> { GetPlacementFolder(targetAvatar.name, config.PlacementLocation) };
+                    if (!string.IsNullOrEmpty(runLogDir)) expectedNewDirs.Add(runLogDir);
+
+                    SourceIntegrityGuard.Verify(avatarRoot, sourceSnapshot, summary, expected, expectedNewDirs);
                 }
 
                 // A run that finishes without reaching its rank target has not done what was asked, and the

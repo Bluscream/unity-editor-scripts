@@ -81,6 +81,7 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
             config.VerifySourceUntouched = EditorPrefs.GetBool("VRCAvatarOptimizer_VerifySourceUntouched", true);
+            config.VerifyEntireProject = EditorPrefs.GetBool("VRCAvatarOptimizer_VerifyEntireProject", false);
             config.WriteRunLogFiles = EditorPrefs.GetBool("VRCAvatarOptimizer_WriteRunLogFiles", false);
             cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
         }
@@ -118,6 +119,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_VerifySourceUntouched", config.VerifySourceUntouched);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_VerifyEntireProject", config.VerifyEntireProject);
             EditorPrefs.SetBool("VRCAvatarOptimizer_WriteRunLogFiles", config.WriteRunLogFiles);
         }
 
@@ -236,8 +238,11 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.HelpBox(
-                    "Fingerprints the source avatar's hierarchy and every asset it references (contents and importer settings) before the run, then re-checks them afterwards. Any pass that edits an original instead of its clone is reported as an error. Rig hygiene edits to the shared model importer are expected and reported as information.",
+                    "Fingerprints the source avatar's hierarchy and every asset it references (contents and importer settings) before the run, then re-checks them afterwards. Changed files are logged with their before and after hashes. Passes configured to edit originals — rig hygiene and texture import overrides — are reported as expected; anything else is an error.",
                     MessageType.None);
+                config.VerifyEntireProject = EditorGUILayout.ToggleLeft("Fingerprint Entire Project (slow)", config.VerifyEntireProject);
+                if (config.VerifyEntireProject)
+                    EditorGUILayout.HelpBox("Hashes every asset under Assets/ instead of just the avatar's dependencies. Catches stray writes anywhere in the project, and is the only mode that can detect newly created files. Costs a full project hash at both ends of the run.", MessageType.None);
                 EditorGUI.indentLevel--;
             }
             MeshIntegrity.Enabled = EditorGUILayout.ToggleLeft("Validate Generated Meshes", MeshIntegrity.Enabled);
