@@ -1,6 +1,6 @@
 {
   "name": "dev.bluscream.avataroptimizer_vrc",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "displayName": "Avatar Optimizer (VRChat)",
   "description": "Automated tool to convert and optimize VRChat avatars across platforms (PC, Android/Quest & iOS) according to SDK performance limits and profiles.",
   "unity": "2022.3",
