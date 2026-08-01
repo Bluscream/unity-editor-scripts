@@ -169,6 +169,8 @@ namespace Bluscream.VRCAvatarOptimizer
             Debug.Log($"[VRCAvatarOptimizerCore] ===== Starting Avatar Conversion for '{avatarRoot.name}' =====");
             Debug.Log($"[VRCAvatarOptimizerCore] Config: Platform={config.Platform}, Rank={config.TargetRank}, Duplicate={config.DuplicateAvatar}, ReplaceShaders={config.ReplaceShaders}, OptimizeTextures={config.OptimizeTextures}, PrunePhysBones={config.PruningStrategy}, DecimateMeshes={config.DecimateMeshes}, RemoveIncompatible={config.RemoveIncompatibleComponents}, Animations={config.RemapAnimationsAndVRCFury}, DeletePlacementFolder={config.DeletePlacementLocationBeforeConversion}, DeleteExistingTargetName={config.DeleteExistingTargetGameObjects}");
 
+            Debug.Log($"[VRCAvatarOptimizerCore] Diagnostics: log verbosity={OptimizerLog.Level}, mesh validation={(OptimizerLog.ValidateMeshes ? "on" : "OFF")}.");
+
             // Step 0: Always switch active build target to match target platform as mandatory first step
             progressCallback?.Invoke($"Ensuring active build target is set to {config.Platform}...", 0.01f);
             SwitchBuildTargetIfNeeded(config.Platform);
@@ -473,6 +475,31 @@ namespace Bluscream.VRCAvatarOptimizer
                 tStep75 = stepSw.Elapsed.TotalSeconds;
                 Debug.Log($"[VRCAvatarOptimizerCore] [Step 7.5] Completed in {tStep75:F2}s.");
                 stepSw.Restart();
+
+                // Final mesh integrity sweep across the whole avatar. Individual passes validate their own
+                // output, but a defect can also come from two passes interacting, which only shows up here.
+                if (OptimizerLog.ValidateMeshes)
+                {
+                    int checkedMeshes = 0, badMeshes = 0;
+                    foreach (Renderer r in targetAvatar.GetComponentsInChildren<Renderer>(true))
+                    {
+                        Mesh m = r is SkinnedMeshRenderer s2 ? s2.sharedMesh
+                               : (r is MeshRenderer && r.GetComponent<MeshFilter>() != null ? r.GetComponent<MeshFilter>().sharedMesh : null);
+                        if (m == null) continue;
+
+                        checkedMeshes++;
+                        if (!MeshIntegrity.Validate(m, $"final check: '{r.name}'", r)) badMeshes++;
+                    }
+
+                    if (badMeshes > 0)
+                    {
+                        summary.AddError($"{badMeshes} of {checkedMeshes} mesh(es) failed integrity validation — see the console. The avatar will load but render incorrectly.");
+                    }
+                    else
+                    {
+                        Debug.Log($"[VRCAvatarOptimizerCore] Mesh integrity: all {checkedMeshes} mesh(es) passed.");
+                    }
+                }
 
                 // Step 8: Platform-Specific Profile Conversions & Rule Validation
                 progressCallback?.Invoke("Executing platform-specific profile conversions & validation...", 0.95f);

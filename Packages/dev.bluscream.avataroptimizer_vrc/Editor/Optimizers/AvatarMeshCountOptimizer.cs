@@ -239,6 +239,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 vertexOffsets.Add(vertexOffset);
                 sourceMeshes.Add(mesh);
 
+                OptimizerLog.Trace("AvatarMeshCountOptimizer", () =>
+                    $"  source '{smr.name}': mesh '{mesh.name}', {mesh.vertexCount:N0} verts at offset {vertexOffset:N0}, " +
+                    $"{mesh.subMeshCount} submesh(es), {mesh.blendShapeCount} blendshape(s), " +
+                    $"{(smr.bones?.Length ?? 0)} bone(s), toggleBone={(toggleBoneIndex >= 0 ? toggleBoneIndex.ToString() : "none")}");
+
                 int vertexCount = mesh.vertexCount;
 
                 Vector3[] srcVertices = mesh.vertices;
@@ -355,6 +360,15 @@ namespace Bluscream.VRCAvatarOptimizer
 
             combinedMesh.RecalculateBounds();
 
+            OptimizerLog.Verbose("AvatarMeshCountOptimizer",
+                $"Assembled '{combinedMesh.name}': {vertices.Count:N0} verts from {sourceMeshes.Count} source mesh(es), " +
+                $"{allBones.Count} bone(s), {materialOrder.Count} submesh(es), {shapesTransferred} blendshape(s), " +
+                $"index format {combinedMesh.indexFormat}.");
+
+            // The merge rewrites bone indices and offsets triangle indices; both fail silently, so the
+            // result is checked before it is written to disk and swapped in.
+            MeshIntegrity.Validate(combinedMesh, $"skinned mesh merge of {groupToMerge.Count} renderer(s)");
+
             string savedPath = SaveMeshAsset(combinedMesh, avatarRoot.name, assetOutputDirectory);
 
             GameObject combinedGo = new GameObject("Combined_SkinnedMesh");
@@ -366,6 +380,10 @@ namespace Bluscream.VRCAvatarOptimizer
             combinedSmr.sharedMaterials = materialOrder.ToArray();
             combinedSmr.bones = allBones.ToArray();
             combinedSmr.rootBone = rootBone;
+
+            // Re-validate with the renderer attached: this additionally cross-checks bone array vs
+            // bindpose count and submesh count vs material slots, which need the renderer to verify.
+            MeshIntegrity.Validate(combinedMesh, $"merged SkinnedMeshRenderer '{combinedGo.name}'", combinedSmr);
 
             // Remove combined original SMR components
             foreach (var smr in groupToMerge)

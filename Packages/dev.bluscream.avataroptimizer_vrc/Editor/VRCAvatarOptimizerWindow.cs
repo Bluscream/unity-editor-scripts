@@ -212,9 +212,26 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             config.ClearEditorLogBeforeConversion = EditorGUILayout.ToggleLeft(
-                "Clear Unity Editor.log before starting conversion", 
+                "Clear Unity Editor.log before starting conversion",
                 config.ClearEditorLogBeforeConversion
             );
+
+            EditorGUILayout.Space(5);
+            OptimizerLog.Level = (OptimizerLogLevel)EditorGUILayout.EnumPopup("Log Verbosity", OptimizerLog.Level);
+            OptimizerLog.ValidateMeshes = EditorGUILayout.ToggleLeft("Validate Generated Meshes", OptimizerLog.ValidateMeshes);
+            if (OptimizerLog.ValidateMeshes)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox(
+                    "Checks every generated mesh for bone indices out of range, weights not summing to 1, triangle indices past the vertex buffer, NaN geometry, duplicate blendshape names, and submesh/material mismatches. " +
+                    "These all load without complaint but render wrongly, so failures are reported as errors at the point they are introduced. Recommended while the optimizer is still being validated.",
+                    MessageType.None);
+                EditorGUI.indentLevel--;
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("Mesh integrity checks are off — vertex-data defects will pass through silently and only show up in-game.", MessageType.Warning);
+            }
 
             EditorGUILayout.Space(5);
             config.RemapAnimationsAndVRCFury = EditorGUILayout.ToggleLeft("Remap VRCFury & Animation Clips", config.RemapAnimationsAndVRCFury);

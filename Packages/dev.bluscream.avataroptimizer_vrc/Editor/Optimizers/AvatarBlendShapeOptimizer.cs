@@ -58,7 +58,15 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (shapesToBakeOrStrip.Count == 0) continue;
 
                 progressCallback?.Invoke($"Optimizing blendshapes on '{smr.gameObject.name}' ({shapesToBakeOrStrip.Count} unanimated)...");
+                OptimizerLog.Verbose("AvatarBlendShapeOptimizer",
+                    $"'{smr.gameObject.name}': {shapeCount} shape(s), {shapesToBakeOrStrip.Count} unanimated -> " +
+                    $"{string.Join(", ", shapesToBakeOrStrip.Select(i => mesh.GetBlendShapeName(i)).Take(10))}" +
+                    $"{(shapesToBakeOrStrip.Count > 10 ? $" (+{shapesToBakeOrStrip.Count - 10} more)" : "")}");
+
                 BakeAndStripBlendShapes(smr, shapesToBakeOrStrip, ref totalBaked, ref totalStripped);
+
+                // Baking rewrites vertex positions and rebuilds the remaining shapes.
+                MeshIntegrity.Validate(smr.sharedMesh, $"blendshape bake on '{smr.gameObject.name}'", smr);
             }
 
             Debug.Log($"[AvatarBlendShapeOptimizer] Complete: {totalBaked} blendshape(s) baked into geometry, {totalStripped} unused shape(s) stripped.");

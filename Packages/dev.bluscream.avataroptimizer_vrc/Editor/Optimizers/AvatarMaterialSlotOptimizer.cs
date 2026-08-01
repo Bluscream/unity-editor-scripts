@@ -88,6 +88,12 @@ namespace Bluscream.VRCAvatarOptimizer
 
                         r.sharedMaterials = uniqueMats.ToArray();
                         Debug.Log($"[AvatarMaterialSlotOptimizer] Consolidated '{r.name}': {mats.Length} slots -> {uniqueMats.Count}.");
+
+                        // Submeshes were rebuilt from a remap table; a wrong entry silently draws the
+                        // wrong material on the wrong triangles.
+                        OptimizerLog.Verbose("AvatarMaterialSlotOptimizer",
+                            $"  '{r.name}' slot remap: [{string.Join(", ", remapIndex.Select((t, i) => $"{i}->{(t < 0 ? "dropped" : t.ToString())}"))}]");
+                        MeshIntegrity.Validate(newMesh, $"material slot consolidation on '{r.name}'", r);
                     }
                     else if (mesh == null)
                     {

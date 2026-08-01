@@ -312,6 +312,14 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             Debug.Log($"[AvatarTextureAtlaser] Packed {group.Count} materials into a {pack.Width}x{pack.Height} atlas across {textureProperties.Count} texture map(s).");
+            OptimizerLog.Verbose("AvatarTextureAtlaser", $"  atlas maps: {string.Join(", ", textureProperties)} (primary '{primaryProperty}')");
+            foreach (TextureAtlasPacker.PackEntry e in pack.Entries)
+            {
+                TextureAtlasPacker.PackEntry entry = e;
+                OptimizerLog.Trace("AvatarTextureAtlaser", () =>
+                    $"  cell '{((Material)entry.Key).name}': {entry.Width}x{entry.Height} at ({entry.X},{entry.Y})" +
+                    $"{(entry.Placed ? "" : " [UNPLACED]")}");
+            }
 
             // Build one atlas per texture property, all sharing the packed layout.
             var atlases = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
@@ -629,6 +637,11 @@ namespace Bluscream.VRCAvatarOptimizer
                     int[] tris = mesh.GetTriangles(i);
                     if (mats[i] != null && groupSet.Contains(mats[i]) && rects.TryGetValue(mats[i], out Rect rect))
                     {
+                        Material remapped = mats[i];
+                        OptimizerLog.Verbose("AvatarTextureAtlaser",
+                            $"  '{r.name}' submesh {i} ('{remapped.name}') -> atlas rect " +
+                            $"x={rect.x:F4} y={rect.y:F4} w={rect.width:F4} h={rect.height:F4} ({tris.Length / 3} tris)");
+
                         // Scale this submesh's UVs into the material's packed cell.
                         foreach (int idx in tris)
                         {
@@ -666,6 +679,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 for (int sub = 0; sub < keptSubMeshTriangles.Count; sub++)
                     newMesh.SetTriangles(keptSubMeshTriangles[sub].ToArray(), sub);
 
+                // UV rewriting and submesh collapsing both fail silently — a UV in the wrong cell just
+                // renders the wrong texture. Check the result before it is persisted.
+                MeshIntegrity.Validate(newMesh, $"atlased mesh for '{r.name}'");
+                ValidateUvsInUnitRange(newMesh, r.name);
+
                 SaveMeshAsset(newMesh, avatarName, assetOutputDirectory);
 
                 Undo.RecordObject(r, "Apply Atlas Material");
@@ -679,6 +697,43 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             return eliminated;
+        }
+
+        /// <summary>
+        /// Every rewritten UV must land inside the atlas. A value outside [0,1] means a cell rect was
+        /// computed wrongly and the mesh will sample a neighbouring material's pixels.
+        /// </summary>
+        private static void ValidateUvsInUnitRange(Mesh mesh, string rendererName)
+        {
+            if (!OptimizerLog.ValidateMeshes) return;
+
+            Vector2[] uvs = mesh.uv;
+            if (uvs == null) return;
+
+            int outside = 0;
+            int firstBad = -1;
+            for (int i = 0; i < uvs.Length; i++)
+            {
+                Vector2 uv = uvs[i];
+                if (float.IsNaN(uv.x) || float.IsNaN(uv.y) ||
+                    uv.x < -UvEpsilon || uv.x > 1f + UvEpsilon ||
+                    uv.y < -UvEpsilon || uv.y > 1f + UvEpsilon)
+                {
+                    if (firstBad < 0) firstBad = i;
+                    outside++;
+                }
+            }
+
+            if (outside > 0)
+            {
+                OptimizerLog.Error("AvatarTextureAtlaser",
+                    $"'{rendererName}': {outside} rewritten UV(s) fall outside the atlas (first at vertex {firstBad}: {uvs[firstBad]}). " +
+                    "These will sample the wrong material's pixels.");
+            }
+            else
+            {
+                OptimizerLog.Verbose("AvatarTextureAtlaser", $"'{rendererName}': all {uvs.Length:N0} UVs land inside the atlas.");
+            }
         }
 
         private static Mesh GetMesh(Renderer r)
