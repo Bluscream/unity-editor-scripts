@@ -52,6 +52,15 @@ namespace Bluscream.VRC
             /// what counts toward the limit.
             /// </summary>
             public bool TextureMemoryFromSDK;
+
+            /// <summary>
+            /// Names of the fields VRChat's own performance stats supplied. Anything listed here must not
+            /// be recomputed locally: this package's reconstructions are approximations of VRChat's rules,
+            /// and silently preferring them means optimizing against the wrong numbers.
+            /// </summary>
+            public HashSet<string> SdkProvidedFields = new HashSet<string>(StringComparer.Ordinal);
+
+            public bool FromSdk(string fieldName) => SdkProvidedFields.Contains(fieldName);
             public string RatingName = "Unknown";
         }
 
@@ -92,6 +101,12 @@ namespace Bluscream.VRC
                             ExtractSDKPerfStats(perfStatsObj, stats);
                             CalculateFallbackStats(avatarRoot, stats);
                             stats.RatingName = DetermineRating(stats);
+
+                            // Which numbers are VRChat's and which are this package's reconstruction is the
+                            // difference between optimizing against the real limits and against a guess, so
+                            // it is stated rather than assumed.
+                            Log.Verbose(() => $"Stats provenance: {stats.SdkProvidedFields.Count} field(s) from the VRChat SDK " +
+                                              $"({string.Join(", ", stats.SdkProvidedFields.OrderBy(f => f))}); the rest computed locally.");
                             return stats;
                         }
                     }
@@ -104,6 +119,7 @@ namespace Bluscream.VRC
 
             CalculateFallbackStats(avatarRoot, stats);
             stats.RatingName = DetermineRating(stats);
+            Log.Warn("VRChat SDK performance stats were unavailable — every figure below is this package's own reconstruction of VRChat's rules, not the SDK's. Treat rank headroom as approximate.");
             return stats;
         }
 
@@ -111,27 +127,27 @@ namespace Bluscream.VRC
         {
             Type t = perfStatsObj.GetType();
 
-            stats.TriangleCount = GetIntProp(t, perfStatsObj, "polyCount", "polygonCount", "triangleCount");
-            stats.SkinnedMeshCount = GetIntProp(t, perfStatsObj, "skinnedMeshCount");
-            stats.MeshRendererCount = GetIntProp(t, perfStatsObj, "meshRendererCount");
-            stats.MaterialSlotCount = GetIntProp(t, perfStatsObj, "materialCount");
-            stats.PhysBoneComponentCount = GetIntProp(t, perfStatsObj, "physBoneComponentCount");
-            stats.PhysBoneTransformCount = GetIntProp(t, perfStatsObj, "physBoneTransformCount");
-            stats.PhysBoneColliderCount = GetIntProp(t, perfStatsObj, "physBoneColliderCount");
-            stats.PhysBoneCollisionCheckCount = GetIntProp(t, perfStatsObj, "physBoneCollisionCheckCount");
-            stats.ContactCount = GetIntProp(t, perfStatsObj, "contactCount", "contactsCount");
-            stats.ConstraintCount = GetIntProp(t, perfStatsObj, "constraintCount");
-            stats.ConstraintDepth = GetIntProp(t, perfStatsObj, "constraintDepth");
-            stats.ParticleSystemCount = GetIntProp(t, perfStatsObj, "particleSystemCount");
-            stats.ActiveParticleCount = GetIntProp(t, perfStatsObj, "particleCount", "activeParticlesCount");
-            stats.TrailRendererCount = GetIntProp(t, perfStatsObj, "trailRendererCount");
-            stats.LineRendererCount = GetIntProp(t, perfStatsObj, "lineRendererCount");
-            stats.ClothCount = GetIntProp(t, perfStatsObj, "clothCount");
-            stats.ClothVertexCount = GetIntProp(t, perfStatsObj, "clothMaxVertices");
-            stats.LightCount = GetIntProp(t, perfStatsObj, "lightCount");
-            stats.AudioSourceCount = GetIntProp(t, perfStatsObj, "audioSourceCount");
-            stats.AnimatorCount = GetIntProp(t, perfStatsObj, "animatorCount");
-            stats.BoneCount = GetIntProp(t, perfStatsObj, "boneCount");
+            stats.TriangleCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.TriangleCount), "polyCount", "polygonCount", "triangleCount");
+            stats.SkinnedMeshCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.SkinnedMeshCount), "skinnedMeshCount");
+            stats.MeshRendererCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.MeshRendererCount), "meshRendererCount");
+            stats.MaterialSlotCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.MaterialSlotCount), "materialCount");
+            stats.PhysBoneComponentCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.PhysBoneComponentCount), "physBoneComponentCount");
+            stats.PhysBoneTransformCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.PhysBoneTransformCount), "physBoneTransformCount");
+            stats.PhysBoneColliderCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.PhysBoneColliderCount), "physBoneColliderCount");
+            stats.PhysBoneCollisionCheckCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.PhysBoneCollisionCheckCount), "physBoneCollisionCheckCount");
+            stats.ContactCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ContactCount), "contactCount", "contactsCount");
+            stats.ConstraintCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ConstraintCount), "constraintCount");
+            stats.ConstraintDepth = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ConstraintDepth), "constraintDepth");
+            stats.ParticleSystemCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ParticleSystemCount), "particleSystemCount");
+            stats.ActiveParticleCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ActiveParticleCount), "particleCount", "activeParticlesCount");
+            stats.TrailRendererCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.TrailRendererCount), "trailRendererCount");
+            stats.LineRendererCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.LineRendererCount), "lineRendererCount");
+            stats.ClothCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ClothCount), "clothCount");
+            stats.ClothVertexCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.ClothVertexCount), "clothMaxVertices");
+            stats.LightCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.LightCount), "lightCount");
+            stats.AudioSourceCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.AudioSourceCount), "audioSourceCount");
+            stats.AnimatorCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.AnimatorCount), "animatorCount");
+            stats.BoneCount = ReadSdkInt(t, perfStatsObj, stats, nameof(stats.BoneCount), "boneCount");
 
             // VRChat reports texture memory as megabytes on the stats object. Reading it settles what
             // actually counts toward the limit — our own CalculateTextureMemory is only a reconstruction of
@@ -141,27 +157,36 @@ namespace Bluscream.VRC
             {
                 stats.TotalTextureMemoryBytes = (long)(textureMb * 1024 * 1024);
                 stats.TextureMemoryFromSDK = true;
+                stats.SdkProvidedFields.Add(nameof(stats.TotalTextureMemoryBytes));
             }
         }
 
         private static int GetIntProp(Type t, object obj, params string[] propNames)
+            => TryGetIntProp(t, obj, out int v, propNames) ? v : 0;
+
+        private static bool TryGetIntProp(Type t, object obj, out int value, params string[] propNames)
         {
             foreach (string name in propNames)
             {
                 PropertyInfo p = t.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (p != null)
-                {
-                    object val = p.GetValue(obj);
-                    if (val is int iVal) return iVal;
-                }
+                if (p != null && p.GetValue(obj) is int pVal) { value = pVal; return true; }
+
                 FieldInfo f = t.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (f != null)
-                {
-                    object val = f.GetValue(obj);
-                    if (val is int iVal) return iVal;
-                }
+                if (f != null && f.GetValue(obj) is int fVal) { value = fVal; return true; }
             }
-            return 0;
+            value = 0;
+            return false;
+        }
+
+        /// <summary>
+        /// Reads an SDK stat into <paramref name="stats"/> and records that it came from the SDK, so the
+        /// local fallback pass knows to leave it alone.
+        /// </summary>
+        private static int ReadSdkInt(Type t, object obj, AvatarStats stats, string fieldName, params string[] propNames)
+        {
+            if (!TryGetIntProp(t, obj, out int value, propNames)) return 0;
+            stats.SdkProvidedFields.Add(fieldName);
+            return value;
         }
 
         /// <summary>
@@ -216,10 +241,10 @@ namespace Bluscream.VRC
                 }
             }
 
-            stats.TriangleCount = tris;
-            stats.SkinnedMeshCount = skinned;
-            stats.MeshRendererCount = renderers;
-            stats.MaterialSlotCount = matSlots;
+            if (!stats.FromSdk(nameof(stats.TriangleCount))) stats.TriangleCount = tris;
+            if (!stats.FromSdk(nameof(stats.SkinnedMeshCount))) stats.SkinnedMeshCount = skinned;
+            if (!stats.FromSdk(nameof(stats.MeshRendererCount))) stats.MeshRendererCount = renderers;
+            if (!stats.FromSdk(nameof(stats.MaterialSlotCount))) stats.MaterialSlotCount = matSlots;
             // Only reconstruct when the SDK did not report it — see ExtractSDKPerfStats.
             if (!stats.TextureMemoryFromSDK)
                 stats.TotalTextureMemoryBytes = CalculateTextureMemory(avatarRoot);
@@ -227,21 +252,21 @@ namespace Bluscream.VRC
             CalculatePhysBoneStats(avatarRoot, stats);
 
             Component[] allComps = avatarRoot.GetComponentsInChildren<Component>(true);
-            stats.ContactCount = allComps.Count(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")));
-            stats.ConstraintCount = allComps.Count(c => c != null && c.GetType().Name.ToLowerInvariant().Contains("constraint"));
-            stats.TrailRendererCount = avatarRoot.GetComponentsInChildren<TrailRenderer>(true).Length;
-            stats.LineRendererCount = avatarRoot.GetComponentsInChildren<LineRenderer>(true).Length;
-            stats.LightCount = avatarRoot.GetComponentsInChildren<Light>(true).Length;
-            stats.AudioSourceCount = avatarRoot.GetComponentsInChildren<AudioSource>(true).Length;
-            stats.AnimatorCount = avatarRoot.GetComponentsInChildren<Animator>(true).Length;
+            if (!stats.FromSdk(nameof(stats.ContactCount))) stats.ContactCount = allComps.Count(c => c != null && (c.GetType().Name.Contains("VRCContactSender") || c.GetType().Name.Contains("VRCContactReceiver")));
+            if (!stats.FromSdk(nameof(stats.ConstraintCount))) stats.ConstraintCount = allComps.Count(c => c != null && c.GetType().Name.ToLowerInvariant().Contains("constraint"));
+            if (!stats.FromSdk(nameof(stats.TrailRendererCount))) stats.TrailRendererCount = avatarRoot.GetComponentsInChildren<TrailRenderer>(true).Length;
+            if (!stats.FromSdk(nameof(stats.LineRendererCount))) stats.LineRendererCount = avatarRoot.GetComponentsInChildren<LineRenderer>(true).Length;
+            if (!stats.FromSdk(nameof(stats.LightCount))) stats.LightCount = avatarRoot.GetComponentsInChildren<Light>(true).Length;
+            if (!stats.FromSdk(nameof(stats.AudioSourceCount))) stats.AudioSourceCount = avatarRoot.GetComponentsInChildren<AudioSource>(true).Length;
+            if (!stats.FromSdk(nameof(stats.AnimatorCount))) stats.AnimatorCount = avatarRoot.GetComponentsInChildren<Animator>(true).Length;
 
             var cloths = avatarRoot.GetComponentsInChildren<Cloth>(true);
-            stats.ClothCount = cloths.Length;
-            stats.ClothVertexCount = cloths.Sum(c => c.vertices != null ? c.vertices.Length : 0);
+            if (!stats.FromSdk(nameof(stats.ClothCount))) stats.ClothCount = cloths.Length;
+            if (!stats.FromSdk(nameof(stats.ClothVertexCount))) stats.ClothVertexCount = cloths.Sum(c => c.vertices != null ? c.vertices.Length : 0);
 
             var particleSystems = avatarRoot.GetComponentsInChildren<ParticleSystem>(true);
-            stats.ParticleSystemCount = particleSystems.Length;
-            stats.ActiveParticleCount = particleSystems.Sum(ps => ps.main.maxParticles);
+            if (!stats.FromSdk(nameof(stats.ParticleSystemCount))) stats.ParticleSystemCount = particleSystems.Length;
+            if (!stats.FromSdk(nameof(stats.ActiveParticleCount))) stats.ActiveParticleCount = particleSystems.Sum(ps => ps.main.maxParticles);
         }
 
         private static void CalculatePhysBoneStats(GameObject avatarRoot, AvatarStats stats)
@@ -277,10 +302,10 @@ namespace Bluscream.VRC
                 totalChecks += tCount * effectiveColliders;
             }
 
-            stats.PhysBoneComponentCount = pbList.Count;
-            stats.PhysBoneTransformCount = transforms;
-            stats.PhysBoneColliderCount = colliders;
-            stats.PhysBoneCollisionCheckCount = totalChecks;
+            if (!stats.FromSdk(nameof(stats.PhysBoneComponentCount))) stats.PhysBoneComponentCount = pbList.Count;
+            if (!stats.FromSdk(nameof(stats.PhysBoneTransformCount))) stats.PhysBoneTransformCount = transforms;
+            if (!stats.FromSdk(nameof(stats.PhysBoneColliderCount))) stats.PhysBoneColliderCount = colliders;
+            if (!stats.FromSdk(nameof(stats.PhysBoneCollisionCheckCount))) stats.PhysBoneCollisionCheckCount = totalChecks;
         }
 
         private static int GetPhysBoneTransformCount(Component pb)
