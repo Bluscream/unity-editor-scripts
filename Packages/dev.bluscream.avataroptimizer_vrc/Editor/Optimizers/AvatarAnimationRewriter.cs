@@ -15,6 +15,9 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarAnimationRewriter
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarAnimationRewriter");
+        private static readonly BluLog LogQuest = BluLog.Get("QuestAnimationRewriter");
+
         public static void ProcessAvatarAnimationsAndVRCFury(
             GameObject avatarRoot, 
             Dictionary<Material, Material> materialMap,
@@ -110,7 +113,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"[QuestAnimationRewriter] Failed inspecting component {comp.GetType().Name}: {e.Message}");
+                    LogQuest.Warn($"Failed inspecting component {comp.GetType().Name}: {e.Message}");
                 }
             }
         }
@@ -154,7 +157,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AvatarAnimationRewriter] Exception inspecting animationClips on controller '{ac.name}': {ex.Message}");
+                Log.Warn($"Exception inspecting animationClips on controller '{ac.name}': {ex.Message}");
             }
 
             if (!needsCopy)
@@ -249,7 +252,7 @@ namespace Bluscream.VRCAvatarOptimizer
         {
             if (string.IsNullOrEmpty(sourcePath))
             {
-                Debug.LogWarning($"[AvatarAnimationRewriter] Cannot duplicate {label}: source has no asset path (runtime-only asset). Leaving original reference.");
+                Log.Warn($"Cannot duplicate {label}: source has no asset path (runtime-only asset). Leaving original reference.");
                 return false;
             }
 
@@ -258,7 +261,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (!AssetDatabase.CopyAsset(sourcePath, destPath))
             {
-                Debug.LogWarning($"[AvatarAnimationRewriter] Failed to copy {label} '{sourcePath}' -> '{destPath}'. Leaving original reference.");
+                Log.Warn($"Failed to copy {label} '{sourcePath}' -> '{destPath}'. Leaving original reference.");
                 return false;
             }
             return true;

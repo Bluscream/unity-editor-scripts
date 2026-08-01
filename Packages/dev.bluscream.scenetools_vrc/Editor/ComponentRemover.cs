@@ -15,6 +15,8 @@ namespace Bluscream.ComponentRemover
     /// </summary>
     public static class ComponentRemover
     {
+        private static readonly BluLog Log = BluLog.Get("ComponentRemover");
+
         #region Context Menu Entries - Remove Missing Scripts
 
         [MenuItem("Bluscream/Component Remover/Remove Missing Scripts from Selected (Recursive)", false, 1)]
@@ -24,7 +26,7 @@ namespace Bluscream.ComponentRemover
             {
                 if (Selection.gameObjects == null || Selection.gameObjects.Length == 0)
                 {
-                    Debug.LogWarning("No GameObjects selected");
+                    Log.Warn("No GameObjects selected");
                     return;
                 }
 
@@ -70,12 +72,12 @@ namespace Bluscream.ComponentRemover
                         }
                     }
                 }
-                Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects" + 
+                Log.Info($"Found and removed {compCount} missing scripts from {goCount} GameObjects" + 
                     (backupPath != null ? $". Backup created: {backupPath}" : ""));
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -86,7 +88,7 @@ namespace Bluscream.ComponentRemover
             {
                 if (Selection.gameObjects == null || Selection.gameObjects.Length == 0)
                 {
-                    Debug.LogWarning("No GameObjects selected");
+                    Log.Warn("No GameObjects selected");
                     return;
                 }
 
@@ -136,12 +138,12 @@ namespace Bluscream.ComponentRemover
                     }
                 }
 
-                Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects" + 
+                Log.Info($"Found and removed {compCount} missing scripts from {goCount} GameObjects" + 
                     (backupPath != null ? $". Backup created: {backupPath}" : ""));
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -170,7 +172,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error removing missing scripts from scene: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error removing missing scripts from scene: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -196,7 +198,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -207,14 +209,14 @@ namespace Bluscream.ComponentRemover
             {
                 if (Selection.gameObjects == null || Selection.gameObjects.Length == 0)
                 {
-                    Debug.LogWarning("No GameObjects selected");
+                    Log.Warn("No GameObjects selected");
                     return;
                 }
                 LogMissingScripts(Selection.gameObjects);
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error logging missing scripts from selection: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error logging missing scripts from selection: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -240,7 +242,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -308,7 +310,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning($"Error processing prefab source: {e.Message}");
+                Log.Warn($"Error processing prefab source: {e.Message}");
             }
         }
 
@@ -318,7 +320,7 @@ namespace Bluscream.ComponentRemover
             {
                 if (gameObjects == null)
                 {
-                    Debug.LogWarning("GameObjects array is null");
+                    Log.Warn("GameObjects array is null");
                     return;
                 }
 
@@ -335,7 +337,7 @@ namespace Bluscream.ComponentRemover
                     }
                 }
 
-                Debug.Log(
+                Log.Info(
                     string.Format(
                         "Searched {0} GameObjects and found {1} missing scripts.",
                         gameObjectCount,
@@ -345,7 +347,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -355,7 +357,7 @@ namespace Bluscream.ComponentRemover
             {
                 if (gameObjects == null)
                 {
-                    Debug.LogWarning("GameObjects array is null");
+                    Log.Warn("GameObjects array is null");
                     return;
                 }
 
@@ -371,7 +373,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -381,7 +383,7 @@ namespace Bluscream.ComponentRemover
             {
                 if (gameObjects == null)
                 {
-                    Debug.LogWarning("GameObjects array is null");
+                    Log.Warn("GameObjects array is null");
                     return;
                 }
 
@@ -400,7 +402,7 @@ namespace Bluscream.ComponentRemover
                     }
                 }
 
-                Debug.Log(
+                Log.Info(
                     string.Format(
                         "Searched {0} GameObjects and removed {1} missing scripts.",
                         gameObjects.Length,
@@ -410,7 +412,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -422,6 +424,8 @@ namespace Bluscream.ComponentRemover
     /// </summary>
     public class FindMissingScriptsWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("ComponentRemover");
+
         public List<GameObject> results = new List<GameObject>();
 
         private void OnGUI()
@@ -455,7 +459,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error searching project: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error searching project: {e.Message}\n{e.StackTrace}");
                 results = new List<GameObject>();
             }
         }
@@ -479,7 +483,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error searching scene: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error searching scene: {e.Message}\n{e.StackTrace}");
                 results = new List<GameObject>();
             }
         }
@@ -495,7 +499,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error searching selected objects: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error searching selected objects: {e.Message}\n{e.StackTrace}");
                 results = new List<GameObject>();
             }
         }
@@ -521,12 +525,12 @@ namespace Bluscream.ComponentRemover
 
                 if (backupPath != null)
                 {
-                    Debug.Log($"Removed missing scripts. Backup created: {backupPath}");
+                    Log.Info($"Removed missing scripts. Backup created: {backupPath}");
                 }
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error removing scripts: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error removing scripts: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -555,6 +559,8 @@ namespace Bluscream.ComponentRemover
     /// </summary>
     public class MissingScriptUtility : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("ComponentRemover");
+
         bool includeInactive = true;
         bool includePrefabs = true;
 
@@ -589,7 +595,7 @@ namespace Bluscream.ComponentRemover
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error logging missing scripts: {e.Message}\n{e.StackTrace}");
                 }
             }
             if (GUILayout.Button("Log Missing Scripts from Selected GameObjects"))
@@ -600,7 +606,7 @@ namespace Bluscream.ComponentRemover
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error logging missing scripts from selection: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error logging missing scripts from selection: {e.Message}\n{e.StackTrace}");
                 }
             }
 
@@ -623,7 +629,7 @@ namespace Bluscream.ComponentRemover
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error selecting GameObjects with missing scripts: {e.Message}\n{e.StackTrace}");
                 }
             }
 
@@ -653,7 +659,7 @@ namespace Bluscream.ComponentRemover
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error removing missing scripts: {e.Message}\n{e.StackTrace}");
                 }
             }
             if (GUILayout.Button("Remove Missing Scripts from Selected GameObjects"))
@@ -672,7 +678,7 @@ namespace Bluscream.ComponentRemover
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error removing missing scripts from selection: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error removing missing scripts from selection: {e.Message}\n{e.StackTrace}");
                 }
             }
         }
@@ -766,7 +772,7 @@ namespace Bluscream.ComponentRemover
                 }
             }
 
-            Debug.Log($"[ComponentRemover] Removed {removedCount} Quest-incompatible components from {root.name}.");
+            Log.Info($"Removed {removedCount} Quest-incompatible components from {root.name}.");
             return removed;
         }
     }
@@ -776,6 +782,8 @@ namespace Bluscream.ComponentRemover
     /// </summary>
     internal static class BackupSystemHelper
     {
+        private static readonly BluLog Log = BluLog.Get("ComponentRemover");
+
         public static string CreateBackupForSelection(string backupName)
         {
             if (Selection.gameObjects == null || Selection.gameObjects.Length == 0) return null;
@@ -812,7 +820,7 @@ namespace Bluscream.ComponentRemover
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Failed to create backup: {e.Message}");
+                Log.Warn($"Failed to create backup: {e.Message}");
                 return null;
             }
         }

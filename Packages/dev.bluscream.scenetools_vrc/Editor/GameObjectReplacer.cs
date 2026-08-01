@@ -9,6 +9,8 @@ namespace Bluscream.Replacer
     /// </summary>
     public static class GameObjectReplacer
     {
+        private static readonly BluLog Log = BluLog.Get("GameObjectReplacer");
+
         private static GameObject sourceGameObject;
         private static GameObject sourcePrefab;
         private static string sourceName;
@@ -30,7 +32,7 @@ namespace Bluscream.Replacer
             sourcePrefab = null;
             sourceName = go.name;
             
-            Debug.Log($"Source GameObject set: {sourceName}");
+            Log.Info($"Source GameObject set: {sourceName}");
         }
 
         /// <summary>
@@ -50,7 +52,7 @@ namespace Bluscream.Replacer
             sourceGameObject = null;
             sourceName = prefab.name;
             
-            Debug.Log($"Source Prefab set: {sourceName}");
+            Log.Info($"Source Prefab set: {sourceName}");
         }
 
         /// <summary>
@@ -111,13 +113,13 @@ namespace Bluscream.Replacer
         {
             if (target == null)
             {
-                Debug.LogError("Cannot replace: Target GameObject is null");
+                Log.Error("Cannot replace: Target GameObject is null");
                 return;
             }
 
             if (!HasSource())
             {
-                Debug.LogError("Cannot replace: No source GameObject or prefab set. Right-click on a GameObject or prefab and select 'Replace with ...' first.");
+                Log.Error("Cannot replace: No source GameObject or prefab set. Right-click on a GameObject or prefab and select 'Replace with ...' first.");
                 EditorUtility.DisplayDialog("No Source", "No source GameObject or prefab set.\n\nRight-click on a GameObject or prefab and select 'Replace with ...' first.", "OK");
                 return;
             }
@@ -145,7 +147,7 @@ namespace Bluscream.Replacer
                     sourceInstance = PrefabUtility.InstantiatePrefab(sourcePrefab) as GameObject;
                     if (sourceInstance == null)
                     {
-                        Debug.LogError($"Failed to instantiate prefab: {sourcePrefab.name}");
+                        Log.Error($"Failed to instantiate prefab: {sourcePrefab.name}");
                         return;
                     }
                 }
@@ -183,7 +185,7 @@ namespace Bluscream.Replacer
 
                 if (sourceInstance == null)
                 {
-                    Debug.LogError("Failed to create source instance");
+                    Log.Error("Failed to create source instance");
                     return;
                 }
 
@@ -207,11 +209,11 @@ namespace Bluscream.Replacer
                 // Select the new instance
                 Selection.activeGameObject = sourceInstance;
 
-                Debug.Log($"Replaced '{targetName}' with '{sourceName}'");
+                Log.Info($"Replaced '{targetName}' with '{sourceName}'");
             }
             catch (Exception e)
             {
-                Debug.LogError($"Error replacing GameObject: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error replacing GameObject: {e.Message}\n{e.StackTrace}");
                 EditorUtility.DisplayDialog("Replace Error", $"Error replacing GameObject:\n{e.Message}", "OK");
             }
         }

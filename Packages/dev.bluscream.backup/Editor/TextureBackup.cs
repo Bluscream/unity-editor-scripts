@@ -11,6 +11,7 @@ namespace Bluscream.BackupSystem
     [System.Serializable]
     public class TextureBackup
     {
+        
         public string texturePath;
         public int maxTextureSize;
         public TextureImporterFormat format;
@@ -24,6 +25,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class TextureBackupHandler
     {
+        private static readonly BluLog Log = BluLog.Get("TextureBackup");
+
         /// <summary>
         /// Backs up textures based on scope
         /// </summary>
@@ -173,7 +176,7 @@ namespace Bluscream.BackupSystem
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Failed to restore texture {backup.texturePath}: {e.Message}");
+                    Log.Warn($"Failed to restore texture {backup.texturePath}: {e.Message}");
                 }
             }
         }

@@ -8,6 +8,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class GameObjectBackupMenu
     {
+        private static readonly BluLog Log = BluLog.Get("GameObjectBackupMenu");
+
         [MenuItem("Bluscream/Backup System/Backup GameObject", false, 0)]
         public static void BackupGameObject(MenuCommand command)
         {
@@ -101,7 +103,7 @@ namespace Bluscream.BackupSystem
                         $"Backup created successfully!\n\nLocation: {backupPath}",
                         "OK"
                     );
-                    Debug.Log($"Backup created for {target.name}: {backupPath}");
+                    Log.Info($"Backup created for {target.name}: {backupPath}");
                 }
                 else
                 {
@@ -120,7 +122,7 @@ namespace Bluscream.BackupSystem
                     $"Error creating backup: {e.Message}",
                     "OK"
                 );
-                Debug.LogError($"Error creating backup: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error creating backup: {e.Message}\n{e.StackTrace}");
             }
         }
     }

@@ -10,6 +10,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarLightOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarLightOptimizer");
+
         /// <summary>
         /// Disables excess dynamic lights on the avatar when their count exceeds maxLights.
         /// Lights on active root or main body are prioritized over secondary prop lights.
@@ -27,7 +29,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             int toRemove = componentCount - maxLights;
             progressCallback?.Invoke($"Removing excess dynamic lights ({componentCount} -> max {maxLights})...");
-            Debug.Log($"[AvatarLightOptimizer] Light components {componentCount} > max {maxLights}. Removing {toRemove} (deepest first).");
+            Log.Info($"Light components {componentCount} > max {maxLights}. Removing {toRemove} (deepest first).");
 
             // Deepest first: prop and accessory lights before anything near the avatar root.
             var lightsToRemove = lights
@@ -37,12 +39,12 @@ namespace Bluscream.VRCAvatarOptimizer
 
             foreach (Light light in lightsToRemove)
             {
-                Debug.Log($"[AvatarLightOptimizer] Removing Light component on '{light.gameObject.name}' (type {light.type}, {(light.enabled ? "enabled" : "disabled")}).");
+                Log.Info($"Removing Light component on '{light.gameObject.name}' (type {light.type}, {(light.enabled ? "enabled" : "disabled")}).");
                 Undo.DestroyObjectImmediate(light);
             }
 
             int remaining = avatarRoot.GetComponentsInChildren<Light>(true).Count(l => l != null);
-            Debug.Log($"[AvatarLightOptimizer] Light components now {remaining} / {maxLights}.");
+            Log.Info($"Light components now {remaining} / {maxLights}.");
         }
 
         private static int GetHierarchyDepth(Transform t)

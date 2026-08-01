@@ -9,6 +9,7 @@ namespace Bluscream.VRCAvatarOptimizer
     /// <summary>Budget names shared between the reducers and the conversion pipeline.</summary>
     public static class AvatarBudgets
     {
+                
         public const string Bundle = "Compressed bundle";
         public const string Vram = "Texture VRAM";
     }
@@ -25,6 +26,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public class TextureBudgetReducer : IBudgetReducer
     {
+        private static readonly BluLog Log = BluLog.Get("TextureBudgetReducer");
+
         public string Name => "Texture compression";
 
         private readonly GameObject _avatar;
@@ -74,7 +77,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (estDelta > 64 * 1024 && measuredDelta > 0)
                 {
                     _diskModelScale = Math.Max(0.10, Math.Min(1.50, (double)measuredDelta / estDelta));
-                    Debug.Log($"[TextureBudgetReducer] Calibrated disk model: 1 estimated MB ≈ {_diskModelScale:F2} MB of real bundle.");
+                    Log.Info($"Calibrated disk model: 1 estimated MB ≈ {_diskModelScale:F2} MB of real bundle.");
                 }
             }
             if (bundle != null)
@@ -93,7 +96,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 if (newDiskBudget < 128 * 1024L)
                 {
-                    Debug.LogWarning($"[TextureBudgetReducer] Non-texture payload (~{nonTexture / (1024.0 * 1024.0):F2} MB) already fills the {bundle.Target / (1024.0 * 1024.0):F2} MB target — textures cannot help further.");
+                    Log.Warn($"Non-texture payload (~{nonTexture / (1024.0 * 1024.0):F2} MB) already fills the {bundle.Target / (1024.0 * 1024.0):F2} MB target — textures cannot help further.");
                     return null; // let the next reducer (meshes) take over
                 }
             }
@@ -116,6 +119,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public class MeshDecimationReducer : IBudgetReducer
     {
+        private static readonly BluLog LogMesh = BluLog.Get("MeshDecimationReducer");
+
         public string Name => "Mesh decimation";
 
         private readonly GameObject _avatar;
@@ -166,7 +171,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (targetTris >= _currentTriangles) return null;
 
             _progress?.Invoke($"Decimating meshes {_currentTriangles:N0} → {targetTris:N0} triangles...");
-            Debug.Log($"[MeshDecimationReducer] Bundle over by {bundle.Excess / (1024.0 * 1024.0):F2} MB; estimated mesh payload ~{meshBytes / (1024.0 * 1024.0):F2} MB → cutting {removeFraction * 100:F0}% of triangles ({_currentTriangles:N0} → {targetTris:N0}, floor {floorTris:N0}).");
+            LogMesh.Info($"Bundle over by {bundle.Excess / (1024.0 * 1024.0):F2} MB; estimated mesh payload ~{meshBytes / (1024.0 * 1024.0):F2} MB → cutting {removeFraction * 100:F0}% of triangles ({_currentTriangles:N0} → {targetTris:N0}, floor {floorTris:N0}).");
 
             int finalTris = UnityMeshDecimation.Editor.MeshDecimationProcessor.DecimateAvatarMeshesToTargetTris(
                 _avatar, targetTris, _progress);

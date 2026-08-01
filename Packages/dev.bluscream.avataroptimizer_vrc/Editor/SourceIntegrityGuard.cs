@@ -23,7 +23,7 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class SourceIntegrityGuard
     {
-        private const string Tag = "SourceIntegrityGuard";
+        private static readonly BluLog Log = BluLog.Get("SourceIntegrityGuard");
 
         /// <summary>Files at or below this size are hashed; larger ones fall back to size + write time.</summary>
         private const long FullHashSizeLimit = 64L * 1024 * 1024;
@@ -54,9 +54,9 @@ namespace Bluscream.VRCAvatarOptimizer
 
             CaptureHierarchy(sourceAvatar, snapshot);
 
-            OptimizerLog.Info(Tag, $"Captured source fingerprint for '{sourceAvatar.name}': " +
+            Log.Info($"Captured source fingerprint for '{sourceAvatar.name}': " +
                                    $"{snapshot.AssetFingerprints.Count} asset(s), {snapshot.TransformCount} transform(s).");
-            OptimizerLog.Trace(Tag, () => "  assets:\n    " + string.Join("\n    ", snapshot.AssetFingerprints.Keys.OrderBy(p => p)));
+            Log.Trace(() => "  assets:\n    " + string.Join("\n    ", snapshot.AssetFingerprints.Keys.OrderBy(p => p)));
 
             return snapshot;
         }
@@ -103,13 +103,13 @@ namespace Bluscream.VRCAvatarOptimizer
             var hierarchyIssues = VerifyHierarchy(sourceAvatar, snapshot);
 
             foreach (string path in expectedHits)
-                OptimizerLog.Info(Tag, $"Source asset '{path}' changed as configured (rig hygiene edits the shared model importer).");
+                Log.Info($"Source asset '{path}' changed as configured (rig hygiene edits the shared model importer).");
 
             bool clean = modified.Count == 0 && deleted.Count == 0 && hierarchyIssues.Count == 0;
 
             if (clean)
             {
-                OptimizerLog.Info(Tag, $"Source integrity verified: '{snapshot.AvatarName}' and all {snapshot.AssetFingerprints.Count} referenced asset(s) are unchanged.");
+                Log.Info($"Source integrity verified: '{snapshot.AvatarName}' and all {snapshot.AssetFingerprints.Count} referenced asset(s) are unchanged.");
                 summary?.AddSuccess($"Source avatar and its {snapshot.AssetFingerprints.Count} referenced asset(s) verified unchanged.");
                 return true;
             }
@@ -138,7 +138,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (hierarchyIssues.Count > 20) report.AppendLine($"    ... and {hierarchyIssues.Count - 20} more");
             }
 
-            OptimizerLog.Error(Tag, report.ToString(), sourceAvatar);
+            Log.Error(report.ToString(), sourceAvatar);
             summary?.AddError($"Source integrity check FAILED: {modified.Count} asset(s) modified, {deleted.Count} deleted, {hierarchyIssues.Count} hierarchy change(s). See console — the original avatar was altered.");
 
             return false;
@@ -181,7 +181,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                OptimizerLog.Warn(Tag, $"Could not collect dependencies for '{sourceAvatar.name}': {e.Message}. The asset check will be incomplete.");
+                Log.Warn($"Could not collect dependencies for '{sourceAvatar.name}': {e.Message}. The asset check will be incomplete.");
                 return paths;
             }
 

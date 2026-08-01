@@ -15,6 +15,8 @@ namespace Bluscream.Cleanup
     /// </summary>
     public class CleanupWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("CleanupWindow");
+
         private Vector2 scrollPosition;
         public List<AssetDeletionInfo> unusedAssets = new List<AssetDeletionInfo>();
         private bool hasAnalyzed = false;
@@ -150,7 +152,7 @@ namespace Bluscream.Cleanup
             catch (Exception e)
             {
                 analysisStatus = $"Analysis failed: {e.Message}";
-                Debug.LogError($"Asset cleanup analysis failed: {e}");
+                Log.Error($"Asset cleanup analysis failed: {e}");
             }
             finally
             {
@@ -223,12 +225,12 @@ namespace Bluscream.Cleanup
                 }
 
                 EditorUtility.ClearProgressBar();
-                Debug.LogWarning("Could not create assets.csv backup. Backup system may not be available.");
+                Log.Warn("Could not create assets.csv backup. Backup system may not be available.");
             }
             catch (Exception e)
             {
                 EditorUtility.ClearProgressBar();
-                Debug.LogError($"Failed to create backup: {e}");
+                Log.Error($"Failed to create backup: {e}");
                 if (!EditorUtility.DisplayDialog(
                     "Backup Failed",
                     $"Failed to create backup: {e.Message}\n\nContinue without backup?",
@@ -262,7 +264,7 @@ namespace Bluscream.Cleanup
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Cleanup Failed", $"Failed to delete assets: {e.Message}", "OK");
-                Debug.LogError($"Asset cleanup failed: {e}");
+                Log.Error($"Asset cleanup failed: {e}");
             }
             finally
             {

@@ -11,6 +11,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarParticleOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarParticleOptimizer");
+
         /// <summary>
         /// Optimizes particle systems, trail renderers, and line renderers to fit profile limits.
         /// </summary>
@@ -35,7 +37,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     ParticleSystem ps = particleComps[particleComps.Count - 1];
                     particleComps.RemoveAt(particleComps.Count - 1);
                     if (ps == null) continue;
-                    Debug.Log($"[AvatarParticleOptimizer] Pruning ParticleSystem on '{ps.gameObject.name}'");
+                    Log.Info($"Pruning ParticleSystem on '{ps.gameObject.name}'");
                     Undo.DestroyObjectImmediate(ps);
                 }
             }
@@ -70,7 +72,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     Undo.RecordObject(ps, "Disable Particle Trails");
                     var trails = ps.trails;
                     trails.enabled = false;
-                    Debug.Log($"[AvatarParticleOptimizer] Disabled trails module on '{ps.gameObject.name}' (not allowed by profile).");
+                    Log.Info($"Disabled trails module on '{ps.gameObject.name}' (not allowed by profile).");
                 }
 
                 if (!profile.ParticleCollisionEnabledAllowed && ps.collision.enabled)
@@ -78,7 +80,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     Undo.RecordObject(ps, "Disable Particle Collision");
                     var collision = ps.collision;
                     collision.enabled = false;
-                    Debug.Log($"[AvatarParticleOptimizer] Disabled collision module on '{ps.gameObject.name}' (not allowed by profile).");
+                    Log.Info($"Disabled collision module on '{ps.gameObject.name}' (not allowed by profile).");
                 }
             }
 
@@ -117,7 +119,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     Undo.RecordObject(renderer, "Disable Mesh Particles");
                     renderer.renderMode = ParticleSystemRenderMode.Billboard;
-                    Debug.Log($"[AvatarParticleOptimizer] Switched mesh particles to billboard on '{ps.gameObject.name}' (mesh particles not allowed by profile).");
+                    Log.Info($"Switched mesh particles to billboard on '{ps.gameObject.name}' (mesh particles not allowed by profile).");
                 }
                 return;
             }
@@ -132,7 +134,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     Undo.RecordObject(ps, "Cap Mesh Particle Count");
                     main.maxParticles = capped;
-                    Debug.Log($"[AvatarParticleOptimizer] Capped mesh particle count on '{ps.gameObject.name}' to {capped} ({meshTris} tris/mesh) to fit {maxPolys} poly budget.");
+                    Log.Info($"Capped mesh particle count on '{ps.gameObject.name}' to {capped} ({meshTris} tris/mesh) to fit {maxPolys} poly budget.");
                 }
             }
         }
@@ -148,7 +150,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 T c = comps[comps.Count - 1]; // deepest first
                 comps.RemoveAt(comps.Count - 1);
                 if (c == null) continue;
-                Debug.Log($"[AvatarParticleOptimizer] Pruning {label} on '{c.gameObject.name}'");
+                Log.Info($"Pruning {label} on '{c.gameObject.name}'");
                 Undo.DestroyObjectImmediate(c);
             }
         }

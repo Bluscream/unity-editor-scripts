@@ -13,6 +13,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class AssetBackupHandler
     {
+        private static readonly BluLog Log = BluLog.Get("AssetBackup");
+
         /// <summary>
         /// Collects asset information based on scope and writes to CSV
         /// </summary>
@@ -204,7 +206,7 @@ namespace Bluscream.BackupSystem
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to process asset {assetPath}: {e.Message}");
+                        Log.Warn($"Failed to process asset {assetPath}: {e.Message}");
                     }
                 }
             }
@@ -228,7 +230,7 @@ namespace Bluscream.BackupSystem
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Failed to calculate MD5 for {filePath}: {e.Message}");
+                Log.Warn($"Failed to calculate MD5 for {filePath}: {e.Message}");
                 return "";
             }
         }

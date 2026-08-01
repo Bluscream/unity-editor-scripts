@@ -20,6 +20,8 @@ namespace Bluscream.VRC
     /// </summary>
     public static class VRCMenuIconCollector
     {
+        private static readonly BluLog Log = BluLog.Get("VRCMenuIconCollector");
+
         /// <summary>A texture that ships with the avatar but is not reachable through any Renderer.</summary>
         public class CollectedTexture
         {
@@ -106,7 +108,7 @@ namespace Bluscream.VRC
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[VRCMenuIconCollector] Component texture scan failed: {e.Message}");
+                Log.Warn($"Component texture scan failed: {e.Message}");
             }
 
             return result;
@@ -131,7 +133,7 @@ namespace Bluscream.VRC
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[VRCMenuIconCollector] Could not collect expression menu icons: {e.Message}");
+                Log.Warn($"Could not collect expression menu icons: {e.Message}");
             }
             return icons;
         }

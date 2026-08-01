@@ -6,6 +6,8 @@ namespace Bluscream.VRCAvatarOptimizer
 {
     public abstract class PlatformProfile_Android : PlatformProfile
     {
+        private static readonly BluLog Log = BluLog.Get("PlatformProfile_Android");
+
         public override TargetPlatform Platform => TargetPlatform.Android;
 
         protected PlatformProfile_Android()
@@ -48,7 +50,7 @@ namespace Bluscream.VRCAvatarOptimizer
             // Enforce VRChat Mobile Quality Setting: Pixel Light Count <= 1 (prevents VRChat SDK build error)
             if (QualitySettings.pixelLightCount > 1)
             {
-                Debug.Log($"[PlatformProfile_Android] Adjusting QualitySettings.pixelLightCount from {QualitySettings.pixelLightCount} -> 1 for VRChat Mobile compliance.");
+                Log.Info($"Adjusting QualitySettings.pixelLightCount from {QualitySettings.pixelLightCount} -> 1 for VRChat Mobile compliance.");
                 QualitySettings.pixelLightCount = 1;
             }
         }

@@ -9,6 +9,7 @@ namespace Bluscream.BackupSystem
     [System.Serializable]
     public class GameObjectBackup
     {
+        
         public string gameObjectPath;
         public Vector3 localPosition;
         public Quaternion localRotation;
@@ -36,6 +37,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class GameObjectBackupHandler
     {
+        private static readonly BluLog Log = BluLog.Get("GameObjectBackup");
+
         /// <summary>
         /// Backs up GameObject hierarchy
         /// </summary>
@@ -84,7 +87,7 @@ namespace Bluscream.BackupSystem
         {
             // GameObject restoration is complex and may not always be possible
             // This would require scene management and hierarchy reconstruction
-            Debug.LogWarning("GameObject restoration is not fully implemented. Manual restoration may be required.");
+            Log.Warn("GameObject restoration is not fully implemented. Manual restoration may be required.");
         }
     }
 }

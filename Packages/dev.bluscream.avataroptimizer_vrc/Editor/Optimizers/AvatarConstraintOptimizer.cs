@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarConstraintOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarConstraintOptimizer");
+
         /// <summary>
         /// Prunes excess Constraint components to fit within profile.MaxConstraints limit.
         /// </summary>
@@ -30,7 +32,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (constraintComps.Count <= maxConstraints) return 0;
 
             int prunedCount = constraintComps.Count - maxConstraints;
-            Debug.Log($"[AvatarConstraintOptimizer] Constraint components: {constraintComps.Count} > {maxConstraints} limit. Pruning {prunedCount}.");
+            Log.Info($"Constraint components: {constraintComps.Count} > {maxConstraints} limit. Pruning {prunedCount}.");
             progressCallback?.Invoke($"Pruning excess Constraints ({constraintComps.Count} -> {maxConstraints})...");
 
             for (int i = maxConstraints; i < constraintComps.Count; i++)
@@ -38,7 +40,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 Component c = constraintComps[i];
                 if (c != null)
                 {
-                    Debug.Log($"[AvatarConstraintOptimizer] Pruning '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
+                    Log.Info($"Pruning '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
                     Undo.DestroyObjectImmediate(c);
                 }
             }

@@ -9,6 +9,7 @@ namespace Bluscream.VRCFury
 {
     public class MenuItemNode
     {
+        
         public string Name;
         public string FullPath;
         public VRCExpressionsMenu.Control Control;
@@ -33,6 +34,8 @@ namespace Bluscream.VRCFury
     /// </summary>
     public static class VRCFuryMenuMapper
     {
+        private static readonly BluLog Log = BluLog.Get("VRCFuryMenuMapper");
+
         public static VRCExpressionsMenu GetMergedMenu(GameObject avatarObj)
         {
             if (avatarObj == null || !Utils.TryInitialize()) return null;
@@ -52,7 +55,7 @@ namespace Bluscream.VRCFury
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[VRCFuryMenuMapper] Failed to extract merged menu: {ex}");
+                Log.Error($"Failed to extract merged menu: {ex}");
                 return null;
             }
         }

@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarContactOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarContactOptimizer");
+
         /// <summary>
         /// Prunes excess VRCContactSender and VRCContactReceiver components to fit within profile.MaxContacts.
         /// </summary>
@@ -30,7 +32,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (contactComps.Count <= maxContacts) return 0;
 
             int prunedCount = contactComps.Count - maxContacts;
-            Debug.Log($"[AvatarContactOptimizer] VRCContact components: {contactComps.Count} > {maxContacts} limit. Pruning {prunedCount}.");
+            Log.Info($"VRCContact components: {contactComps.Count} > {maxContacts} limit. Pruning {prunedCount}.");
             progressCallback?.Invoke($"Pruning excess VRCContact components ({contactComps.Count} -> {maxContacts})...");
 
             for (int i = maxContacts; i < contactComps.Count; i++)
@@ -38,7 +40,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 Component c = contactComps[i];
                 if (c != null)
                 {
-                    Debug.Log($"[AvatarContactOptimizer] Pruning '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
+                    Log.Info($"Pruning '{c.GetType().Name}' from '{GetGameObjectPath(c.gameObject)}'");
                     Undo.DestroyObjectImmediate(c);
                 }
             }

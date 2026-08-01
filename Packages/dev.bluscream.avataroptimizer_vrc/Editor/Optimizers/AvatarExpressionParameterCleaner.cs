@@ -22,6 +22,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarExpressionParameterCleaner
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarExpressionParameterCleaner");
+
         /// <summary>Fallback for VRCExpressionParameters.MAX_PARAMETER_COST when the SDK constant cannot be read.</summary>
         private const int FallbackMaxParameterCost = 256;
 
@@ -68,7 +70,7 @@ namespace Bluscream.VRCAvatarOptimizer
             ScriptableObject paramAsset = paramsProp?.objectReferenceValue as ScriptableObject;
             if (paramAsset == null)
             {
-                Debug.Log("[AvatarExpressionParameterCleaner] Avatar has no VRCExpressionParameters asset — nothing to clean.");
+                Log.Info("Avatar has no VRCExpressionParameters asset — nothing to clean.");
                 return 0;
             }
 
@@ -77,11 +79,11 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (cost <= budget && !force)
             {
-                Debug.Log($"[AvatarExpressionParameterCleaner] Synced parameter cost {cost} / {budget} bits is within budget — leaving parameters untouched.");
+                Log.Info($"Synced parameter cost {cost} / {budget} bits is within budget — leaving parameters untouched.");
                 return 0;
             }
 
-            Debug.Log(cost > budget
+            Log.Info(cost > budget
                 ? $"[AvatarExpressionParameterCleaner] Synced parameter cost {cost} > budget {budget} bits — cleaning dead parameters."
                 : $"[AvatarExpressionParameterCleaner] Cost {cost} / {budget} bits is within budget, but cleaning was explicitly requested.");
 
@@ -97,7 +99,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (dead.Count == 0)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Cost is {cost} / {budget} bits but every synced parameter is still referenced — nothing safe to remove. Reduce synced parameters manually (Int/Float cost {CostInt} bits each, Bool costs {CostBool}).");
+                Log.Warn($"Cost is {cost} / {budget} bits but every synced parameter is still referenced — nothing safe to remove. Reduce synced parameters manually (Int/Float cost {CostInt} bits each, Bool costs {CostBool}).");
                 return 0;
             }
 
@@ -127,16 +129,16 @@ namespace Bluscream.VRCAvatarOptimizer
             descriptorSo.ApplyModifiedProperties();
 
             foreach (ParameterEntry entry in toRemove)
-                Debug.Log($"[AvatarExpressionParameterCleaner] Removed unreferenced parameter '{entry.Name}' ({entry.Cost} bit(s)).");
+                Log.Info($"Removed unreferenced parameter '{entry.Name}' ({entry.Cost} bit(s)).");
 
             // Menu controls pointing at a parameter that no longer exists would show up broken in-game.
             int menusFixed = PruneMenuControls(descriptor, descriptorSo, removedNames, outputDirectory);
 
             int finalCost = CalculateTotalCost(workingAsset);
-            Debug.Log($"[AvatarExpressionParameterCleaner] Complete: removed {toRemove.Count} parameter(s), pruned {menusFixed} menu control(s). Cost {cost} → {finalCost} / {budget} bits.");
+            Log.Info($"Complete: removed {toRemove.Count} parameter(s), pruned {menusFixed} menu control(s). Cost {cost} → {finalCost} / {budget} bits.");
 
             if (finalCost > budget)
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Still over budget at {finalCost} / {budget} bits — the remaining synced parameters are all in use and must be reduced manually.");
+                Log.Warn($"Still over budget at {finalCost} / {budget} bits — the remaining synced parameters are all in use and must be reduced manually.");
 
             return toRemove.Count;
         }
@@ -209,7 +211,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Could not read descriptor playable layers: {e.Message}");
+                Log.Warn($"Could not read descriptor playable layers: {e.Message}");
             }
         }
 
@@ -326,7 +328,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Could not read expression parameters: {e.Message}");
+                Log.Warn($"Could not read expression parameters: {e.Message}");
             }
             return result;
         }
@@ -390,7 +392,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Could not remove parameters: {e.Message}");
+                Log.Warn($"Could not remove parameters: {e.Message}");
                 return false;
             }
         }
@@ -449,7 +451,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Could not inspect menu '{menu.name}': {e.Message}");
+                Log.Warn($"Could not inspect menu '{menu.name}': {e.Message}");
             }
             return false;
         }
@@ -484,7 +486,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     if (ControlReferencesRemovedParameter(control, removedNames))
                     {
                         string label = control.FindPropertyRelative("name")?.stringValue ?? "(unnamed)";
-                        Debug.Log($"[AvatarExpressionParameterCleaner] Removed menu control '{label}' — its parameter no longer exists.");
+                        Log.Info($"Removed menu control '{label}' — its parameter no longer exists.");
                         controls.DeleteArrayElementAtIndex(i);
                         removedCount++;
                         continue;
@@ -504,7 +506,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Could not prune menu '{menu.name}': {e.Message}");
+                Log.Warn($"Could not prune menu '{menu.name}': {e.Message}");
             }
 
             return working;
@@ -536,7 +538,7 @@ namespace Bluscream.VRCAvatarOptimizer
             string sourcePath = AssetDatabase.GetAssetPath(source);
             if (string.IsNullOrEmpty(sourcePath))
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Cannot duplicate {label}: '{source.name}' has no asset path. Skipping to avoid mutating a runtime-only asset.");
+                Log.Warn($"Cannot duplicate {label}: '{source.name}' has no asset path. Skipping to avoid mutating a runtime-only asset.");
                 return null;
             }
 
@@ -556,7 +558,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (!AssetDatabase.CopyAsset(sourcePath, destPath))
             {
-                Debug.LogWarning($"[AvatarExpressionParameterCleaner] Failed to copy {label} '{sourcePath}' -> '{destPath}'. Leaving the original untouched.");
+                Log.Warn($"Failed to copy {label} '{sourcePath}' -> '{destPath}'. Leaving the original untouched.");
                 return null;
             }
 

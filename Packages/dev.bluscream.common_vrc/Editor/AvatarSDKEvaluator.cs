@@ -14,6 +14,10 @@ namespace Bluscream.VRC
     /// </summary>
     public static class AvatarSDKEvaluator
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarSDKEvaluator");
+        private static readonly BluLog LogSdkLive = BluLog.Get("VRChat SDK Live");
+        private static readonly BluLog LogSdkSync = BluLog.Get("VRChat SDK Sync");
+
         public class AvatarStats
         {
             public int TriangleCount;
@@ -89,7 +93,7 @@ namespace Bluscream.VRC
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] VRChat SDK Stats Reflection fallback: {e.Message}");
+                Log.Warn($"VRChat SDK Stats Reflection fallback: {e.Message}");
             }
 
             CalculateFallbackStats(avatarRoot, stats);
@@ -550,7 +554,7 @@ namespace Bluscream.VRC
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Failed to reflect VRChat SDK Builder alerts: {ex.Message}");
+                Log.Warn($"Failed to reflect VRChat SDK Builder alerts: {ex.Message}");
             }
             return alerts;
         }
@@ -675,14 +679,14 @@ namespace Bluscream.VRC
         /// <summary>
         /// Prints VRChat SDK validation alerts directly to Console
         /// </summary>
-        public static void PrintSDKAlertsToConsole(GameObject avatarRoot, AvatarStats stats = null)
+        public static void PrintSDKAlertsToConsole(GameObject avatarRoot, AvatarStats stats = null, int maxPolygons = 70000, int maxMaterialSlots = 8)
         {
             if (avatarRoot == null) return;
             if (stats == null) stats = EvaluateAvatar(avatarRoot);
 
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
-            Debug.Log($"<color=cyan><b>[AvatarSDKEvaluator] VRChat SDK Alert Report for Avatar '{avatarRoot.name}':</b></color>");
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Log.Info($"<color=cyan><b>================================================================================</b></color>");
+            Log.Info($"<color=cyan><b>[AvatarSDKEvaluator] VRChat SDK Alert Report for Avatar '{avatarRoot.name}':</b></color>");
+            Log.Info($"<color=cyan><b>================================================================================</b></color>");
 
             int sdkAlertCount = 0;
 
@@ -726,7 +730,7 @@ namespace Bluscream.VRC
                             MethodInfo onGuiMethod = panelType.GetMethod("OnGUI", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                             if (onGuiMethod != null)
                             {
-                                Debug.Log("[AvatarSDKEvaluator] Running VRChat SDK Avatar Builder GUI validation pass...");
+                                Log.Info("Running VRChat SDK Avatar Builder GUI validation pass...");
                                 try { onGuiMethod.Invoke(sdkPanel, null); } catch { }
                             }
                         }
@@ -735,29 +739,29 @@ namespace Bluscream.VRC
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Could not trigger SDK Builder GUI validation: {ex.Message}");
+                Log.Warn($"Could not trigger SDK Builder GUI validation: {ex.Message}");
             }
 
-            if (stats.TriangleCount > 20000)
+            if (maxPolygons < int.MaxValue && stats.TriangleCount > maxPolygons)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] [SDK ALERT] Polygon count ({stats.TriangleCount}) exceeds Quest hard limit (20,000 max for Poor/Medium).");
+                Log.Warn($"[SDK ALERT] Polygon count ({stats.TriangleCount}) exceeds target limit ({maxPolygons:N0} max).");
                 sdkAlertCount++;
             }
-            if (stats.MaterialSlotCount > 4)
+            if (maxMaterialSlots < int.MaxValue && stats.MaterialSlotCount > maxMaterialSlots)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] [SDK ALERT] Material slot count ({stats.MaterialSlotCount}) exceeds Quest hard limit (4 max).");
+                Log.Warn($"[SDK ALERT] Material slot count ({stats.MaterialSlotCount}) exceeds target limit ({maxMaterialSlots} max).");
                 sdkAlertCount++;
             }
 
             if (sdkAlertCount == 0)
             {
-                Debug.Log($"<color=green><b>[AvatarSDKEvaluator] No blocking VRChat SDK alerts detected for avatar '{avatarRoot.name}'.</b></color>");
+                Log.Info($"<color=green><b>[AvatarSDKEvaluator] No blocking VRChat SDK alerts detected for avatar '{avatarRoot.name}'.</b></color>");
             }
             else
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Total SDK Alert(s): {sdkAlertCount}.");
+                Log.Warn($"Total SDK Alert(s): {sdkAlertCount}.");
             }
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Log.Info($"<color=cyan><b>================================================================================</b></color>");
         }
 
         /// <summary>
@@ -768,7 +772,7 @@ namespace Bluscream.VRC
             try { return VRCMenuIconCollector.CollectMenuIconImporters(avatarRoot); }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Menu icon collection failed: {e.Message}");
+                Log.Warn($"Menu icon collection failed: {e.Message}");
                 return new List<UnityEditor.TextureImporter>();
             }
         }
@@ -782,7 +786,7 @@ namespace Bluscream.VRC
             try { return VRCMenuIconCollector.CollectNonRendererTextures(avatarRoot); }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Non-renderer texture collection failed: {e.Message}");
+                Log.Warn($"Non-renderer texture collection failed: {e.Message}");
                 return new List<VRCMenuIconCollector.CollectedTexture>();
             }
         }
@@ -799,12 +803,33 @@ namespace Bluscream.VRC
             if (avatarRoot == null) throw new ArgumentNullException(nameof(avatarRoot), "[AvatarSDKEvaluator] BuildAvatarAssetBundle: avatarRoot is null.");
             DateTime buildStartTime = DateTime.Now.AddSeconds(-2);
 
-            // Third-party build hooks (VRCFury's mobile parameter sync) raise blocking modal dialogs
-            // that are meaningful for a real upload but would stall an automated size probe. They are
-            // suppressed for the duration of this build only and restored immediately afterwards.
-            using (new ThirdPartyBuildDialogSuppressor())
+            var existingRoots = avatarRoot.scene.isLoaded
+                ? new HashSet<GameObject>(avatarRoot.scene.GetRootGameObjects())
+                : new HashSet<GameObject>();
+
+            try
             {
-                return BuildAvatarAssetBundleInternal(avatarRoot, out bundlePath, progressCallback, buildStartTime);
+                // Third-party build hooks (VRCFury's mobile parameter sync) raise blocking modal dialogs
+                // that are meaningful for a real upload but would stall an automated size probe. They are
+                // suppressed for the duration of this build only and restored immediately afterwards.
+                using (new ThirdPartyBuildDialogSuppressor())
+                {
+                    return BuildAvatarAssetBundleInternal(avatarRoot, out bundlePath, progressCallback, buildStartTime);
+                }
+            }
+            finally
+            {
+                if (avatarRoot != null && avatarRoot.scene.isLoaded)
+                {
+                    foreach (var rootGo in avatarRoot.scene.GetRootGameObjects())
+                    {
+                        if (rootGo != null && !existingRoots.Contains(rootGo))
+                        {
+                            Log.Info($"Cleaning up dry-run generated scene-root object '{rootGo.name}'.");
+                            UnityEngine.Object.DestroyImmediate(rootGo);
+                        }
+                    }
+                }
             }
         }
 
@@ -821,7 +846,7 @@ namespace Bluscream.VRC
             }
             catch (MissingMemberException mm)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Synchronous SDK exporter unavailable ({mm.Message}) — falling back to async panel Build().");
+                Log.Warn($"Synchronous SDK exporter unavailable ({mm.Message}) — falling back to async panel Build().");
             }
 
             try
@@ -853,9 +878,9 @@ namespace Bluscream.VRC
                 string sdkBuildError = null;
                 RegisterBuildCallbacks(
                     builderInstance,
-                    onProgress: (status) => Debug.Log($"[VRChat SDK Live] Build Progress: {status}"),
-                    onError:    (err) => { Debug.LogError($"[VRChat SDK Live] Build Error: {err}"); sdkBuildError = err; },
-                    onSuccess:  (path) => Debug.Log($"[VRChat SDK Live] Build Success: {path}")
+                    onProgress: (status) => LogSdkLive.Info($"Build Progress: {status}"),
+                    onError:    (err) => { LogSdkLive.Error($"Build Error: {err}"); sdkBuildError = err; },
+                    onSuccess:  (path) => LogSdkLive.Info($"Build Success: {path}")
                 );
 
                 // Pass testAvatar based on SDK PlatformSupportsBuildAndTest()
@@ -900,7 +925,7 @@ namespace Bluscream.VRC
                         {
                             staticPump = execTasks;
                         }
-                        Debug.LogWarning($"[AvatarSDKEvaluator] Instance sync-context pump unavailable (Current = {(syncContext == null ? "null" : syncContext.GetType().FullName)}). " +
+                        Log.Warn($"Instance sync-context pump unavailable (Current = {(syncContext == null ? "null" : syncContext.GetType().FullName)}). " +
                                          $"Falling back to {(staticPump != null ? $"UnitySynchronizationContext.{staticPump.Name}" : "no pump — async SDK build continuations may not run until the editor idles")}.");
                     }
 
@@ -923,7 +948,7 @@ namespace Bluscream.VRC
                                 if (syncExec != null) syncExec.Invoke(pumpTarget, null);
                                 else staticPump?.Invoke(null, staticPumpArgs);
                             }
-                            catch (Exception pumpEx) { Debug.LogWarning($"[AvatarSDKEvaluator] Sync context pump threw: {pumpEx.InnerException?.Message ?? pumpEx.Message}"); }
+                            catch (Exception pumpEx) { Log.Warn($"Sync context pump threw: {pumpEx.InnerException?.Message ?? pumpEx.Message}"); }
 
                             UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
                             System.Threading.Thread.Sleep(5);
@@ -932,13 +957,13 @@ namespace Bluscream.VRC
                             // (verbose: false — this polls every few ms and would otherwise flood Editor.log)
                             if (GetBuiltBundleSize(out string earlyPath, buildStartTime, verbose: false) > 0)
                             {
-                                Debug.Log($"[AvatarSDKEvaluator] Detected generated .vrca AssetBundle on disk early during build loop: '{earlyPath}'");
+                                Log.Info($"Detected generated .vrca AssetBundle on disk early during build loop: '{earlyPath}'");
                                 break;
                             }
 
                             if (elapsed > MAX_BUNDLE_BUILD_TIMEOUT_SECONDS)
                             {
-                                Debug.LogError($"[AvatarSDKEvaluator] ⚠️ CRITICAL: Dry-run AssetBundle build timed out after {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS} seconds for '{avatarRoot.name}'.");
+                                Log.Error($"⚠️ CRITICAL: Dry-run AssetBundle build timed out after {MAX_BUNDLE_BUILD_TIMEOUT_SECONDS} seconds for '{avatarRoot.name}'.");
                                 break;
                             }
                         }
@@ -993,7 +1018,7 @@ namespace Bluscream.VRC
                 || (runExportMethod == null && runExportDelegate == null))
                 throw new MissingMemberException("VRC_SdkBuilder.RunExportAvatarBlueprint or its supporting SDK types were not found");
 
-            Debug.Log($"[AvatarSDKEvaluator] Using synchronous SDK exporter (VRC_SdkBuilder.RunExportAvatarBlueprint) for '{avatarRoot.name}'.");
+            Log.Info($"Using synchronous SDK exporter (VRC_SdkBuilder.RunExportAvatarBlueprint) for '{avatarRoot.name}'.");
             progressCallback?.Invoke("Running VRChat SDK export (synchronous)...");
 
             // 1. Fire the SDK build-requested gate (build hooks like VRCFury can veto/prepare here)
@@ -1020,14 +1045,14 @@ namespace Bluscream.VRC
                         if (assignId != null && contentTypeEnum != null)
                         {
                             assignId.Invoke(pm, new[] { Enum.Parse(contentTypeEnum, "avatar") });
-                            Debug.Log("[AvatarSDKEvaluator] Assigned temporary blueprint id for dry-run export.");
+                            Log.Info("Assigned temporary blueprint id for dry-run export.");
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Could not verify/assign PipelineManager blueprint id: {e.Message}");
+                Log.Warn($"Could not verify/assign PipelineManager blueprint id: {e.Message}");
             }
 
             // 4. Configure the static builder exactly like the SDK panel does
@@ -1041,9 +1066,9 @@ namespace Bluscream.VRC
             // 5. Capture success/error through the static builder callbacks
             string builtPath = null;
             string buildError = null;
-            RegisterStaticCallback(sdkBuilderType, "RegisterBuildProgressCallback", (s, msg) => { Debug.Log($"[VRChat SDK Sync] Build Progress: {msg}"); progressCallback?.Invoke(msg); });
-            RegisterStaticCallback(sdkBuilderType, "RegisterBuildErrorCallback", (s, err) => { Debug.LogError($"[VRChat SDK Sync] Build Error: {err}"); buildError = err; });
-            RegisterStaticCallback(sdkBuilderType, "RegisterBuildSuccessCallback", (s, path) => { Debug.Log($"[VRChat SDK Sync] Build Success: {path}"); builtPath = path; });
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildProgressCallback", (s, msg) => { LogSdkSync.Info($"Build Progress: {msg}"); progressCallback?.Invoke(msg); });
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildErrorCallback", (s, err) => { LogSdkSync.Error($"Build Error: {err}"); buildError = err; });
+            RegisterStaticCallback(sdkBuilderType, "RegisterBuildSuccessCallback", (s, path) => { LogSdkSync.Info($"Build Success: {path}"); builtPath = path; });
 
             try
             {
@@ -1077,7 +1102,7 @@ namespace Bluscream.VRC
             {
                 bundlePath = builtPath;
                 FileInfo fileInfo = new FileInfo(builtPath);
-                Debug.Log($"[AvatarSDKEvaluator] Synchronous dry-run build complete: '{builtPath}' ({fileInfo.Length / (1024.0 * 1024.0):F2} MB)");
+                Log.Info($"Synchronous dry-run build complete: '{builtPath}' ({fileInfo.Length / (1024.0 * 1024.0):F2} MB)");
                 return fileInfo.Length;
             }
 
@@ -1119,12 +1144,12 @@ namespace Bluscream.VRC
                 }
                 else
                 {
-                    Debug.LogWarning($"[AvatarSDKEvaluator] {registerMethodName} has unexpected delegate shape ({delType.Name}) — skipping.");
+                    Log.Warn($"{registerMethodName} has unexpected delegate shape ({delType.Name}) — skipping.");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Could not subscribe {registerMethodName}: {e.Message}");
+                Log.Warn($"Could not subscribe {registerMethodName}: {e.Message}");
             }
         }
 
@@ -1145,7 +1170,7 @@ namespace Bluscream.VRC
                 object panelWindow = windowField?.GetValue(null);
                 if (panelWindow == null)
                 {
-                    Debug.Log("[AvatarSDKEvaluator] VRChat SDK Control Panel is not open — opening it (the SDK build pipeline requires it)...");
+                    Log.Info("VRChat SDK Control Panel is not open — opening it (the SDK build pipeline requires it)...");
                     MethodInfo showMethod = panelType.GetMethod("ShowControlPanel", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
                     showMethod?.Invoke(null, null);
                     panelWindow = windowField?.GetValue(null);
@@ -1161,7 +1186,7 @@ namespace Bluscream.VRC
                     object[] args = new object[] { null };
                     if (tryGetBuilder.MakeGenericMethod(builderApiType).Invoke(null, args) is bool found && found && args[0] != null)
                     {
-                        Debug.Log($"[AvatarSDKEvaluator] Acquired panel-registered avatar builder: {args[0].GetType().Name}");
+                        Log.Info($"Acquired panel-registered avatar builder: {args[0].GetType().Name}");
                         return args[0];
                     }
                 }
@@ -1172,13 +1197,13 @@ namespace Bluscream.VRC
                 if (registerMethod != null)
                 {
                     registerMethod.Invoke(instance, new object[] { panelWindow });
-                    Debug.Log("[AvatarSDKEvaluator] Created avatar builder instance and registered it with the SDK Control Panel.");
+                    Log.Info("Created avatar builder instance and registered it with the SDK Control Panel.");
                     return instance;
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Failed to acquire panel-registered avatar builder: {e.Message}");
+                Log.Warn($"Failed to acquire panel-registered avatar builder: {e.Message}");
             }
             return null;
         }
@@ -1211,26 +1236,26 @@ namespace Bluscream.VRC
 
                         if (newestBundle != null)
                         {
-                            if (verbose) Debug.Log($"[AvatarSDKEvaluator] Dry-run AssetBundle built successfully: '{newestBundle.FullName}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
+                            if (verbose) Log.Info($"Dry-run AssetBundle built successfully: '{newestBundle.FullName}' ({newestBundle.Length / (1024.0 * 1024.0):F2} MB)");
                             return newestBundle;
                         }
 
                         // Bundles exist but none are newer than buildStartTime
-                        if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] {files.Length} .vrca file(s) found in temp cache but none were written after {minCreationTime:HH:mm:ss}. The build may have been suppressed or cached.");
+                        if (verbose) Log.Warn($"{files.Length} .vrca file(s) found in temp cache but none were written after {minCreationTime:HH:mm:ss}. The build may have been suppressed or cached.");
                     }
                     else
                     {
-                        if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] No .vrca files found in Unity temp cache at '{cachePath}'. Build may not have produced output.");
+                        if (verbose) Log.Warn($"No .vrca files found in Unity temp cache at '{cachePath}'. Build may not have produced output.");
                     }
                 }
                 else
                 {
-                    if (verbose) Debug.LogWarning($"[AvatarSDKEvaluator] Unity temp cache directory does not exist: '{cachePath}'.");
+                    if (verbose) Log.Warn($"Unity temp cache directory does not exist: '{cachePath}'.");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AvatarSDKEvaluator] Error reading temp cache for bundle FileInfo: {e.Message}");
+                Log.Error($"Error reading temp cache for bundle FileInfo: {e.Message}");
             }
 
             return null;
@@ -1304,7 +1329,7 @@ namespace Bluscream.VRC
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AvatarSDKEvaluator] Could not register VRCSdkControlPanelAvatarBuilder event handlers: {ex.Message}");
+                Log.Warn($"Could not register VRCSdkControlPanelAvatarBuilder event handlers: {ex.Message}");
                 return false;
             }
         }

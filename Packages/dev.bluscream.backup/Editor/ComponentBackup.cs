@@ -13,6 +13,7 @@ namespace Bluscream.BackupSystem
     [System.Serializable]
     public class ComponentBackup
     {
+        
         public string gameObjectPath;
         public string componentType;
         
@@ -43,6 +44,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class ComponentBackupHandler
     {
+        private static readonly BluLog Log = BluLog.Get("ComponentBackup");
+
         /// <summary>
         /// Backs up components based on scope
         /// </summary>
@@ -87,7 +90,7 @@ namespace Bluscream.BackupSystem
                         }
                         catch (Exception e)
                         {
-                            Debug.LogWarning($"Failed to serialize component {backup.componentType}: {e.Message}");
+                            Log.Warn($"Failed to serialize component {backup.componentType}: {e.Message}");
                             backup.componentData = new List<ComponentPropertyEntry>();
                         }
                     }
@@ -111,7 +114,7 @@ namespace Bluscream.BackupSystem
             // Component restoration would require finding GameObjects by path
             // This is complex and may not always work if hierarchy changed
             // For now, just log a warning
-            Debug.LogWarning("Component restoration is not fully implemented. GameObjects may need to be restored first.");
+            Log.Warn("Component restoration is not fully implemented. GameObjects may need to be restored first.");
         }
     }
 }

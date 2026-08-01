@@ -12,6 +12,8 @@ namespace Bluscream.VRCAvatarOptimizer
     [System.Serializable]
     public class ConversionSummary
     {
+        private static readonly BluLog Log = BluLog.Get("VRC-AvatarOptimizer Summary");
+
         public int materialsReplaced = 0;
         public int materialsSkipped = 0;
         public int materialsFailed = 0;
@@ -142,25 +144,25 @@ namespace Bluscream.VRCAvatarOptimizer
             string constraintLimit = (profile != null && profile.MaxConstraints < int.MaxValue) ? $"/ {profile.MaxConstraints}" : "/ Unlimited";
             string smrLimit = (profile != null && profile.MaxSkinnedMeshes < int.MaxValue) ? $"/ {profile.MaxSkinnedMeshes}" : "/ Unlimited";
 
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
-            Debug.Log($"<color=cyan><b>[VRC-AvatarOptimizer Summary] Target Platform Conversion Comparison for '{avatarName}':</b></color>");
-            Debug.Log($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
+            Log.Info($"<color=cyan><b>================================================================================</b></color>");
+            Log.Info($"<color=cyan><b>[VRC-AvatarOptimizer Summary] Target Platform Conversion Comparison for '{avatarName}':</b></color>");
+            Log.Info($"<color=cyan><b>--------------------------------------------------------------------------------</b></color>");
+            Log.Info($"• Performance Rating:        {InitialStats.RatingName}  →  {FinalStats.RatingName}");
+            Log.Info($"• Triangles:                 {InitialStats.TriangleCount:N0}  →  {FinalStats.TriangleCount:N0} {triLimit}");
             string texMemLimit = (profile != null) ? $"/ {profile.MaxTextureMemoryBytes / (1024.0 * 1024.0):F2} MB" : "";
             string bundleSizeLimit = (profile != null && profile.MaxAssetBundleSizeBytes != long.MaxValue) ? $"/ {profile.MaxAssetBundleSizeBytes / (1024.0 * 1024.0):F2} MB" : "";
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB {texMemLimit}");
+            Log.Info($"• Texture Memory (VRAM):     {InitialStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB  →  {FinalStats.TotalTextureMemoryBytes / (1024.0 * 1024.0):F2} MB {texMemLimit}");
             if (CompressedAvatarSizeBytes > 0)
             {
-                Debug.Log($"[VRC-AvatarOptimizer Summary] • Compressed Avatar Size (Disk): {CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB {bundleSizeLimit}");
+                Log.Info($"• Compressed Avatar Size (Disk): {CompressedAvatarSizeBytes / (1024.0 * 1024.0):F2} MB {bundleSizeLimit}");
             }
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Contacts:                  {InitialStats.ContactCount}  →  {FinalStats.ContactCount} {contactLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Constraints:               {InitialStats.ConstraintCount}  →  {FinalStats.ConstraintCount} {constraintLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Skinned Meshes:            {InitialStats.SkinnedMeshCount}  →  {FinalStats.SkinnedMeshCount} {smrLimit}");
-            Debug.Log($"[VRC-AvatarOptimizer Summary] • Operations:                {materialsReplaced} Materials Replaced, {texturesOptimized} Textures Compressed, {componentsRemoved} Components Removed.");
-            Debug.Log($"<color=cyan><b>================================================================================</b></color>");
+            Log.Info($"• Material Slots:            {InitialStats.MaterialSlotCount}  →  {FinalStats.MaterialSlotCount} {matLimit}");
+            Log.Info($"• PhysBone Components:       {InitialStats.PhysBoneComponentCount}  →  {FinalStats.PhysBoneComponentCount} {pbCompLimit}");
+            Log.Info($"• Contacts:                  {InitialStats.ContactCount}  →  {FinalStats.ContactCount} {contactLimit}");
+            Log.Info($"• Constraints:               {InitialStats.ConstraintCount}  →  {FinalStats.ConstraintCount} {constraintLimit}");
+            Log.Info($"• Skinned Meshes:            {InitialStats.SkinnedMeshCount}  →  {FinalStats.SkinnedMeshCount} {smrLimit}");
+            Log.Info($"• Operations:                {materialsReplaced} Materials Replaced, {texturesOptimized} Textures Compressed, {componentsRemoved} Components Removed.");
+            Log.Info($"<color=cyan><b>================================================================================</b></color>");
         }
 
         private void RenderSummaryItem(SummaryItem item, UnityEngine.Color color)

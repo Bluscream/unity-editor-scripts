@@ -12,6 +12,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public class VRCAvatarOptimizerWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("VRCAvatarOptimizerWindow");
+
         private GameObject avatarRoot;
         private VRCAvatarOptimizerCore.ConversionConfig config = new VRCAvatarOptimizerCore.ConversionConfig();
         private ConversionSummary summary;
@@ -35,13 +37,13 @@ namespace Bluscream.VRCAvatarOptimizer
 
         private void OnEnable()
         {
-            Debug.Log("[VRCAvatarOptimizerWindow] OnEnable called.");
+            Log.Info("OnEnable called.");
             LoadPreferences();
         }
 
         private void OnDisable()
         {
-            Debug.Log("[VRCAvatarOptimizerWindow] OnDisable called.");
+            Log.Info("OnDisable called.");
         }
 
         private void LoadPreferences()
@@ -79,12 +81,13 @@ namespace Bluscream.VRCAvatarOptimizer
             config.DeleteExistingTargetGameObjects = EditorPrefs.GetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", false);
             config.ClearEditorLogBeforeConversion = EditorPrefs.GetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", false);
             config.VerifySourceUntouched = EditorPrefs.GetBool("VRCAvatarOptimizer_VerifySourceUntouched", true);
+            config.WriteRunLogFiles = EditorPrefs.GetBool("VRCAvatarOptimizer_WriteRunLogFiles", false);
             cachedProfile = PlatformProfile.GetProfile(config.Platform, config.TargetRank);
         }
 
         private void SavePreferences()
         {
-            Debug.Log("[VRCAvatarOptimizerWindow] SavePreferences called.");
+            Log.Info("SavePreferences called.");
             EditorPrefs.SetInt("VRCAvatarOptimizer_Platform", (int)config.Platform);
             EditorPrefs.SetInt("VRCAvatarOptimizer_TargetRank", (int)config.TargetRank);
             EditorPrefs.SetInt("VRCAvatarOptimizer_PlacementLocation", (int)config.PlacementLocation);
@@ -115,6 +118,7 @@ namespace Bluscream.VRCAvatarOptimizer
             EditorPrefs.SetBool("VRCAvatarOptimizer_DeleteExistingTargetGameObjects", config.DeleteExistingTargetGameObjects);
             EditorPrefs.SetBool("VRCAvatarOptimizer_ClearEditorLogBeforeConversion", config.ClearEditorLogBeforeConversion);
             EditorPrefs.SetBool("VRCAvatarOptimizer_VerifySourceUntouched", config.VerifySourceUntouched);
+            EditorPrefs.SetBool("VRCAvatarOptimizer_WriteRunLogFiles", config.WriteRunLogFiles);
         }
 
         private void OnGUI()
@@ -219,7 +223,14 @@ namespace Bluscream.VRCAvatarOptimizer
             );
 
             EditorGUILayout.Space(5);
-            OptimizerLog.Level = (OptimizerLogLevel)EditorGUILayout.EnumPopup("Log Verbosity", OptimizerLog.Level);
+            BluLog.GlobalLevel = (BluLogLevel)EditorGUILayout.EnumPopup("Log Verbosity", BluLog.GlobalLevel);
+            config.WriteRunLogFiles = EditorGUILayout.ToggleLeft("Write Per-Subsystem Log Files", config.WriteRunLogFiles);
+            if (config.WriteRunLogFiles)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.HelpBox("Writes one timestamped, level-tagged log file per subsystem under the output folder's Logs/ directory, in addition to the Unity console. Easier to archive and parse than Editor.log.", MessageType.None);
+                EditorGUI.indentLevel--;
+            }
             config.VerifySourceUntouched = EditorGUILayout.ToggleLeft("Verify Source Avatar Untouched", config.VerifySourceUntouched);
             if (config.VerifySourceUntouched)
             {
@@ -229,8 +240,8 @@ namespace Bluscream.VRCAvatarOptimizer
                     MessageType.None);
                 EditorGUI.indentLevel--;
             }
-            OptimizerLog.ValidateMeshes = EditorGUILayout.ToggleLeft("Validate Generated Meshes", OptimizerLog.ValidateMeshes);
-            if (OptimizerLog.ValidateMeshes)
+            MeshIntegrity.Enabled = EditorGUILayout.ToggleLeft("Validate Generated Meshes", MeshIntegrity.Enabled);
+            if (MeshIntegrity.Enabled)
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.HelpBox(
@@ -397,7 +408,7 @@ namespace Bluscream.VRCAvatarOptimizer
             long totalMs = sw.ElapsedMilliseconds;
             if (totalMs > 2)
             {
-                Debug.LogWarning($"[VRCAvatarOptimizerWindow] OnGUI ({currentEventType}) Total: {totalMs} ms | Header: {tHeader} ms | Selection: {tSelection} ms | Prefs: {tPrefs} ms | Button: {tButton} ms | Summary/End: {totalMs - tHeader - tSelection - tPrefs - tButton} ms");
+                Log.Warn($"OnGUI ({currentEventType}) Total: {totalMs} ms | Header: {tHeader} ms | Selection: {tSelection} ms | Prefs: {tPrefs} ms | Button: {tButton} ms | Summary/End: {totalMs - tHeader - tSelection - tPrefs - tButton} ms");
             }
         }
 
@@ -527,12 +538,12 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (OperationCanceledException canceledEx)
             {
-                Debug.LogWarning($"[VRCAvatarOptimizerWindow] {canceledEx.Message}");
+                Log.Warn($"{canceledEx.Message}");
             }
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Conversion failed: {e.Message}", "OK");
-                Debug.LogError($"[VRCAvatarOptimizerWindow] Conversion error: {e}");
+                Log.Error($"Conversion error: {e}");
             }
             finally
             {

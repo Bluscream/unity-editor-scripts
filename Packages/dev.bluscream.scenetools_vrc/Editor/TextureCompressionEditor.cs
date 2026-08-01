@@ -14,6 +14,8 @@ namespace Bluscream.TextureCompressor
     /// </summary>
     public class TextureCompressionEditor : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("TextureCompressor");
+
         public class CompressorTexture
         {
             public string guid { get; set; }
@@ -62,7 +64,7 @@ namespace Bluscream.TextureCompressor
                             }
                             catch (System.Exception e)
                             {
-                                Debug.LogWarning($"Error setting platform texture settings for {path} platform {_override}: {e.Message}");
+                                Log.Warn($"Error setting platform texture settings for {path} platform {_override}: {e.Message}");
                             }
                         }
                     }
@@ -72,7 +74,7 @@ namespace Bluscream.TextureCompressor
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error applying compression to texture {path}: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error applying compression to texture {path}: {e.Message}\n{e.StackTrace}");
                     return false;
                 }
             }
@@ -124,14 +126,14 @@ namespace Bluscream.TextureCompressor
                         }
                         catch (System.Exception e)
                         {
-                            Debug.LogWarning($"Error processing texture with GUID {guid}: {e.Message}");
+                            Log.Warn($"Error processing texture with GUID {guid}: {e.Message}");
                         }
                     }
                     return ret;
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error getting textures: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error getting textures: {e.Message}\n{e.StackTrace}");
                     return new List<CompressorTexture>();
                 }
             }
@@ -150,7 +152,7 @@ namespace Bluscream.TextureCompressor
                         }
                         catch (System.Exception e)
                         {
-                            Debug.LogWarning($"Error applying compression to texture {texture.path}: {e.Message}");
+                            Log.Warn($"Error applying compression to texture {texture.path}: {e.Message}");
                             success = false;
                         }
                     }
@@ -158,7 +160,7 @@ namespace Bluscream.TextureCompressor
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Error applying compression settings: {e.Message}\n{e.StackTrace}");
+                    Log.Error($"Error applying compression settings: {e.Message}\n{e.StackTrace}");
                     return false;
                 }
             }
@@ -257,7 +259,7 @@ namespace Bluscream.TextureCompressor
                 backupPath = BackupSystemHelper.CreateBackupForAllTextures("Texture Compression");
                 if (backupPath != null)
                 {
-                    Debug.Log($"Backup created before compression: {backupPath}");
+                    Log.Info($"Backup created before compression: {backupPath}");
                 }
             }
 
@@ -269,7 +271,7 @@ namespace Bluscream.TextureCompressor
                 var compressorTextureCount = textures.Count;
                 foreach (var tex in textures)
                 {
-                    Debug.Log(
+                    Log.Info(
                         $"Compressing texture {i}/{compressorTextureCount} ({tex.importer.textureType})"
                     );
                     var success = tex.apply(compressor, true);
@@ -289,7 +291,7 @@ namespace Bluscream.TextureCompressor
             }
 
             EditorUtility.ClearProgressBar();
-            Debug.Log($"Compressed {projectTextureCount} Textures" + 
+            Log.Info($"Compressed {projectTextureCount} Textures" + 
                 (backupPath != null ? $". Backup created: {backupPath}" : ""));
         }
 
@@ -362,7 +364,7 @@ namespace Bluscream.TextureCompressor
                 AssetDatabase.StopAssetEditing();
             }
 
-            Debug.Log($"[TextureCompressor] Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
+            Log.Info($"Done: {importers.Count} texture(s) set to {maxResolutionCap}px {format} Crunch {compressionQuality}%.");
         }
 
         [MenuItem("Bluscream/VRChat/Reset Default PC Texture Settings for Selection")]
@@ -372,7 +374,7 @@ namespace Bluscream.TextureCompressor
             GameObject selected = Selection.activeGameObject;
             if (selected == null)
             {
-                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                Log.Warn("Please select an avatar GameObject first.");
                 return;
             }
 
@@ -407,7 +409,7 @@ namespace Bluscream.TextureCompressor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[TextureCompressor] Reset default PC texture settings (Max Size 4096, Uncompressed, No Crunch) for {count} textures.");
+            Log.Info($"Reset default PC texture settings (Max Size 4096, Uncompressed, No Crunch) for {count} textures.");
         }
 
         [MenuItem("Bluscream/VRChat/Clear Android Platform Overrides for Selection")]
@@ -417,7 +419,7 @@ namespace Bluscream.TextureCompressor
             GameObject selected = Selection.activeGameObject;
             if (selected == null)
             {
-                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                Log.Warn("Please select an avatar GameObject first.");
                 return;
             }
 
@@ -445,7 +447,7 @@ namespace Bluscream.TextureCompressor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[TextureCompressor] Cleared Android platform overrides for {count} textures.");
+            Log.Info($"Cleared Android platform overrides for {count} textures.");
         }
 
         [MenuItem("Bluscream/VRChat/Optimize PC Textures (2K Max, 75% Crunch) for Selection")]
@@ -455,7 +457,7 @@ namespace Bluscream.TextureCompressor
             GameObject selected = Selection.activeGameObject;
             if (selected == null)
             {
-                Debug.LogWarning("[TextureCompressor] Please select an avatar GameObject first.");
+                Log.Warn("Please select an avatar GameObject first.");
                 return;
             }
 
@@ -488,7 +490,7 @@ namespace Bluscream.TextureCompressor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[TextureCompressor] Optimized {count} PC textures (2048px max cap, DXT Crunch 75%).");
+            Log.Info($"Optimized {count} PC textures (2048px max cap, DXT Crunch 75%).");
         }
 
         public static HashSet<TextureImporter> GetUniqueTextureImporters(GameObject avatarRoot)
@@ -563,6 +565,8 @@ namespace Bluscream.TextureCompressor
     /// </summary>
     internal static class BackupSystemHelper
     {
+        private static readonly BluLog Log = BluLog.Get("TextureCompressor");
+
         public static string CreateBackupForAllTextures(string backupName)
         {
             try
@@ -583,7 +587,7 @@ namespace Bluscream.TextureCompressor
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Failed to create backup: {e.Message}");
+                Log.Warn($"Failed to create backup: {e.Message}");
                 return null;
             }
         }

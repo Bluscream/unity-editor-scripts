@@ -10,6 +10,8 @@ namespace Bluscream.MenuManager
 {
     public class MassMoveWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("MassMoveWindow");
+
         [SerializeField] private GameObject avatarObject;
         [SerializeField] private string fromPath = "";
         [SerializeField] private string toPath = "";
@@ -161,7 +163,7 @@ namespace Bluscream.MenuManager
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError(ex);
+                    Log.Error(ex);
                     EditorUtility.DisplayDialog("Error", $"Failed to apply moves: {ex.Message}", "OK");
                 }
             }

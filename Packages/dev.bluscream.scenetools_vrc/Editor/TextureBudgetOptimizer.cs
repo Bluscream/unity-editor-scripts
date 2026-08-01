@@ -16,6 +16,7 @@ namespace Bluscream.TextureCompressor
     /// </summary>
     public class TextureBudgetRequest
     {
+        
         /// <summary>Hard uncompressed texture memory budget (VRChat mobile hard cap is 40 MB).</summary>
         public long VramBudgetBytes = 40L * 1024 * 1024;
         /// <summary>Budget for the TEXTURE portion of the AssetBundle (total cap minus non-texture payload).</summary>
@@ -98,6 +99,8 @@ namespace Bluscream.TextureCompressor
     /// </summary>
     public static class TextureBudgetOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("TextureBudget");
+
         private class Tier
         {
             public string Name;
@@ -463,9 +466,9 @@ namespace Bluscream.TextureCompressor
             long totalVram = entries.Sum(e => e.Vram);
             long totalDisk = entries.Sum(e => e.Disk);
 
-            Debug.Log($"[TextureBudget] Texture roles: " + string.Join(", ",
+            Log.Info($"Texture roles: " + string.Join(", ",
                 entries.GroupBy(e => e.Role).OrderByDescending(g => g.Count()).Select(g => $"{g.Count()}× {g.Key}")));
-            Debug.Log($"[TextureBudget] {entries.Count} texture(s) on {platformName}. Starting at best tier: " +
+            Log.Info($"{entries.Count} texture(s) on {platformName}. Starting at best tier: " +
                       $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB (budget {result.VramBudgetBytes / (1024.0 * 1024.0):F1} MB), " +
                       $"disk ~{totalDisk / (1024.0 * 1024.0):F2} MB (budget {result.DiskBudgetBytes / (1024.0 * 1024.0):F2} MB).");
 
@@ -538,7 +541,7 @@ namespace Bluscream.TextureCompressor
                 {
                     result.HitFloor = true;
                     int atLastLevel = entries.Count(e => e.LevelIndex >= e.Ladder.Count - 1);
-                    Debug.LogWarning($"[TextureBudget] No further texture reduction is possible ({atLastLevel}/{entries.Count} at their final ladder level, floor {hardMinRes}px). " +
+                    Log.Warn($"No further texture reduction is possible ({atLastLevel}/{entries.Count} at their final ladder level, floor {hardMinRes}px). " +
                                      $"VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
                     break;
                 }
@@ -601,7 +604,7 @@ namespace Bluscream.TextureCompressor
                 }
 
                 if (upgrades > 0)
-                    Debug.Log($"[TextureBudget] Reclaimed leftover budget with {upgrades} quality upgrade(s) → VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
+                    Log.Info($"Reclaimed leftover budget with {upgrades} quality upgrade(s) → VRAM {totalVram / (1024.0 * 1024.0):F1} MB, disk ~{totalDisk / (1024.0 * 1024.0):F2} MB.");
             }
 
             // ── Apply
@@ -617,7 +620,7 @@ namespace Bluscream.TextureCompressor
                     // Per-texture decisions are only visible here; log the important ones so the
                     // allocation can be audited without digging through .meta files.
                     if (e.Importance >= 1.3f || e.Importance <= 0.5f)
-                        Debug.Log($"[TextureBudget]   [{e.Role} ×{e.Importance:F2}] {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
+                        Log.Info($"  [{e.Role} ×{e.Importance:F2}] {System.IO.Path.GetFileName(e.Importer.assetPath)} → {lvl.Resolution}px {lvl.Tier.Name}");
 
                     TextureImporterPlatformSettings s = e.Importer.GetPlatformTextureSettings(platformName);
                     s.overridden = true;
@@ -649,10 +652,10 @@ namespace Bluscream.TextureCompressor
             result.TexturesBelowPreferredResolution = entries.Count(e => e.Ladder[e.LevelIndex].Resolution < preferredMinRes);
             result.WentBelowPreferredResolution = result.TexturesBelowPreferredResolution > 0;
 
-            Debug.Log($"[TextureBudget] Done — {result.Describe()}");
+            Log.Info($"Done — {result.Describe()}");
             if (result.WentBelowPreferredResolution)
             {
-                Debug.LogWarning($"[TextureBudget] {result.TexturesBelowPreferredResolution} texture(s) had to go below the preferred {preferredMinRes}px floor — every format/crunch combination above it was exhausted before downscaling further.");
+                Log.Warn($"{result.TexturesBelowPreferredResolution} texture(s) had to go below the preferred {preferredMinRes}px floor — every format/crunch combination above it was exhausted before downscaling further.");
             }
             return result;
         }

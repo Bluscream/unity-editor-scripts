@@ -11,6 +11,8 @@ namespace Bluscream.VRCFury
     /// </summary>
     public static class Extensions
     {
+        private static readonly BluLog Log = BluLog.Get("VRCFuryExtensions");
+
         /// <summary>
         /// Attempts to get all VRCFury components on an avatar object.
         /// </summary>
@@ -36,7 +38,7 @@ namespace Bluscream.VRCFury
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VRCFuryExtensions] Failed to estimate VRCFury menu cost: {ex.Message}");
+                Log.Warn($"Failed to estimate VRCFury menu cost: {ex.Message}");
                 return false;
             }
         }
@@ -56,7 +58,7 @@ namespace Bluscream.VRCFury
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VRCFuryExtensions] Failed to get raw VRCFury menu: {ex.Message}");
+                Log.Warn($"Failed to get raw VRCFury menu: {ex.Message}");
                 return false;
             }
         }

@@ -12,6 +12,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarMeshCountOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarMeshCountOptimizer");
+
         /// <summary>
         /// Combines static MeshRenderers sharing the same parent into single combined meshes,
         /// but only when the avatar exceeds profile limits, and only as much as needed.
@@ -39,7 +41,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             progressCallback?.Invoke($"Combining static meshes to reduce MeshRenderer count ({rendererCount} -> {maxMeshRenderers})...");
-            Debug.Log($"[AvatarMeshCountOptimizer] MeshRenderers {rendererCount} > limit {maxMeshRenderers}. Combining per-parent groups (largest first).");
+            Log.Info($"MeshRenderers {rendererCount} > limit {maxMeshRenderers}. Combining per-parent groups (largest first).");
 
             // Only combine renderers that are active and enabled: disabled ones are commonly
             // animator-driven toggles and must keep their own renderer to stay toggleable.
@@ -136,12 +138,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
 
                 rendererCount -= renderersList.Count - 1;
-                Debug.Log($"[AvatarMeshCountOptimizer] Combined {renderersList.Count} static MeshRenderers under '{parent.name}' into '{combinedGo.name}'{(savedPath != null ? $" (mesh saved: {savedPath})" : "")}. Renderer count now {rendererCount}.");
+                Log.Info($"Combined {renderersList.Count} static MeshRenderers under '{parent.name}' into '{combinedGo.name}'{(savedPath != null ? $" (mesh saved: {savedPath})" : "")}. Renderer count now {rendererCount}.");
             }
 
             if (rendererCount > maxMeshRenderers)
             {
-                Debug.LogWarning($"[AvatarMeshCountOptimizer] Could not reach MeshRenderer limit: {rendererCount} / {maxMeshRenderers} (remaining renderers have no combinable same-parent group).");
+                Log.Warn($"Could not reach MeshRenderer limit: {rendererCount} / {maxMeshRenderers} (remaining renderers have no combinable same-parent group).");
             }
         }
 
@@ -215,14 +217,14 @@ namespace Bluscream.VRCAvatarOptimizer
                 {
                     if (!AvatarNaNimationOptimizer.CanTakeToggleBone(mesh))
                     {
-                        Debug.LogWarning($"[AvatarMeshCountOptimizer] '{smr.name}' is animated on/off but every vertex already uses four bones, so no zero-weight toggle bone can be added without changing deformation. Merging would break the toggle — leaving this renderer alone.");
+                        Log.Warn($"'{smr.name}' is animated on/off but every vertex already uses four bones, so no zero-weight toggle bone can be added without changing deformation. Merging would break the toggle — leaving this renderer alone.");
                         continue;
                     }
 
                     Transform toggleBone = AvatarNaNimationOptimizer.GetOrCreateNaNToggleBone(avatarRoot, smr.name);
                     if (toggleBone == null)
                     {
-                        Debug.LogWarning($"[AvatarMeshCountOptimizer] Could not create a NaNimation toggle bone for '{smr.name}' — leaving this renderer alone.");
+                        Log.Warn($"Could not create a NaNimation toggle bone for '{smr.name}' — leaving this renderer alone.");
                         continue;
                     }
 
@@ -239,7 +241,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 vertexOffsets.Add(vertexOffset);
                 sourceMeshes.Add(mesh);
 
-                OptimizerLog.Trace("AvatarMeshCountOptimizer", () =>
+                Log.Trace(() =>
                     $"  source '{smr.name}': mesh '{mesh.name}', {mesh.vertexCount:N0} verts at offset {vertexOffset:N0}, " +
                     $"{mesh.subMeshCount} submesh(es), {mesh.blendShapeCount} blendshape(s), " +
                     $"{(smr.bones?.Length ?? 0)} bone(s), toggleBone={(toggleBoneIndex >= 0 ? toggleBoneIndex.ToString() : "none")}");
@@ -359,28 +361,27 @@ namespace Bluscream.VRCAvatarOptimizer
             // Report the blendshape situation unconditionally: "blendshapes: 0" is only correct if the
             // sources genuinely had none, and that distinction is not visible after the fact.
             int sourceShapeTotal = sourceMeshes.Sum(m => m != null ? m.blendShapeCount : 0);
-            Debug.Log($"[AvatarMeshCountOptimizer] Blendshapes across {sourceMeshes.Count} source mesh(es): " +
+            Log.Info($"Blendshapes across {sourceMeshes.Count} source mesh(es): " +
                       string.Join(", ", sourceMeshes.Select(m => $"'{m.name}'={m.blendShapeCount}")));
 
             int shapesTransferred = TransferBlendShapes(combinedMesh, sourceMeshes, vertexOffsets, vertices.Count);
 
             if (sourceShapeTotal == 0)
             {
-                Debug.Log($"[AvatarMeshCountOptimizer] No source mesh had blendshapes — nothing to transfer.");
+                Log.Info($"No source mesh had blendshapes — nothing to transfer.");
             }
             else if (shapesTransferred == 0)
             {
-                Debug.LogError($"[AvatarMeshCountOptimizer] {sourceShapeTotal} blendshape(s) existed across the source meshes but NONE were transferred to the combined mesh. Visemes, blinks and toggles driven by these shapes are now broken.");
+                Log.Error($"{sourceShapeTotal} blendshape(s) existed across the source meshes but NONE were transferred to the combined mesh. Visemes, blinks and toggles driven by these shapes are now broken.");
             }
             else
             {
-                Debug.Log($"[AvatarMeshCountOptimizer] Transferred {shapesTransferred} unique blendshape name(s) from {sourceShapeTotal} source shape(s) (same-named shapes merge across meshes).");
+                Log.Info($"Transferred {shapesTransferred} unique blendshape name(s) from {sourceShapeTotal} source shape(s) (same-named shapes merge across meshes).");
             }
 
             combinedMesh.RecalculateBounds();
 
-            OptimizerLog.Verbose("AvatarMeshCountOptimizer",
-                $"Assembled '{combinedMesh.name}': {vertices.Count:N0} verts from {sourceMeshes.Count} source mesh(es), " +
+            Log.Verbose($"Assembled '{combinedMesh.name}': {vertices.Count:N0} verts from {sourceMeshes.Count} source mesh(es), " +
                 $"{allBones.Count} bone(s), {materialOrder.Count} submesh(es), {shapesTransferred} blendshape(s), " +
                 $"index format {combinedMesh.indexFormat}.");
 
@@ -410,7 +411,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 Undo.DestroyObjectImmediate(smr);
             }
 
-            Debug.Log($"[AvatarMeshCountOptimizer] Merged {groupToMerge.Count} SkinnedMeshRenderers into '{combinedGo.name}' " +
+            Log.Info($"Merged {groupToMerge.Count} SkinnedMeshRenderers into '{combinedGo.name}' " +
                       $"(bones: {allBones.Count}, vertices: {combinedMesh.vertexCount}, submeshes: {materialOrder.Count}, blendshapes: {shapesTransferred})" +
                       $"{(savedPath != null ? $" (mesh saved: {savedPath})" : "")}.");
         }
@@ -511,7 +512,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarMeshCountOptimizer] Could not persist combined mesh '{mesh.name}' as asset: {e.Message}");
+                Log.Warn($"Could not persist combined mesh '{mesh.name}' as asset: {e.Message}");
                 return null;
             }
         }

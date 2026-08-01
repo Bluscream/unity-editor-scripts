@@ -45,6 +45,8 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public abstract class PlatformProfile : ProfileLimitData
     {
+        private static readonly BluLog Log = BluLog.Get("PlatformProfile");
+
         public abstract TargetPlatform Platform { get; }
         public abstract AvatarPerformanceRank Rank { get; }
 
@@ -326,7 +328,7 @@ namespace Bluscream.VRCAvatarOptimizer
             if (diffs.Count > 0)
             {
                 string msg = $"[VRCAvatarOptimizer] Overrode limits from VRChat SDK for {profile.Platform} [{profile.Rank}]:\n" + string.Join("\n", diffs);
-                Debug.Log(msg);
+                Log.Info(msg);
             }
         }
 

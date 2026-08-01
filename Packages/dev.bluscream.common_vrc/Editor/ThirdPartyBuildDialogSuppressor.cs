@@ -14,6 +14,8 @@ namespace Bluscream.VRC
     /// </summary>
     public sealed class ThirdPartyBuildDialogSuppressor : IDisposable
     {
+        private static readonly BluLog Log = BluLog.Get("BuildDialogSuppressor");
+
         private readonly List<(string key, bool previous)> _restoreBools = new List<(string, bool)>();
         private readonly bool _verbose;
 
@@ -43,12 +45,12 @@ namespace Bluscream.VRC
                 if (current)
                 {
                     EditorPrefs.SetBool(key, false);
-                    if (_verbose) Debug.Log($"[BuildDialogSuppressor] Temporarily disabled {description} for the dry-run build (restored afterwards).");
+                    if (_verbose) Log.Info($"Temporarily disabled {description} for the dry-run build (restored afterwards).");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[BuildDialogSuppressor] Could not suppress {description}: {e.Message}");
+                Log.Warn($"Could not suppress {description}: {e.Message}");
             }
         }
 
@@ -57,7 +59,7 @@ namespace Bluscream.VRC
             foreach (var (key, previous) in _restoreBools)
             {
                 try { EditorPrefs.SetBool(key, previous); }
-                catch (Exception e) { Debug.LogWarning($"[BuildDialogSuppressor] Failed to restore '{key}' to {previous}: {e.Message}"); }
+                catch (Exception e) { Log.Warn($"Failed to restore '{key}' to {previous}: {e.Message}"); }
             }
             _restoreBools.Clear();
         }

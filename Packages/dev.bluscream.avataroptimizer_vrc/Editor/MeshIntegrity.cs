@@ -6,114 +6,6 @@ using UnityEngine;
 
 namespace Bluscream.VRCAvatarOptimizer
 {
-    public enum OptimizerLogLevel
-    {
-        /// <summary>Warnings and errors only.</summary>
-        Quiet = 0,
-        /// <summary>Step boundaries and per-pass results. The default.</summary>
-        Normal = 1,
-        /// <summary>Per-object decisions: what was merged, skipped, kept, and why.</summary>
-        Verbose = 2,
-        /// <summary>Per-vertex-block / per-element detail. Very noisy; for diagnosing a specific bad avatar.</summary>
-        Trace = 3
-    }
-
-    /// <summary>
-    /// Verbosity-gated logging for the optimizer.
-    ///
-    /// The passes that rewrite vertex data fail silently when they go wrong — a bone index pointing at the
-    /// wrong bone or a UV landing in the wrong atlas cell produces a mesh that loads fine and renders
-    /// wrongly. <see cref="MeshIntegrity"/> exists to make those failures loud at the point they are
-    /// introduced rather than in-game.
-    /// </summary>
-    public static class OptimizerLog
-    {
-        private const string LevelPref = "VRCAvatarOptimizer_LogLevel";
-        private const string ValidatePref = "VRCAvatarOptimizer_ValidateMeshes";
-
-        public static OptimizerLogLevel Level
-        {
-            get => (OptimizerLogLevel)EditorPrefs.GetInt(LevelPref, (int)OptimizerLogLevel.Normal);
-            set => EditorPrefs.SetInt(LevelPref, (int)value);
-        }
-
-        /// <summary>Run mesh integrity checks after every pass that rewrites vertex data.</summary>
-        public static bool ValidateMeshes
-        {
-            get => EditorPrefs.GetBool(ValidatePref, true);
-            set => EditorPrefs.SetBool(ValidatePref, value);
-        }
-
-        public static bool IsVerbose => Level >= OptimizerLogLevel.Verbose;
-        public static bool IsTrace => Level >= OptimizerLogLevel.Trace;
-
-        public static void Info(string tag, string message)
-        {
-            if (Level >= OptimizerLogLevel.Normal) Debug.Log($"[{tag}] {message}");
-        }
-
-        public static void Verbose(string tag, string message)
-        {
-            if (Level >= OptimizerLogLevel.Verbose) Debug.Log($"[{tag}] {message}");
-        }
-
-        /// <summary>
-        /// Trace messages are lazily built — the string is never constructed unless Trace is enabled, so
-        /// per-vertex logging costs nothing at lower levels.
-        /// </summary>
-        public static void Trace(string tag, Func<string> message)
-        {
-            if (Level >= OptimizerLogLevel.Trace && message != null) Debug.Log($"[{tag}] {message()}");
-        }
-
-        public static void Warn(string tag, string message, UnityEngine.Object context = null)
-        {
-            if (context != null) Debug.LogWarning($"[{tag}] {message}", context);
-            else Debug.LogWarning($"[{tag}] {message}");
-        }
-
-        public static void Error(string tag, string message, UnityEngine.Object context = null)
-        {
-            if (context != null) Debug.LogError($"[{tag}] {message}", context);
-            else Debug.LogError($"[{tag}] {message}");
-        }
-
-        private static StackTraceLogType _savedLogTrace;
-        private static StackTraceLogType _savedWarningTrace;
-        private static bool _tracesSuppressed;
-
-        /// <summary>
-        /// Suppresses Unity's stack trace on Log and Warning for the duration of a conversion.
-        ///
-        /// Unity attaches a full managed stack trace to every Debug.Log, which on a real run turned 742
-        /// optimizer messages into 55,812 lines of Editor.log and made postmortems impractical. Errors keep
-        /// their traces, since those are the ones worth tracing.
-        /// </summary>
-        public static void SuppressStackTraces()
-        {
-            if (_tracesSuppressed) return;
-
-            _savedLogTrace = Application.GetStackTraceLogType(LogType.Log);
-            _savedWarningTrace = Application.GetStackTraceLogType(LogType.Warning);
-
-            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
-            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.None);
-
-            _tracesSuppressed = true;
-        }
-
-        /// <summary>Restores whatever the project had configured. Safe to call when not suppressed.</summary>
-        public static void RestoreStackTraces()
-        {
-            if (!_tracesSuppressed) return;
-
-            Application.SetStackTraceLogType(LogType.Log, _savedLogTrace);
-            Application.SetStackTraceLogType(LogType.Warning, _savedWarningTrace);
-
-            _tracesSuppressed = false;
-        }
-    }
-
     /// <summary>
     /// Structural checks for meshes the optimizer generates.
     ///
@@ -123,6 +15,17 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class MeshIntegrity
     {
+        private static readonly BluLog Log = BluLog.Get("MeshIntegrity");
+
+        private const string EnabledPref = "VRCAvatarOptimizer_ValidateMeshes";
+
+        /// <summary>Run integrity checks after every pass that rewrites vertex data.</summary>
+        public static bool Enabled
+        {
+            get => EditorPrefs.GetBool(EnabledPref, true);
+            set => EditorPrefs.SetBool(EnabledPref, value);
+        }
+
         /// <summary>Bone weights are allowed to drift this far from summing to 1 before it is reported.</summary>
         private const float WeightSumTolerance = 0.001f;
 
@@ -136,13 +39,11 @@ namespace Bluscream.VRCAvatarOptimizer
         /// <returns>True when the mesh passed every check.</returns>
         public static bool Validate(Mesh mesh, string context, Renderer renderer = null)
         {
-            if (!OptimizerLog.ValidateMeshes) return true;
-
-            const string Tag = "MeshIntegrity";
+            if (!MeshIntegrity.Enabled) return true;
 
             if (mesh == null)
             {
-                OptimizerLog.Error(Tag, $"{context}: mesh is null.");
+                Log.Error($"{context}: mesh is null.");
                 return false;
             }
 
@@ -165,12 +66,12 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (problems.Count == 0)
             {
-                OptimizerLog.Verbose(Tag, $"{context}: OK — {vertexCount:N0} verts, {mesh.subMeshCount} submesh(es), " +
+                Log.Verbose($"{context}: OK — {vertexCount:N0} verts, {mesh.subMeshCount} submesh(es), " +
                                           $"{mesh.blendShapeCount} blendshape(s), {(mesh.bindposes?.Length ?? 0)} bindpose(s).");
                 return true;
             }
 
-            OptimizerLog.Error(Tag, $"{context}: {problems.Count} integrity problem(s) — this mesh will load but render incorrectly:\n  - "
+            Log.Error($"{context}: {problems.Count} integrity problem(s) — this mesh will load but render incorrectly:\n  - "
                                     + string.Join("\n  - ", problems),
                                renderer);
             return false;

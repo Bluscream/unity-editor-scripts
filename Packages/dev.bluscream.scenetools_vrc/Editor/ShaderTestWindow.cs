@@ -12,6 +12,8 @@ namespace Bluscream.ShaderTest
     /// </summary>
     public class ShaderTestWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("ShaderTest");
+
         private Material targetMaterial;
         private GameObject targetGameObject;
         private Shader originalShader;
@@ -247,7 +249,7 @@ namespace Bluscream.ShaderTest
             }
             sb.AppendLine("================================================================================");
 
-            Debug.Log(sb.ToString());
+            Log.Info(sb.ToString());
         }
 
         private void ApplyShader(Shader shader)

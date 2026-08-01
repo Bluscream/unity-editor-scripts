@@ -19,6 +19,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarBoundsOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarBoundsOptimizer");
+
         /// <summary>Extra margin applied to computed bounds, so animation slightly beyond the sampled poses still renders.</summary>
         private const float BoundsPadding = 0.05f;
 
@@ -60,7 +62,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 boundsFixed++;
             }
 
-            Debug.Log($"[AvatarBoundsOptimizer] Recalculated bounds on {boundsFixed} SkinnedMeshRenderer(s)" +
+            Log.Info($"Recalculated bounds on {boundsFixed} SkinnedMeshRenderer(s)" +
                       $"{(anchor != null ? $" and anchored light probes to '{anchor.name}'" : "")}.");
         }
 
@@ -140,7 +142,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarBoundsOptimizer] Could not read blendshape displacement on '{mesh.name}': {e.Message}");
+                Log.Warn($"Could not read blendshape displacement on '{mesh.name}': {e.Message}");
             }
 
             return max;

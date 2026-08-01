@@ -13,6 +13,8 @@ namespace Bluscream.VRC
     [InitializeOnLoad]
     public static class VRCWhitelistPatcher
     {
+        private static readonly BluLog Log = BluLog.Get("VRCWhitelistPatcher");
+
         private static readonly HashSet<string> _pendingTypesToWhitelist = new HashSet<string>();
 
         static VRCWhitelistPatcher()
@@ -86,14 +88,14 @@ namespace Bluscream.VRC
 
                 if (modified)
                 {
-                    Debug.Log($"<color=lime><b>[VRCWhitelistPatcher]</b></color> Successfully patched VRChat SDK whitelist ({_pendingTypesToWhitelist.Count} custom types registered).");
+                    Log.Info($"<color=lime><b>[VRCWhitelistPatcher]</b></color> Successfully patched VRChat SDK whitelist ({_pendingTypesToWhitelist.Count} custom types registered).");
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VRCWhitelistPatcher] Exception while patching VRChat SDK whitelist: {ex.Message}");
+                Log.Warn($"Exception while patching VRChat SDK whitelist: {ex.Message}");
                 return false;
             }
         }
@@ -133,7 +135,7 @@ namespace Bluscream.VRC
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VRCWhitelistPatcher] Exception while getting whitelisted component type names: {ex.Message}");
+                Log.Warn($"Exception while getting whitelisted component type names: {ex.Message}");
             }
 
             return result.OrderBy(t => t).ToList();

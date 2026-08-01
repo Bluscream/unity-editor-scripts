@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class ShaderPropertyMapper
     {
+        private static readonly BluLog Log = BluLog.Get("ShaderPropertyMapper");
+
         [System.Serializable]
         private class PropertyMapping
         {
@@ -118,7 +120,7 @@ namespace Bluscream.VRCAvatarOptimizer
                             }
                         }
                         
-                        Debug.Log($"Loaded {UniversalPropertyMappings.Count} property mappings from ShaderPropertyMappings.json");
+                        Log.Info($"Loaded {UniversalPropertyMappings.Count} property mappings from ShaderPropertyMappings.json");
                         initialized = true;
                         return;
                     }
@@ -126,7 +128,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Failed to load ShaderPropertyMappings.json, using defaults: {e.Message}");
+                Log.Warn($"Failed to load ShaderPropertyMappings.json, using defaults: {e.Message}");
             }
             
             // Fallback to hardcoded defaults if JSON loading fails
@@ -450,7 +452,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     if (fallbackTex != null)
                     {
                         target.SetTexture("_MainTex", fallbackTex);
-                        Debug.Log($"[ShaderPropertyMapper] Assigned fallback texture '{fallbackTex.name}' from source property '{prop}' to _MainTex on target material '{target.name}'.");
+                        Log.Info($"Assigned fallback texture '{fallbackTex.name}' from source property '{prop}' to _MainTex on target material '{target.name}'.");
                         result.TransferredProperties.Add($"{prop} (fallback) → _MainTex");
                         result.PropertiesTransferred++;
                         return;

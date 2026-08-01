@@ -15,6 +15,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarRigOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarRigOptimizer");
+
         /// <summary>
         /// Unmaps the humanoid jaw bone. VRChat drives the jaw from visemes, and a mapped jaw bone fights
         /// that, which shows up as a mouth that will not move or moves wrongly while talking.
@@ -27,21 +29,21 @@ namespace Bluscream.VRCAvatarOptimizer
             Animator animator = avatarRoot.GetComponent<Animator>();
             if (animator == null || !animator.isHuman)
             {
-                Debug.Log("[AvatarRigOptimizer] Avatar is not humanoid — no jaw bone to unmap.");
+                Log.Info("Avatar is not humanoid — no jaw bone to unmap.");
                 return false;
             }
 
             Transform jaw = animator.GetBoneTransform(HumanBodyBones.Jaw);
             if (jaw == null)
             {
-                Debug.Log("[AvatarRigOptimizer] Humanoid rig has no jaw bone mapped — nothing to do.");
+                Log.Info("Humanoid rig has no jaw bone mapped — nothing to do.");
                 return false;
             }
 
             ModelImporter importer = GetModelImporter(animator.avatar);
             if (importer == null)
             {
-                Debug.LogWarning($"[AvatarRigOptimizer] Jaw bone '{jaw.name}' is mapped, but its source model importer could not be found — unmap it manually via the rig's Configure menu.");
+                Log.Warn($"Jaw bone '{jaw.name}' is mapped, but its source model importer could not be found — unmap it manually via the rig's Configure menu.");
                 return false;
             }
 
@@ -54,7 +56,7 @@ namespace Bluscream.VRCAvatarOptimizer
             int index = Array.FindIndex(humanBones, b => b.humanName == jawName);
             if (index < 0)
             {
-                Debug.Log("[AvatarRigOptimizer] Jaw is not present in the model's human description — nothing to unmap.");
+                Log.Info("Jaw is not present in the model's human description — nothing to unmap.");
                 return false;
             }
 
@@ -65,7 +67,7 @@ namespace Bluscream.VRCAvatarOptimizer
             AssetDatabase.WriteImportSettingsIfDirty(importer.assetPath);
             importer.SaveAndReimport();
 
-            Debug.Log($"[AvatarRigOptimizer] Unmapped jaw bone '{jaw.name}' on model '{importer.assetPath}'. Note: this affects every avatar using that model.");
+            Log.Info($"Unmapped jaw bone '{jaw.name}' on model '{importer.assetPath}'. Note: this affects every avatar using that model.");
             return true;
         }
 
@@ -97,12 +99,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 AssetDatabase.WriteImportSettingsIfDirty(importer.assetPath);
                 importer.SaveAndReimport();
 
-                Debug.Log($"[AvatarRigOptimizer] Enabled Legacy Blend Shape Normals on '{importer.assetPath}'. Note: this affects every avatar using that model.");
+                Log.Info($"Enabled Legacy Blend Shape Normals on '{importer.assetPath}'. Note: this affects every avatar using that model.");
                 changedAny = true;
             }
 
             if (!changedAny)
-                Debug.Log("[AvatarRigOptimizer] No model needed a Legacy Blend Shape Normals change.");
+                Log.Info("No model needed a Legacy Blend Shape Normals change.");
 
             return changedAny;
         }

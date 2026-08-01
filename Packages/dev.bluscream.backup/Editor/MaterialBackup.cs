@@ -10,6 +10,7 @@ namespace Bluscream.BackupSystem
     /// </summary>
     internal class MaterialBackupLogHandler : ILogHandler
     {
+        
         private ILogHandler defaultHandler;
         
         public MaterialBackupLogHandler()
@@ -65,6 +66,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class MaterialBackupHandler
     {
+        private static readonly BluLog Log = BluLog.Get("MaterialBackup");
+
         /// <summary>
         /// Backs up materials based on scope
         /// </summary>
@@ -342,7 +345,7 @@ namespace Bluscream.BackupSystem
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Failed to restore material {backup.materialPath}: {e.Message}");
+                    Log.Warn($"Failed to restore material {backup.materialPath}: {e.Message}");
                 }
             }
         }

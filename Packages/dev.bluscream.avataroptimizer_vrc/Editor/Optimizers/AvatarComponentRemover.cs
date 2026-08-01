@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarComponentRemover
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarComponentRemover");
+
         public class RemovedComponent
         {
             public GameObject gameObject;
@@ -29,14 +31,14 @@ namespace Bluscream.VRCAvatarOptimizer
             
             if (avatarRoot == null)
             {
-                Debug.LogError("[AvatarComponentRemover] Avatar root is null");
+                Log.Error("Avatar root is null");
                 return removed;
             }
 
             profile = profile ?? PlatformProfile.GetProfile(TargetPlatform.Android, AvatarPerformanceRank.Medium);
 
             List<GameObject> allGameObjects = avatarRoot.transform.CollectAllGameObjects();
-            Debug.Log($"[AvatarComponentRemover] Starting component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects) using profile '{profile.Platform}_{profile.Rank}'.");
+            Log.Info($"Starting component removal on '{avatarRoot.name}' ({allGameObjects.Count} GameObjects) using profile '{profile.Platform}_{profile.Rank}'.");
 
             // Component removal can fail on dependency chains (e.g. a Joint that [RequireComponent]s a
             // Rigidbody: DestroyImmediate on the Rigidbody logs an error and silently leaves it alive).
@@ -88,18 +90,18 @@ namespace Bluscream.VRCAvatarOptimizer
                             // and leaves the component alive. Only count it if it is actually gone.
                             if (comp == null)
                             {
-                                Debug.Log($"[AvatarComponentRemover] [Pass {pass}] Removed '{compTypeName}' from '{GetGameObjectPath(go)}'");
+                                Log.Info($"[Pass {pass}] Removed '{compTypeName}' from '{GetGameObjectPath(go)}'");
                                 removed.Add(removedComp);
                                 removedThisPass++;
                             }
                             else if (pass == maxPasses)
                             {
-                                Debug.LogWarning($"[AvatarComponentRemover] Could not remove '{compTypeName}' from '{GetGameObjectPath(go)}' — another component still depends on it.");
+                                Log.Warn($"Could not remove '{compTypeName}' from '{GetGameObjectPath(go)}' — another component still depends on it.");
                             }
                         }
                         catch (Exception e)
                         {
-                            Debug.LogWarning($"[AvatarComponentRemover] Failed to remove '{compTypeName}' from {go.name}: {e.Message}");
+                            Log.Warn($"Failed to remove '{compTypeName}' from {go.name}: {e.Message}");
                         }
                     }
                 }
@@ -118,7 +120,7 @@ namespace Bluscream.VRCAvatarOptimizer
             PruneExcessComponents<AudioSource>(avatarRoot, profile.MaxAudioSources, removed, progressCallback);
             PruneExcessComponents<Cloth>(avatarRoot, profile.MaxClothComponents, removed, progressCallback);
 
-            Debug.Log($"[AvatarComponentRemover] Done. Total removed: {removed.Count} component(s).");
+            Log.Info($"Done. Total removed: {removed.Count} component(s).");
             return removed;
         }
 
@@ -140,7 +142,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             string label = typeof(T).Name;
             progressCallback?.Invoke($"Pruning excess {label} components ({comps.Count} -> {allowed})...");
-            Debug.Log($"[AvatarComponentRemover] {label} count {comps.Count} > limit {allowed}. Pruning deepest-first.");
+            Log.Info($"{label} count {comps.Count} > limit {allowed}. Pruning deepest-first.");
 
             while (comps.Count > allowed)
             {
@@ -164,7 +166,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     componentType = c.GetType().FullName,
                     gameObjectPath = GetGameObjectPath(c.gameObject)
                 });
-                Debug.Log($"[AvatarComponentRemover] Pruning excess {label} on '{GetGameObjectPath(c.gameObject)}'");
+                Log.Info($"Pruning excess {label} on '{GetGameObjectPath(c.gameObject)}'");
                 Undo.DestroyObjectImmediate(c);
             }
         }
@@ -303,7 +305,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 // for genuinely empty chains.
                 if (t.childCount > 0)
                 {
-                    Debug.Log($"[AvatarComponentRemover] Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it still has {t.childCount} child(ren), and re-parenting them would break animation paths.");
+                    Log.Info($"Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it still has {t.childCount} child(ren), and re-parenting them would break animation paths.");
                     continue;
                 }
 
@@ -311,17 +313,17 @@ namespace Bluscream.VRCAvatarOptimizer
                 // toggle its active state.
                 if (animatedPaths.Contains(AnimationUtility.CalculateTransformPath(t, avatarRoot.transform)))
                 {
-                    Debug.Log($"[AvatarComponentRemover] Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it is targeted by an animation curve.");
+                    Log.Info($"Keeping unused GameObject '{GetGameObjectPath(t.gameObject)}': it is targeted by an animation curve.");
                     continue;
                 }
 
-                Debug.Log($"[AvatarComponentRemover] Deleting unused GameObject '{GetGameObjectPath(t.gameObject)}'");
+                Log.Info($"Deleting unused GameObject '{GetGameObjectPath(t.gameObject)}'");
                 Undo.DestroyObjectImmediate(t.gameObject);
                 deletedCount++;
             }
 
             if (deletedCount > 0)
-                Debug.Log($"[AvatarComponentRemover] Deleted {deletedCount} unused GameObject(s).");
+                Log.Info($"Deleted {deletedCount} unused GameObject(s).");
 
             return deletedCount;
         }

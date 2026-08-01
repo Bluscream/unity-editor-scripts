@@ -11,6 +11,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public static class BackupSystem
     {
+        private static readonly BluLog Log = BluLog.Get("BackupSystem");
+
         /// <summary>
         /// Creates a backup based on the configuration
         /// </summary>
@@ -78,7 +80,7 @@ namespace Bluscream.BackupSystem
                     MaterialsWrapper materialsWrapper = new MaterialsWrapper { materials = backup.materials };
                     string materialsJson = JsonUtility.ToJson(materialsWrapper, true);
                     File.WriteAllText(materialsPath, materialsJson);
-                    Debug.Log($"Saved {backup.materials.Count} materials to {materialsPath}");
+                    Log.Info($"Saved {backup.materials.Count} materials to {materialsPath}");
                 }
 
                 if (config.backupComponents)
@@ -88,7 +90,7 @@ namespace Bluscream.BackupSystem
                     ComponentsWrapper componentsWrapper = new ComponentsWrapper { components = backup.components };
                     string componentsJson = JsonUtility.ToJson(componentsWrapper, true);
                     File.WriteAllText(componentsPath, componentsJson);
-                    Debug.Log($"Saved {backup.components.Count} components to {componentsPath}");
+                    Log.Info($"Saved {backup.components.Count} components to {componentsPath}");
                 }
 
                 if (config.backupTextures)
@@ -98,7 +100,7 @@ namespace Bluscream.BackupSystem
                     TexturesWrapper texturesWrapper = new TexturesWrapper { textures = backup.textures };
                     string texturesJson = JsonUtility.ToJson(texturesWrapper, true);
                     File.WriteAllText(texturesPath, texturesJson);
-                    Debug.Log($"Saved {backup.textures.Count} textures to {texturesPath}");
+                    Log.Info($"Saved {backup.textures.Count} textures to {texturesPath}");
                 }
 
                 if (config.backupGameObjectHierarchy)
@@ -108,7 +110,7 @@ namespace Bluscream.BackupSystem
                     HierarchyWrapper hierarchyWrapper = new HierarchyWrapper { gameObjects = backup.gameObjects };
                     string hierarchyJson = JsonUtility.ToJson(hierarchyWrapper, true);
                     File.WriteAllText(hierarchyPath, hierarchyJson);
-                    Debug.Log($"Saved {backup.gameObjects.Count} gameObjects to {hierarchyPath}");
+                    Log.Info($"Saved {backup.gameObjects.Count} gameObjects to {hierarchyPath}");
                 }
 
                 // Backup asset information to CSV
@@ -127,12 +129,12 @@ namespace Bluscream.BackupSystem
                     {
                         string[] lines = File.ReadAllLines(assetsCsvPath);
                         assetCount = lines.Length > 1 ? lines.Length - 1 : 0; // Subtract header
-                        Debug.Log($"Saved {assetCount} assets to {assetsCsvPath}");
+                        Log.Info($"Saved {assetCount} assets to {assetsCsvPath}");
                     }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Failed to create assets.csv: {e.Message}");
+                    Log.Warn($"Failed to create assets.csv: {e.Message}");
                 }
 
                 // Save comprehensive metadata file
@@ -164,13 +166,13 @@ namespace Bluscream.BackupSystem
                 summary.Append(string.Join(", ", parts));
                 
                 progressCallback?.Invoke("Backup complete!", 1f);
-                Debug.Log(summary.ToString());
+                Log.Info(summary.ToString());
                 return backupFolder;
             }
             catch (Exception e)
             {
                 progressCallback?.Invoke("Backup failed!", 1f);
-                Debug.LogError($"Error creating backup: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error creating backup: {e.Message}\n{e.StackTrace}");
                 return null;
             }
         }
@@ -184,7 +186,7 @@ namespace Bluscream.BackupSystem
             {
                 if (string.IsNullOrEmpty(assetPath) || !File.Exists(assetPath))
                 {
-                    Debug.LogWarning($"Asset file not found for backup: {assetPath}");
+                    Log.Warn($"Asset file not found for backup: {assetPath}");
                     return null;
                 }
 
@@ -209,13 +211,13 @@ namespace Bluscream.BackupSystem
                     File.Copy(metaPath, destPath + ".meta", true);
                 }
 
-                Debug.Log($"Backed up asset file to: {destPath}");
+                Log.Info($"Backed up asset file to: {destPath}");
                 return destPath;
             }
             catch (Exception e)
             {
                 progressCallback?.Invoke("Asset Backup failed!", 1f);
-                Debug.LogError($"Error creating asset file backup: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error creating asset file backup: {e.Message}\n{e.StackTrace}");
                 return null;
             }
         }
@@ -232,7 +234,7 @@ namespace Bluscream.BackupSystem
                 
                 if (!File.Exists(metadataPath))
                 {
-                    Debug.LogWarning($"Metadata file not found: {metadataPath}");
+                    Log.Warn($"Metadata file not found: {metadataPath}");
                     return null;
                 }
 
@@ -242,7 +244,7 @@ namespace Bluscream.BackupSystem
             }
             catch (Exception e)
             {
-                Debug.LogError($"Failed to load backup metadata: {e.Message}");
+                Log.Error($"Failed to load backup metadata: {e.Message}");
                 return null;
             }
         }
@@ -259,7 +261,7 @@ namespace Bluscream.BackupSystem
                 
                 if (!Directory.Exists(backupFolder))
                 {
-                    Debug.LogError($"Backup folder not found: {backupFolder}");
+                    Log.Error($"Backup folder not found: {backupFolder}");
                     return false;
                 }
 
@@ -281,7 +283,7 @@ namespace Bluscream.BackupSystem
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to load materials.json: {e.Message}");
+                        Log.Warn($"Failed to load materials.json: {e.Message}");
                     }
                 }
 
@@ -300,7 +302,7 @@ namespace Bluscream.BackupSystem
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to load components.json: {e.Message}");
+                        Log.Warn($"Failed to load components.json: {e.Message}");
                     }
                 }
 
@@ -319,7 +321,7 @@ namespace Bluscream.BackupSystem
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to load textures.json: {e.Message}");
+                        Log.Warn($"Failed to load textures.json: {e.Message}");
                     }
                 }
 
@@ -338,7 +340,7 @@ namespace Bluscream.BackupSystem
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to load hierarchy.json: {e.Message}");
+                        Log.Warn($"Failed to load hierarchy.json: {e.Message}");
                     }
                 }
 
@@ -347,7 +349,7 @@ namespace Bluscream.BackupSystem
             catch (System.Exception e)
             {
                 progressCallback?.Invoke("Restore failed!", 1f);
-                Debug.LogError($"Error restoring backup: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error restoring backup: {e.Message}\n{e.StackTrace}");
                 return false;
             }
         }
@@ -386,7 +388,7 @@ namespace Bluscream.BackupSystem
             {
                 if (backup == null)
                 {
-                    Debug.LogError("Backup data is null");
+                    Log.Error("Backup data is null");
                     return false;
                 }
 
@@ -424,13 +426,13 @@ namespace Bluscream.BackupSystem
                 AssetDatabase.Refresh();
 
                 progressCallback?.Invoke("Restore complete!", 1f);
-                Debug.Log("Backup restored successfully");
+                Log.Info("Backup restored successfully");
                 return true;
             }
             catch (Exception e)
             {
                 progressCallback?.Invoke("Restore failed!", 1f);
-                Debug.LogError($"Error restoring backup: {e.Message}\n{e.StackTrace}");
+                Log.Error($"Error restoring backup: {e.Message}\n{e.StackTrace}");
                 return false;
             }
         }

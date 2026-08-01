@@ -28,6 +28,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarTextureAtlaser
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarTextureAtlaser");
+
         /// <summary>Transparent padding around each cell, to stop neighbours bleeding in at low mip levels.</summary>
         private const int CellPadding = 8;
 
@@ -72,11 +74,11 @@ namespace Bluscream.VRCAvatarOptimizer
             int currentSlots = renderers.Sum(r => r.sharedMaterials.Length);
             if (maxMaterialSlots == int.MaxValue || currentSlots <= maxMaterialSlots)
             {
-                Debug.Log($"[AvatarTextureAtlaser] Material slots {currentSlots} / {maxMaterialSlots} already within budget — skipping atlasing.");
+                Log.Info($"Material slots {currentSlots} / {maxMaterialSlots} already within budget — skipping atlasing.");
                 return 0;
             }
 
-            Debug.Log($"[AvatarTextureAtlaser] Material slots {currentSlots} > limit {maxMaterialSlots} — attempting to atlas.");
+            Log.Info($"Material slots {currentSlots} > limit {maxMaterialSlots} — attempting to atlas.");
 
             // A mesh whose submeshes share vertices cannot carry per-submesh atlas UVs.
             var eligibleRenderers = new List<Renderer>();
@@ -86,7 +88,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (mesh == null) continue;
                 if (SharesVerticesBetweenSubMeshes(mesh))
                 {
-                    Debug.Log($"[AvatarTextureAtlaser] Skipping '{r.name}': its submeshes share vertices, which cannot hold two different atlas UVs.");
+                    Log.Info($"Skipping '{r.name}': its submeshes share vertices, which cannot hold two different atlas UVs.");
                     continue;
                 }
                 eligibleRenderers.Add(r);
@@ -94,7 +96,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (eligibleRenderers.Count == 0)
             {
-                Debug.LogWarning("[AvatarTextureAtlaser] No renderer is eligible for atlasing.");
+                Log.Warn("No renderer is eligible for atlasing.");
                 return 0;
             }
 
@@ -108,7 +110,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (groups.Count == 0)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Material slots are over budget ({currentSlots} / {maxMaterialSlots}) but no two materials are compatible enough to atlas together.");
+                Log.Warn($"Material slots are over budget ({currentSlots} / {maxMaterialSlots}) but no two materials are compatible enough to atlas together.");
                 return 0;
             }
 
@@ -117,7 +119,7 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 if (currentSlots - eliminated <= maxMaterialSlots)
                 {
-                    Debug.Log($"[AvatarTextureAtlaser] Slot budget reached ({currentSlots - eliminated} / {maxMaterialSlots}) — stopping before over-atlasing.");
+                    Log.Info($"Slot budget reached ({currentSlots - eliminated} / {maxMaterialSlots}) — stopping before over-atlasing.");
                     break;
                 }
 
@@ -126,7 +128,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 eliminated += saved;
             }
 
-            Debug.Log($"[AvatarTextureAtlaser] Complete: eliminated {eliminated} material slot(s).");
+            Log.Info($"Complete: eliminated {eliminated} material slot(s).");
             return eliminated;
         }
 
@@ -172,7 +174,7 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 if (!SubMeshUvsInUnitRange(u.Mesh, u.SubMeshIndex))
                 {
-                    Debug.Log($"[AvatarTextureAtlaser] Material '{material.name}' cannot be atlased: submesh {u.SubMeshIndex} of '{u.Mesh.name}' has UVs outside [0,1] (tiling or offset).");
+                    Log.Info($"Material '{material.name}' cannot be atlased: submesh {u.SubMeshIndex} of '{u.Mesh.name}' has UVs outside [0,1] (tiling or offset).");
                     return false;
                 }
             }
@@ -284,7 +286,7 @@ namespace Bluscream.VRCAvatarOptimizer
             List<string> textureProperties = CollectTextureProperties(group);
             if (textureProperties.Count == 0)
             {
-                Debug.Log($"[AvatarTextureAtlaser] Group of {group.Count} materials has no textures to pack — skipping.");
+                Log.Info($"Group of {group.Count} materials has no textures to pack — skipping.");
                 return 0;
             }
 
@@ -307,16 +309,16 @@ namespace Bluscream.VRCAvatarOptimizer
             TextureAtlasPacker.PackResult pack = PackWithDownscale(entries);
             if (!pack.Success)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Could not pack {group.Count} materials into a {MaxAtlasDimension}px atlas even after downscaling — skipping this group.");
+                Log.Warn($"Could not pack {group.Count} materials into a {MaxAtlasDimension}px atlas even after downscaling — skipping this group.");
                 return 0;
             }
 
-            Debug.Log($"[AvatarTextureAtlaser] Packed {group.Count} materials into a {pack.Width}x{pack.Height} atlas across {textureProperties.Count} texture map(s).");
-            OptimizerLog.Verbose("AvatarTextureAtlaser", $"  atlas maps: {string.Join(", ", textureProperties)} (primary '{primaryProperty}')");
+            Log.Info($"Packed {group.Count} materials into a {pack.Width}x{pack.Height} atlas across {textureProperties.Count} texture map(s).");
+            Log.Verbose($"  atlas maps: {string.Join(", ", textureProperties)} (primary '{primaryProperty}')");
             foreach (TextureAtlasPacker.PackEntry e in pack.Entries)
             {
                 TextureAtlasPacker.PackEntry entry = e;
-                OptimizerLog.Trace("AvatarTextureAtlaser", () =>
+                Log.Trace(() =>
                     $"  cell '{((Material)entry.Key).name}': {entry.Width}x{entry.Height} at ({entry.X},{entry.Y})" +
                     $"{(entry.Placed ? "" : " [UNPLACED]")}");
             }
@@ -331,7 +333,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (!atlases.ContainsKey(primaryProperty))
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Failed to build the primary '{primaryProperty}' atlas — skipping this group.");
+                Log.Warn($"Failed to build the primary '{primaryProperty}' atlas — skipping this group.");
                 return 0;
             }
 
@@ -366,7 +368,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (result.Success)
                 {
                     if (attempt > 0)
-                        Debug.Log($"[AvatarTextureAtlaser] Atlas cells downscaled {divisor}x to fit within {MaxAtlasDimension}px.");
+                        Log.Info($"Atlas cells downscaled {divisor}x to fit within {MaxAtlasDimension}px.");
                     return result;
                 }
             }
@@ -507,7 +509,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Could not read texture '{source.name}': {e.Message}");
+                Log.Warn($"Could not read texture '{source.name}': {e.Message}");
                 return null;
             }
             finally
@@ -551,7 +553,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Could not save atlas for '{property}': {e.Message}");
+                Log.Warn($"Could not save atlas for '{property}': {e.Message}");
                 return null;
             }
         }
@@ -586,7 +588,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Could not create atlas material: {e.Message}");
+                Log.Warn($"Could not create atlas material: {e.Message}");
                 return null;
             }
         }
@@ -623,7 +625,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (uvs == null || uvs.Length == 0)
                 {
                     UnityEngine.Object.DestroyImmediate(newMesh);
-                    Debug.Log($"[AvatarTextureAtlaser] Skipping '{r.name}': mesh has no UV0 to rewrite.");
+                    Log.Info($"Skipping '{r.name}': mesh has no UV0 to rewrite.");
                     continue;
                 }
 
@@ -638,8 +640,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     if (mats[i] != null && groupSet.Contains(mats[i]) && rects.TryGetValue(mats[i], out Rect rect))
                     {
                         Material remapped = mats[i];
-                        OptimizerLog.Verbose("AvatarTextureAtlaser",
-                            $"  '{r.name}' submesh {i} ('{remapped.name}') -> atlas rect " +
+                        Log.Verbose($"  '{r.name}' submesh {i} ('{remapped.name}') -> atlas rect " +
                             $"x={rect.x:F4} y={rect.y:F4} w={rect.width:F4} h={rect.height:F4} ({tris.Length / 3} tris)");
 
                         // Scale this submesh's UVs into the material's packed cell.
@@ -693,7 +694,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 r.sharedMaterials = keptMaterials.ToArray();
 
                 eliminated += slotsBefore - keptMaterials.Count;
-                Debug.Log($"[AvatarTextureAtlaser] '{r.name}': {slotsBefore} slots -> {keptMaterials.Count} using atlas material '{atlasMaterial.name}'.");
+                Log.Info($"'{r.name}': {slotsBefore} slots -> {keptMaterials.Count} using atlas material '{atlasMaterial.name}'.");
             }
 
             return eliminated;
@@ -705,7 +706,7 @@ namespace Bluscream.VRCAvatarOptimizer
         /// </summary>
         private static void ValidateUvsInUnitRange(Mesh mesh, string rendererName)
         {
-            if (!OptimizerLog.ValidateMeshes) return;
+            if (!MeshIntegrity.Enabled) return;
 
             Vector2[] uvs = mesh.uv;
             if (uvs == null) return;
@@ -726,13 +727,12 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (outside > 0)
             {
-                OptimizerLog.Error("AvatarTextureAtlaser",
-                    $"'{rendererName}': {outside} rewritten UV(s) fall outside the atlas (first at vertex {firstBad}: {uvs[firstBad]}). " +
+                Log.Error($"'{rendererName}': {outside} rewritten UV(s) fall outside the atlas (first at vertex {firstBad}: {uvs[firstBad]}). " +
                     "These will sample the wrong material's pixels.");
             }
             else
             {
-                OptimizerLog.Verbose("AvatarTextureAtlaser", $"'{rendererName}': all {uvs.Length:N0} UVs land inside the atlas.");
+                Log.Verbose($"'{rendererName}': all {uvs.Length:N0} UVs land inside the atlas.");
             }
         }
 
@@ -761,7 +761,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarTextureAtlaser] Could not persist atlased mesh '{mesh.name}': {e.Message}");
+                Log.Warn($"Could not persist atlased mesh '{mesh.name}': {e.Message}");
             }
         }
     }

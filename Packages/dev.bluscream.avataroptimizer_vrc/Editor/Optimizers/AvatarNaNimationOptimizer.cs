@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarNaNimationOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarNaNimationOptimizer");
+
         public const string NaNToggleBonePrefix = "NaN_Toggle_";
 
         public static Transform GetOrCreateNaNToggleBone(GameObject avatarRoot, string toggleName)
@@ -146,7 +148,7 @@ namespace Bluscream.VRCAvatarOptimizer
                     string clipPath = AssetDatabase.GetAssetPath(clip);
                     if (!string.IsNullOrEmpty(clipPath) && !clipPath.Contains("_AVATAROPTIMIZER"))
                     {
-                        Debug.LogWarning($"[AvatarNaNimationOptimizer] Skipping NaNimation rewrite of '{clip.name}': it is still the original project asset at '{clipPath}'. Enable animation remapping so the clip is cloned first.");
+                        Log.Warn($"Skipping NaNimation rewrite of '{clip.name}': it is still the original project asset at '{clipPath}'. Enable animation remapping so the clip is cloned first.");
                         continue;
                     }
 
@@ -171,7 +173,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             if (rewritten > 0)
-                Debug.Log($"[AvatarNaNimationOptimizer] Rewrote {rewritten} clip(s): '{togglePath}' active-state -> NaN scale on '{toggleBonePath}'.");
+                Log.Info($"Rewrote {rewritten} clip(s): '{togglePath}' active-state -> NaN scale on '{toggleBonePath}'.");
 
             return rewritten;
         }

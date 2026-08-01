@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarAnimatorOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarAnimatorOptimizer");
+
         public static void OptimizeAnimatorControllers(GameObject avatarRoot, Action<string> progressCallback = null)
         {
             if (avatarRoot == null) return;
@@ -62,17 +64,17 @@ namespace Bluscream.VRCAvatarOptimizer
                 // shared Direct Blend Tree, so those layers keep their own layer.
                 if (layer.avatarMask != null)
                 {
-                    Debug.Log($"[AvatarAnimatorOptimizer] Layer '{layer.name}' has an avatar mask — left as its own layer.");
+                    Log.Info($"Layer '{layer.name}' has an avatar mask — left as its own layer.");
                     continue;
                 }
                 if (layer.blendingMode != AnimatorLayerBlendingMode.Override)
                 {
-                    Debug.Log($"[AvatarAnimatorOptimizer] Layer '{layer.name}' uses {layer.blendingMode} blending — left as its own layer.");
+                    Log.Info($"Layer '{layer.name}' uses {layer.blendingMode} blending — left as its own layer.");
                     continue;
                 }
                 if (!Mathf.Approximately(layer.defaultWeight, 1f))
                 {
-                    Debug.Log($"[AvatarAnimatorOptimizer] Layer '{layer.name}' has default weight {layer.defaultWeight} — left as its own layer.");
+                    Log.Info($"Layer '{layer.name}' has default weight {layer.defaultWeight} — left as its own layer.");
                     continue;
                 }
 
@@ -157,7 +159,7 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 // Add DBT layer at index 1
                 layers.Insert(1, dbtLayer);
-                Debug.Log($"[AvatarAnimatorOptimizer] Merged {layersToMerge.Count} toggle layers into Direct Blend Tree on '{controller.name}'.");
+                Log.Info($"Merged {layersToMerge.Count} toggle layers into Direct Blend Tree on '{controller.name}'.");
             }
 
             // Remove merged and dead layers (in reverse order to preserve indices)
@@ -256,7 +258,7 @@ namespace Bluscream.VRCAvatarOptimizer
             });
             floatParams.Add(ConstantOneName);
 
-            Debug.Log($"[AvatarAnimatorOptimizer] Added '{ConstantOneName}' (float, default 1) to drive the Direct Blend Tree on '{controller.name}'.");
+            Log.Info($"Added '{ConstantOneName}' (float, default 1) to drive the Direct Blend Tree on '{controller.name}'.");
             return ConstantOneName;
         }
 

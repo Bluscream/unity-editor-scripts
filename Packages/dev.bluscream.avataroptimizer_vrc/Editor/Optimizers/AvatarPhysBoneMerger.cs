@@ -19,6 +19,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarPhysBoneMerger
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarPhysBoneMerger");
+
         /// <summary>Serialized fields the merge itself rewrites — excluded from the settings-equality test.</summary>
         private static readonly HashSet<string> MergeControlledFields = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -46,7 +48,7 @@ namespace Bluscream.VRCAvatarOptimizer
             int componentLimit = profile.MaxPhysBoneComponents;
             if (physBones.Count <= componentLimit)
             {
-                Debug.Log($"[AvatarPhysBoneMerger] PhysBone component count already within budget ({physBones.Count} / {componentLimit}) — nothing to merge.");
+                Log.Info($"PhysBone component count already within budget ({physBones.Count} / {componentLimit}) — nothing to merge.");
                 return 0;
             }
 
@@ -60,7 +62,7 @@ namespace Bluscream.VRCAvatarOptimizer
             List<MergeGroup> groups = BuildMergeGroups(avatarRoot, physBones, animatedPaths);
             if (groups.Count == 0)
             {
-                Debug.Log($"[AvatarPhysBoneMerger] No mergeable sibling PhysBone groups found on '{avatarRoot.name}'.");
+                Log.Info($"No mergeable sibling PhysBone groups found on '{avatarRoot.name}'.");
                 return 0;
             }
 
@@ -74,7 +76,7 @@ namespace Bluscream.VRCAvatarOptimizer
             {
                 if (currentCount <= componentLimit)
                 {
-                    Debug.Log($"[AvatarPhysBoneMerger] Component budget reached ({currentCount} / {componentLimit}) — stopping before over-merging.");
+                    Log.Info($"Component budget reached ({currentCount} / {componentLimit}) — stopping before over-merging.");
                     break;
                 }
 
@@ -82,7 +84,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 int transformsAfter = totalTransforms + 1;
                 if (transformsAfter > transformBudget)
                 {
-                    Debug.Log($"[AvatarPhysBoneMerger] Skipping group on '{group.CommonParent.name}': merging would take affected transforms to {transformsAfter} > limit {transformBudget}.");
+                    Log.Info($"Skipping group on '{group.CommonParent.name}': merging would take affected transforms to {transformsAfter} > limit {transformBudget}.");
                     continue;
                 }
 
@@ -94,11 +96,11 @@ namespace Bluscream.VRCAvatarOptimizer
                 eliminated += saved;
                 totalTransforms = transformsAfter;
 
-                Debug.Log($"[AvatarPhysBoneMerger] Merged {group.Members.Count} PhysBones into 1 on '{group.CommonParent.name}' " +
+                Log.Info($"Merged {group.Members.Count} PhysBones into 1 on '{group.CommonParent.name}' " +
                           $"({group.IgnoredTransforms.Count} ignored transform(s)). Components: {currentCount} / {componentLimit}, affected transforms: {totalTransforms} / {transformBudget}.");
             }
 
-            Debug.Log($"[AvatarPhysBoneMerger] Complete: eliminated {eliminated} PhysBone component(s) without losing motion.");
+            Log.Info($"Complete: eliminated {eliminated} PhysBone component(s) without losing motion.");
             return eliminated;
         }
 
@@ -128,7 +130,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 string path = AnimationUtility.CalculateTransformPath(pb.transform, avatarRoot.transform);
                 if (animatedPaths.Contains(path))
                 {
-                    Debug.Log($"[AvatarPhysBoneMerger] Skipping PhysBone on '{pb.gameObject.name}': its GameObject is animated, re-rooting would break the curves.");
+                    Log.Info($"Skipping PhysBone on '{pb.gameObject.name}': its GameObject is animated, re-rooting would break the curves.");
                     continue;
                 }
 
@@ -226,7 +228,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarPhysBoneMerger] Could not compare PhysBone settings on '{a.gameObject.name}' / '{b.gameObject.name}': {e.Message}");
+                Log.Warn($"Could not compare PhysBone settings on '{a.gameObject.name}' / '{b.gameObject.name}': {e.Message}");
                 return false;
             }
         }
@@ -242,21 +244,21 @@ namespace Bluscream.VRCAvatarOptimizer
 
             if (!ComponentUtility.CopyComponent(template))
             {
-                Debug.LogWarning($"[AvatarPhysBoneMerger] Could not copy PhysBone from '{template.gameObject.name}' — group skipped.");
+                Log.Warn($"Could not copy PhysBone from '{template.gameObject.name}' — group skipped.");
                 return false;
             }
 
             var before = new HashSet<Component>(host.GetComponents<Component>());
             if (!ComponentUtility.PasteComponentAsNew(host))
             {
-                Debug.LogWarning($"[AvatarPhysBoneMerger] Could not paste merged PhysBone onto '{host.name}' — group skipped.");
+                Log.Warn($"Could not paste merged PhysBone onto '{host.name}' — group skipped.");
                 return false;
             }
 
             Component merged = host.GetComponents<Component>().FirstOrDefault(c => c != null && !before.Contains(c));
             if (merged == null)
             {
-                Debug.LogWarning($"[AvatarPhysBoneMerger] Merged PhysBone did not appear on '{host.name}' — group skipped.");
+                Log.Warn($"Merged PhysBone did not appear on '{host.name}' — group skipped.");
                 return false;
             }
             // PasteComponentAsNew already records its own undo entry — do not register a second one.
@@ -281,7 +283,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 SerializedProperty rootProp = so.FindProperty("rootTransform");
                 if (rootProp == null)
                 {
-                    Debug.LogWarning($"[AvatarPhysBoneMerger] PhysBone on '{merged.gameObject.name}' has no 'rootTransform' field — group skipped.");
+                    Log.Warn($"PhysBone on '{merged.gameObject.name}' has no 'rootTransform' field — group skipped.");
                     return false;
                 }
                 rootProp.objectReferenceValue = group.CommonParent;
@@ -289,7 +291,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 SerializedProperty ignoreProp = so.FindProperty("ignoreTransforms");
                 if (ignoreProp == null || !ignoreProp.isArray)
                 {
-                    Debug.LogWarning($"[AvatarPhysBoneMerger] PhysBone on '{merged.gameObject.name}' has no 'ignoreTransforms' array — group skipped.");
+                    Log.Warn($"PhysBone on '{merged.gameObject.name}' has no 'ignoreTransforms' array — group skipped.");
                     return false;
                 }
 
@@ -303,7 +305,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarPhysBoneMerger] Could not configure merged PhysBone on '{merged.gameObject.name}': {e.Message}");
+                Log.Warn($"Could not configure merged PhysBone on '{merged.gameObject.name}': {e.Message}");
                 return false;
             }
         }

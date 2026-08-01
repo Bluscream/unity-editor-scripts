@@ -21,6 +21,8 @@ namespace Bluscream.VRCAvatarOptimizer
     [Serializable]
     public class ShaderMappingRule
     {
+
+        
         public int priority = 100; // Lower = evaluated first;
         public string description;
         public string matchType = "Contains"; // Exact, StartsWith, EndsWith, Contains, Regex
@@ -270,6 +272,8 @@ namespace Bluscream.VRCAvatarOptimizer
     [InitializeOnLoad]
     public static class OptimizerConfig
     {
+        private static readonly BluLog Log = BluLog.Get("OptimizerConfig");
+
         private const string REMOTE_URL = "https://raw.githubusercontent.com/Bluscream/unity-editor-scripts/main/Packages/dev.bluscream.avataroptimizer_vrc/config.json";
         private const string LOCAL_PATH = "Packages/dev.bluscream.avataroptimizer_vrc/config.json";
 
@@ -296,14 +300,14 @@ namespace Bluscream.VRCAvatarOptimizer
                         HttpResponseMessage response = await client.GetAsync(REMOTE_URL);
                         if (!response.IsSuccessStatusCode)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] Remote config download failed (HTTP {(int)response.StatusCode} {response.ReasonPhrase}) — staying on local config.json.");
+                            Log.Warn($"Remote config download failed (HTTP {(int)response.StatusCode} {response.ReasonPhrase}) — staying on local config.json.");
                             return;
                         }
 
                         string json = await response.Content.ReadAsStringAsync();
                         if (string.IsNullOrWhiteSpace(json))
                         {
-                            Debug.LogWarning("[OptimizerConfig] Remote config returned empty response — staying on local config.json.");
+                            Log.Warn("Remote config returned empty response — staying on local config.json.");
                             return;
                         }
 
@@ -311,25 +315,25 @@ namespace Bluscream.VRCAvatarOptimizer
                         if (remoteData != null)
                         {
                             ActiveConfig = remoteData;
-                            Debug.Log("[OptimizerConfig] Successfully fetched and validated updated config.json from GitHub repository.");
+                            Log.Info("Successfully fetched and validated updated config.json from GitHub repository.");
                         }
                         else
                         {
-                            Debug.LogWarning("[OptimizerConfig] Remote config JSON validation failed — staying on local config.json.");
+                            Log.Warn("Remote config JSON validation failed — staying on local config.json.");
                         }
                     }
                 }
                 catch (HttpRequestException ex)
                 {
-                    Debug.LogWarning($"[OptimizerConfig] Network request to GitHub failed ({ex.Message}) — staying on local config.json.");
+                    Log.Warn($"Network request to GitHub failed ({ex.Message}) — staying on local config.json.");
                 }
                 catch (TaskCanceledException)
                 {
-                    Debug.LogWarning("[OptimizerConfig] Remote config download timed out (5s limit) — staying on local config.json.");
+                    Log.Warn("Remote config download timed out (5s limit) — staying on local config.json.");
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[OptimizerConfig] Unexpected error updating remote config: {ex.Message} — staying on local config.json.");
+                    Log.Warn($"Unexpected error updating remote config: {ex.Message} — staying on local config.json.");
                 }
             });
         }
@@ -346,12 +350,12 @@ namespace Bluscream.VRCAvatarOptimizer
                 }
                 else
                 {
-                    Debug.LogWarning($"[OptimizerConfig] Local config.json not found at '{LOCAL_PATH}' — using hardcoded defaults.");
+                    Log.Warn($"Local config.json not found at '{LOCAL_PATH}' — using hardcoded defaults.");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[OptimizerConfig] Failed to read local config.json ({ex.Message}) — using hardcoded defaults.");
+                Log.Warn($"Failed to read local config.json ({ex.Message}) — using hardcoded defaults.");
             }
             return new OptimizerConfigData();
         }
@@ -363,7 +367,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 OptimizerConfigData data = JsonUtility.FromJson<OptimizerConfigData>(json);
                 if (data == null)
                 {
-                    Debug.LogWarning($"[OptimizerConfig] JsonUtility returned null when parsing {sourceName}.");
+                    Log.Warn($"JsonUtility returned null when parsing {sourceName}.");
                     return null;
                 }
 
@@ -372,14 +376,14 @@ namespace Bluscream.VRCAvatarOptimizer
 
                 if (warningCount > 0)
                 {
-                    Debug.LogWarning($"[OptimizerConfig] {sourceName} loaded with {warningCount} validation warning(s).");
+                    Log.Warn($"{sourceName} loaded with {warningCount} validation warning(s).");
                 }
 
                 return data;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[OptimizerConfig] JSON parse error in {sourceName}: {ex.Message}");
+                Log.Warn($"JSON parse error in {sourceName}: {ex.Message}");
                 return null;
             }
         }
@@ -402,14 +406,14 @@ namespace Bluscream.VRCAvatarOptimizer
                     }
                     if (string.IsNullOrWhiteSpace(rule.targetShader))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} ('{rule.pattern}') has empty targetShader — removing invalid rule.");
+                        Log.Warn($"[{sourceName}] Shader rule #{i} ('{rule.pattern}') has empty targetShader — removing invalid rule.");
                         data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(rule.pattern) && (rule.requiredProperties == null || rule.requiredProperties.Count == 0))
                     {
-                        Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} has neither pattern nor requiredProperties specified — removing invalid rule.");
+                        Log.Warn($"[{sourceName}] Shader rule #{i} has neither pattern nor requiredProperties specified — removing invalid rule.");
                         data.shaderMapping.rules.RemoveAt(i);
                         warnings++;
                         continue;
@@ -424,7 +428,7 @@ namespace Bluscream.VRCAvatarOptimizer
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] Shader rule #{i} has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
+                            Log.Warn($"[{sourceName}] Shader rule #{i} has invalid regex ('{rule.pattern}'): {ex.Message} — removing invalid rule.");
                             data.shaderMapping.rules.RemoveAt(i);
                             warnings++;
                         }
@@ -450,25 +454,25 @@ namespace Bluscream.VRCAvatarOptimizer
                         // platform's real limit (e.g. Android Poor: 8 -> 256) and silently disable pruning.
                         if (p.MaxTriangles != int.MaxValue && p.MaxTriangles < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
+                            Log.Warn($"[{sourceName}] {platData.name}/{rankData.name} MaxTriangles is negative ({p.MaxTriangles}) — clamping to 0.");
                             p.MaxTriangles = 0;
                             warnings++;
                         }
                         if (p.MaxMaterialSlots != int.MaxValue && p.MaxMaterialSlots < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
+                            Log.Warn($"[{sourceName}] {platData.name}/{rankData.name} MaxMaterialSlots is negative ({p.MaxMaterialSlots}) — clamping to 0.");
                             p.MaxMaterialSlots = 0;
                             warnings++;
                         }
                         if (p.MaxTextureMemoryBytes != long.MaxValue && p.MaxTextureMemoryBytes < 0)
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
+                            Log.Warn($"[{sourceName}] {platData.name}/{rankData.name} MaxTextureMemoryBytes is negative ({p.MaxTextureMemoryBytes}) — clamping to 0.");
                             p.MaxTextureMemoryBytes = 0;
                             warnings++;
                         }
                         if (p.MaxPhysBoneComponents != int.MaxValue && (p.MaxPhysBoneComponents < 0 || p.MaxPhysBoneComponents > 256))
                         {
-                            Debug.LogWarning($"[OptimizerConfig] [{sourceName}] {platData.name}/{rankData.name} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
+                            Log.Warn($"[{sourceName}] {platData.name}/{rankData.name} MaxPhysBoneComponents ({p.MaxPhysBoneComponents}) is out of reasonable bounds [0-256] — clamping.");
                             p.MaxPhysBoneComponents = Mathf.Clamp(p.MaxPhysBoneComponents, 0, 256);
                             warnings++;
                         }

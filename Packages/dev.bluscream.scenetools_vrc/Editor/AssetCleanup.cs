@@ -14,6 +14,7 @@ namespace Bluscream.Cleanup
     [System.Serializable]
     public class AssetDeletionInfo
     {
+        
         public string assetPath;
         public string reason;
         public long sizeInBytes;
@@ -25,6 +26,8 @@ namespace Bluscream.Cleanup
     /// </summary>
     public static class AssetCleanup
     {
+        private static readonly BluLog Log = BluLog.Get("AssetCleanup");
+
         /// <summary>
         /// Analyzes assets in the specified folder and returns a list of unused assets
         /// </summary>
@@ -484,7 +487,7 @@ namespace Bluscream.Cleanup
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Failed to delete {info.assetPath}: {e.Message}");
+                    Log.Error($"Failed to delete {info.assetPath}: {e.Message}");
                 }
             }
 

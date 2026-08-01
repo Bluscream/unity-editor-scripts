@@ -13,6 +13,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarBlendShapeOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarBlendShapeOptimizer");
+
         private static readonly HashSet<string> MmdBlendShapeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "vrc.v_sil", "vrc.v_pp", "vrc.v_ff", "vrc.v_th", "vrc.v_dd", "vrc.v_kk", "vrc.v_ch",
@@ -58,8 +60,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 if (shapesToBakeOrStrip.Count == 0) continue;
 
                 progressCallback?.Invoke($"Optimizing blendshapes on '{smr.gameObject.name}' ({shapesToBakeOrStrip.Count} unanimated)...");
-                OptimizerLog.Verbose("AvatarBlendShapeOptimizer",
-                    $"'{smr.gameObject.name}': {shapeCount} shape(s), {shapesToBakeOrStrip.Count} unanimated -> " +
+                Log.Verbose($"'{smr.gameObject.name}': {shapeCount} shape(s), {shapesToBakeOrStrip.Count} unanimated -> " +
                     $"{string.Join(", ", shapesToBakeOrStrip.Select(i => mesh.GetBlendShapeName(i)).Take(10))}" +
                     $"{(shapesToBakeOrStrip.Count > 10 ? $" (+{shapesToBakeOrStrip.Count - 10} more)" : "")}");
 
@@ -69,7 +70,7 @@ namespace Bluscream.VRCAvatarOptimizer
                 MeshIntegrity.Validate(smr.sharedMesh, $"blendshape bake on '{smr.gameObject.name}'", smr);
             }
 
-            Debug.Log($"[AvatarBlendShapeOptimizer] Complete: {totalBaked} blendshape(s) baked into geometry, {totalStripped} unused shape(s) stripped.");
+            Log.Info($"Complete: {totalBaked} blendshape(s) baked into geometry, {totalStripped} unused shape(s) stripped.");
         }
 
         private static HashSet<string> CollectUsedBlendShapes(GameObject avatarRoot)

@@ -10,6 +10,8 @@ namespace Bluscream.BackupSystem
     /// </summary>
     public class BackupWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("BackupWindow");
+
         private BackupConfig backupConfig = new BackupConfig();
         private BackupConfig restoreConfig = new BackupConfig();
         private BackupScope backupScope = BackupScope.SingleGameObject;
@@ -308,7 +310,7 @@ namespace Bluscream.BackupSystem
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Backup failed: {e.Message}", "OK");
-                Debug.LogError($"Backup System error: {e}");
+                Log.Error($"Backup System error: {e}");
             }
             finally
             {
@@ -371,7 +373,7 @@ namespace Bluscream.BackupSystem
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Restore failed: {e.Message}", "OK");
-                Debug.LogError($"Backup System error: {e}");
+                Log.Error($"Backup System error: {e}");
             }
             finally
             {

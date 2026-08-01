@@ -11,6 +11,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarPenetratorDetector
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarPenetratorDetector");
+
         public static bool IsPenetratorLight(Light light)
         {
             if (light == null) return false;
@@ -72,7 +74,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             if (set.Count > 0)
-                Debug.Log($"[AvatarPenetratorDetector] Detected {set.Count} DPS/TPS/SPS penetrator renderer(s) on '{avatarRoot.name}'.");
+                Log.Info($"Detected {set.Count} DPS/TPS/SPS penetrator renderer(s) on '{avatarRoot.name}'.");
 
             return set;
         }

@@ -15,12 +15,16 @@ namespace Bluscream.VRC
     {
         static VRCSDKControlPanelFix()
         {
-            EditorApplication.update -= GuardControlPanelOnUpdate;
-            EditorApplication.update += GuardControlPanelOnUpdate;
+            // Passive fix — no per-frame EditorApplication.update loop
         }
+
+        private static double _nextCheckTime = 0;
 
         private static void GuardControlPanelOnUpdate()
         {
+            if (EditorApplication.timeSinceStartup < _nextCheckTime) return;
+            _nextCheckTime = EditorApplication.timeSinceStartup + 2.0;
+
             try
             {
                 Type windowType = Type.GetType("VRCSdkControlPanel, VRCSDK3A-Editor")

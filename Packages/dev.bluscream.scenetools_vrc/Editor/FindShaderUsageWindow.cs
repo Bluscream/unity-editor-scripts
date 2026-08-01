@@ -12,6 +12,8 @@ namespace Bluscream.ShaderTest
     /// </summary>
     public class FindShaderUsageWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("FindShaderUsage");
+
         private GameObject rootGameObject;
         private Shader targetShader;
         private string shaderSearchText = "";
@@ -459,7 +461,7 @@ namespace Bluscream.ShaderTest
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Error replacing shader in material '{info.material.name}': {e.Message}");
+                        Log.Error($"Error replacing shader in material '{info.material.name}': {e.Message}");
                         errorCount++;
                     }
                 }
@@ -481,7 +483,7 @@ namespace Bluscream.ShaderTest
                         }
                         catch (Exception e)
                         {
-                            Debug.LogWarning($"Error updating renderer '{info.renderer.name}': {e.Message}");
+                            Log.Warn($"Error updating renderer '{info.renderer.name}': {e.Message}");
                         }
                     }
                 }
@@ -496,12 +498,12 @@ namespace Bluscream.ShaderTest
                 }
 
                 EditorUtility.DisplayDialog("Replace Complete", message, "OK");
-                Debug.Log($"Shader replacement complete: {replacedCount} materials replaced, {errorCount} errors");
+                Log.Info($"Shader replacement complete: {replacedCount} materials replaced, {errorCount} errors");
             }
             catch (Exception e)
             {
                 EditorUtility.DisplayDialog("Error", $"Error during shader replacement: {e.Message}", "OK");
-                Debug.LogError($"Shader replacement error: {e}\n{e.StackTrace}");
+                Log.Error($"Shader replacement error: {e}\n{e.StackTrace}");
             }
         }
 

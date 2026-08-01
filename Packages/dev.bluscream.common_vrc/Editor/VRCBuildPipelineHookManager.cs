@@ -13,6 +13,7 @@ namespace Bluscream.VRC
     /// </summary>
     public struct HookResult
     {
+        
         public bool Success;
         public bool Abort;
         public string ErrorMessage;
@@ -36,6 +37,8 @@ namespace Bluscream.VRC
     [InitializeOnLoad]
     public class VRCBuildPipelineHookManager : IVRCSDKPreprocessAvatarCallback, IVRCSDKPostprocessAvatarCallback, IVRCSDKBuildRequestedCallback
     {
+        private static readonly BluLog Log = BluLog.Get("VRCBuildPipelineHookManager");
+
         public int callbackOrder => 0;
 
         public class HookRegistration<T>
@@ -105,7 +108,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PreprocessAvatar hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PreprocessAvatar hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PreprocessAvatar", errorRes);
                     return errorRes;
@@ -129,7 +132,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PostprocessAvatar hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PostprocessAvatar hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PostprocessAvatar", errorRes);
                     return errorRes;
@@ -153,7 +156,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in BuildRequested hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in BuildRequested hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "BuildRequested", errorRes);
                     return errorRes;
@@ -177,7 +180,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PreBuild hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PreBuild hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PreBuild", errorRes);
                     return errorRes;
@@ -201,7 +204,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PostBuild hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PostBuild hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PostBuild", errorRes);
                     return errorRes;
@@ -225,7 +228,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PreUpload hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PreUpload hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PreUpload", errorRes);
                     return errorRes;
@@ -249,7 +252,7 @@ namespace Bluscream.VRC
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[VRCBuildPipelineHookManager] Error in PostUpload hook '{hook.ConsumerName}': {ex}");
+                    Log.Error($"Error in PostUpload hook '{hook.ConsumerName}': {ex}");
                     HookResult errorRes = HookResult.Cancel($"Hook error in {hook.ConsumerName}: {ex.Message}", true);
                     HandleAbort(hook.ConsumerName, "PostUpload", errorRes);
                     return errorRes;
@@ -264,7 +267,7 @@ namespace Bluscream.VRC
                 ? res.ErrorMessage
                 : $"VRChat build phase '{phaseName}' aborted by '{consumerName}'.";
 
-            Debug.LogWarning($"[VRCBuildPipelineHookManager] Build phase '{phaseName}' aborted by '{consumerName}'. Message: {msg}");
+            Log.Warn($"Build phase '{phaseName}' aborted by '{consumerName}'. Message: {msg}");
 
             if (res.ShowDialog)
             {

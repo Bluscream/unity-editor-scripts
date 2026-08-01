@@ -12,6 +12,8 @@ namespace Bluscream.VRCAvatarOptimizer
     /// </summary>
     public static class AvatarMaterialSlotOptimizer
     {
+        private static readonly BluLog Log = BluLog.Get("AvatarMaterialSlotOptimizer");
+
         /// <summary>
         /// Deduplicates materials, consolidates material slots, and merges duplicate submesh indices
         /// on renderers. Null slots are dropped together with their submesh triangles.
@@ -87,12 +89,11 @@ namespace Bluscream.VRCAvatarOptimizer
                         else if (r is MeshRenderer mRenderer) mRenderer.GetComponent<MeshFilter>().sharedMesh = newMesh;
 
                         r.sharedMaterials = uniqueMats.ToArray();
-                        Debug.Log($"[AvatarMaterialSlotOptimizer] Consolidated '{r.name}': {mats.Length} slots -> {uniqueMats.Count}.");
+                        Log.Info($"Consolidated '{r.name}': {mats.Length} slots -> {uniqueMats.Count}.");
 
                         // Submeshes were rebuilt from a remap table; a wrong entry silently draws the
                         // wrong material on the wrong triangles.
-                        OptimizerLog.Verbose("AvatarMaterialSlotOptimizer",
-                            $"  '{r.name}' slot remap: [{string.Join(", ", remapIndex.Select((t, i) => $"{i}->{(t < 0 ? "dropped" : t.ToString())}"))}]");
+                        Log.Verbose($"  '{r.name}' slot remap: [{string.Join(", ", remapIndex.Select((t, i) => $"{i}->{(t < 0 ? "dropped" : t.ToString())}"))}]");
                         MeshIntegrity.Validate(newMesh, $"material slot consolidation on '{r.name}'", r);
                     }
                     else if (mesh == null)
@@ -106,11 +107,11 @@ namespace Bluscream.VRCAvatarOptimizer
             }
 
             int finalSlots = avatarRoot.GetComponentsInChildren<Renderer>(true).Sum(r => r != null && r.sharedMaterials != null ? r.sharedMaterials.Length : 0);
-            Debug.Log($"[AvatarMaterialSlotOptimizer] Material Slot Consolidation complete: {initialSlots} slots -> {finalSlots} slots.");
+            Log.Info($"Material Slot Consolidation complete: {initialSlots} slots -> {finalSlots} slots.");
 
             if (finalSlots > maxMaterialSlots)
             {
-                Debug.LogWarning($"[AvatarMaterialSlotOptimizer] Avatar still has {finalSlots} material slots (limit {maxMaterialSlots}). " +
+                Log.Warn($"Avatar still has {finalSlots} material slots (limit {maxMaterialSlots}). " +
                                  $"Deduplication is lossless and cannot go further — the remaining {finalSlots} materials are genuinely distinct. " +
                                  $"Reaching {maxMaterialSlots} requires atlasing, which is opt-in: enable 'Atlas Materials into Shared Textures' in the optimizer window.");
             }
@@ -168,7 +169,7 @@ namespace Bluscream.VRCAvatarOptimizer
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AvatarMaterialSlotOptimizer] Could not persist consolidated mesh '{mesh.name}' as asset: {e.Message}");
+                Log.Warn($"Could not persist consolidated mesh '{mesh.name}' as asset: {e.Message}");
             }
         }
     }

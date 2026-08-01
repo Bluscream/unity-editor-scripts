@@ -12,6 +12,8 @@ namespace Bluscream.TextureCompressor
     /// </summary>
     public class TextureUsageWindow : EditorWindow
     {
+        private static readonly BluLog Log = BluLog.Get("TextureUsage");
+
         private GameObject targetGameObject;
         private Vector2 scrollPosition;
         private List<TextureInfo> textureInfos = new List<TextureInfo>();
@@ -265,7 +267,7 @@ namespace Bluscream.TextureCompressor
             {
                 EditorUtility.ClearProgressBar();
                 EditorUtility.DisplayDialog("Error", $"Error analyzing textures: {e.Message}", "OK");
-                Debug.LogError($"Texture usage analysis error: {e}\n{e.StackTrace}");
+                Log.Error($"Texture usage analysis error: {e}\n{e.StackTrace}");
             }
         }
 
@@ -303,7 +305,7 @@ namespace Bluscream.TextureCompressor
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Error processing texture {texture.name}: {e.Message}");
+                Log.Warn($"Error processing texture {texture.name}: {e.Message}");
             }
         }
 
