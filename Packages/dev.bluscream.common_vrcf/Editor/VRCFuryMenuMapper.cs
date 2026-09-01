@@ -48,8 +48,12 @@ namespace Bluscream.VRCFury
                 if (!Utils.EstimateMethod.TryInvoke(null, out object menuManager, vfGameObject) || menuManager == null)
                     return null;
 
-                if (Utils.GetRawMethod.TryInvoke(menuManager, out VRCExpressionsMenu rawMenu))
-                    return rawMenu;
+                if (Utils.GetRawMethod.TryInvoke(menuManager, out VRCExpressionsMenu rawMenu) && rawMenu != null)
+                {
+                    var clonedMenu = CloneMenu(rawMenu, new Dictionary<VRCExpressionsMenu, VRCExpressionsMenu>());
+                    ApplyMoveFeaturesFromAvatar(avatarObj, clonedMenu);
+                    return clonedMenu;
+                }
 
                 return null;
             }
@@ -58,6 +62,138 @@ namespace Bluscream.VRCFury
                 Log.Error($"Failed to extract merged menu: {ex}");
                 return null;
             }
+        }
+
+        private static VRCExpressionsMenu CloneMenu(VRCExpressionsMenu source, Dictionary<VRCExpressionsMenu, VRCExpressionsMenu> clonedMap)
+        {
+            if (source == null) return null;
+            if (clonedMap.TryGetValue(source, out var existing)) return existing;
+
+            var clone = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            clone.name = source.name;
+            clonedMap[source] = clone;
+
+            if (source.controls != null)
+            {
+                foreach (var ctrl in source.controls)
+                {
+                    if (ctrl == null) continue;
+                    var ctrlClone = new VRCExpressionsMenu.Control
+                    {
+                        name = ctrl.name,
+                        icon = ctrl.icon,
+                        type = ctrl.type,
+                        parameter = ctrl.parameter != null ? new VRCExpressionsMenu.Control.Parameter { name = ctrl.parameter.name } : null,
+                        value = ctrl.value,
+                        style = ctrl.style,
+                        subMenu = ctrl.subMenu != null ? CloneMenu(ctrl.subMenu, clonedMap) : null,
+                        subParameters = ctrl.subParameters != null ? ctrl.subParameters.Select(p => new VRCExpressionsMenu.Control.Parameter { name = p.name }).ToArray() : null,
+                        labels = ctrl.labels != null ? ctrl.labels.ToArray() : null
+                    };
+                    clone.controls.Add(ctrlClone);
+                }
+            }
+
+            return clone;
+        }
+
+        private static void ApplyMoveFeaturesFromAvatar(GameObject avatarObj, VRCExpressionsMenu rootMenu)
+        {
+            if (avatarObj == null || rootMenu == null || !Utils.TryInitialize()) return;
+
+            var vrcfComponents = avatarObj.GetComponentsInChildren(Utils.VRCFuryComponentType, true);
+            foreach (var comp in vrcfComponents)
+            {
+                if (comp == null) continue;
+                if (!ReflectionHelper.TryGetFieldValue(comp, "config", out object config) || config == null) continue;
+                if (!ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) || featuresListObj == null) continue;
+                if (!(featuresListObj is System.Collections.IEnumerable featuresEnumerable)) continue;
+
+                foreach (var feature in featuresEnumerable)
+                {
+                    if (feature == null) continue;
+                    string typeName = feature.GetType().Name;
+                    if (typeName != "MoveMenuItem") continue;
+
+                    if (ReflectionHelper.TryGetFieldValue(feature, "fromPath", out string fromPath) &&
+                        ReflectionHelper.TryGetFieldValue(feature, "toPath", out string toPath) &&
+                        !string.IsNullOrEmpty(fromPath))
+                    {
+                        ExecuteMove(rootMenu, fromPath, toPath);
+                    }
+                }
+            }
+        }
+
+        private static void ExecuteMove(VRCExpressionsMenu rootMenu, string fromPath, string toPath)
+        {
+            if (rootMenu == null || string.IsNullOrEmpty(fromPath)) return;
+
+            var fromSplit = fromPath.Split('/').Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (fromSplit.Count == 0) return;
+
+            string fromName = fromSplit.Last();
+            var parentMenu = FindParentMenu(rootMenu, fromSplit, 0);
+            if (parentMenu == null || parentMenu.controls == null) return;
+
+            var matchingControls = parentMenu.controls.Where(c => c != null && c.name == fromName).ToList();
+            if (matchingControls.Count == 0) return;
+
+            parentMenu.controls.RemoveAll(c => matchingControls.Contains(c));
+
+            if (string.IsNullOrWhiteSpace(toPath)) return; // Move to empty string = delete
+
+            var toSplit = toPath.Split('/').Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (toSplit.Count == 0) return;
+
+            string targetName = toSplit.Last();
+            var targetParentDir = toSplit.Take(toSplit.Count - 1).ToList();
+            var targetMenu = GetOrCreateSubMenu(rootMenu, targetParentDir);
+
+            foreach (var ctrl in matchingControls)
+            {
+                ctrl.name = targetName;
+                targetMenu.controls.Add(ctrl);
+            }
+        }
+
+        private static VRCExpressionsMenu FindParentMenu(VRCExpressionsMenu current, List<string> pathParts, int index)
+        {
+            if (current == null || current.controls == null) return null;
+            if (index >= pathParts.Count - 1) return current;
+
+            string part = pathParts[index];
+            var ctrl = current.controls.FirstOrDefault(c => c != null && c.name == part && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu && c.subMenu != null);
+            if (ctrl == null) return null;
+
+            return FindParentMenu(ctrl.subMenu, pathParts, index + 1);
+        }
+
+        private static VRCExpressionsMenu GetOrCreateSubMenu(VRCExpressionsMenu current, List<string> pathParts)
+        {
+            VRCExpressionsMenu menu = current;
+            foreach (var part in pathParts)
+            {
+                var existingCtrl = menu.controls.FirstOrDefault(c => c != null && c.name == part && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu && c.subMenu != null);
+                if (existingCtrl != null)
+                {
+                    menu = existingCtrl.subMenu;
+                }
+                else
+                {
+                    var newSub = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    newSub.name = part;
+                    var newCtrl = new VRCExpressionsMenu.Control
+                    {
+                        name = part,
+                        type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                        subMenu = newSub
+                    };
+                    menu.controls.Add(newCtrl);
+                    menu = newSub;
+                }
+            }
+            return menu;
         }
 
         public static MenuItemNode BuildMenuTree(GameObject avatarObj)

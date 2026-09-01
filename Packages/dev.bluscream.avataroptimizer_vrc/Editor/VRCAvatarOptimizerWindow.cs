@@ -33,8 +33,6 @@ namespace Bluscream.VRCAvatarOptimizer
             window.Show();
         }
 
-        private System.Diagnostics.Stopwatch guiStopwatch = new System.Diagnostics.Stopwatch();
-
         private void OnEnable()
         {
             Log.Info("OnEnable called.");
@@ -125,7 +123,6 @@ namespace Bluscream.VRCAvatarOptimizer
 
         private void OnGUI()
         {
-            guiStopwatch.Restart();
             EventType currentEventType = Event.current != null ? Event.current.type : EventType.Ignore;
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -411,9 +408,13 @@ namespace Bluscream.VRCAvatarOptimizer
 
             sw.Stop();
             long totalMs = sw.ElapsedMilliseconds;
+            // A repaint costing a few ms is normal, and OnGUI runs continuously — at Warning with a 2 ms
+            // threshold this fired on nearly every frame and could not be turned down, since Warning sits
+            // above Info. Trace keeps it available for diagnosing a genuinely slow window without it
+            // drowning the log of an actual run.
             if (totalMs > 2)
             {
-                Log.Warn($"OnGUI ({currentEventType}) Total: {totalMs} ms | Header: {tHeader} ms | Selection: {tSelection} ms | Prefs: {tPrefs} ms | Button: {tButton} ms | Summary/End: {totalMs - tHeader - tSelection - tPrefs - tButton} ms");
+                Log.Trace(() => $"OnGUI ({currentEventType}) Total: {totalMs} ms | Header: {tHeader} ms | Selection: {tSelection} ms | Prefs: {tPrefs} ms | Button: {tButton} ms | Summary/End: {totalMs - tHeader - tSelection - tPrefs - tButton} ms");
             }
         }
 

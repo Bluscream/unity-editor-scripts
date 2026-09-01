@@ -91,16 +91,7 @@ namespace Bluscream.MenuManager
                 return;
             }
 
-            var paths = new List<string>();
-            CollectPaths(menu, "", paths);
-
-            var gm = new GenericMenu();
-            gm.AddItem(new GUIContent("(Root)"), false, () => onSelect(""));
-            foreach (var path in paths.OrderBy(p => p))
-            {
-                gm.AddItem(new GUIContent(path), false, () => onSelect(path));
-            }
-            gm.ShowAsContext();
+            MenuSelectorWindow.ShowWindow(menu, onSelect);
         }
 
         private void CollectPaths(VRCExpressionsMenu menu, string currentPath, List<string> paths)
@@ -163,7 +154,7 @@ namespace Bluscream.MenuManager
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex);
+                    Log.Error($"Failed to apply {moves.Count} move operation(s) to '{avatarObject.name}': {ex}");
                     EditorUtility.DisplayDialog("Error", $"Failed to apply moves: {ex.Message}", "OK");
                 }
             }

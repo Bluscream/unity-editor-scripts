@@ -25,6 +25,11 @@ Modal sub-window for batch-moving multiple menu controls matching path patterns 
 
 ---
 
-### 3. Data Models (`Editor/MenuModels.cs`)
+### 3. `MenuSelectorWindow` (`Editor/MenuSelectorWindow.cs`)
+Interactive IMGUI `TreeView` popup for browsing avatar `VRCExpressionsMenu` hierarchies, searching menu nodes, expanding/collapsing folders, and selecting target menu paths cleanly.
+
+---
+
+### 4. Data Models (`Editor/MenuModels.cs`)
 - `MenuNodeData`: Data model representing menu folders, items, control types, and paths.
 - `MoveItemData`: Data structure holding source and target paths for queued move operations.

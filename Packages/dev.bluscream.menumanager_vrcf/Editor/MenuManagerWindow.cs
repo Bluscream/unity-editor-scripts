@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace Bluscream.MenuManager
@@ -30,6 +31,41 @@ namespace Bluscream.MenuManager
         {
             serializedObject = new SerializedObject(this);
             avatarObjectProperty = serializedObject.FindProperty("avatarObject");
+            AutoSelectActiveAvatar();
+            LoadMenu();
+        }
+
+        private void OnSelectionChange()
+        {
+            if (AutoSelectActiveAvatar())
+            {
+                Repaint();
+            }
+        }
+
+        private void OnHierarchyChange()
+        {
+            if (avatarObject != null)
+            {
+                LoadMenu();
+                Repaint();
+            }
+        }
+
+        private bool AutoSelectActiveAvatar()
+        {
+            if (Selection.activeGameObject != null)
+            {
+                var descriptor = Selection.activeGameObject.GetComponentInParent<VRCAvatarDescriptor>();
+                if (descriptor != null && descriptor.gameObject != avatarObject)
+                {
+                    avatarObject = descriptor.gameObject;
+                    serializedObject.Update();
+                    LoadMenu();
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void OnGUI()
@@ -40,8 +76,22 @@ namespace Bluscream.MenuManager
             GUILayout.Label("VRCFury Menu Manager", EditorStyles.boldLabel);
             
             using (new EditorGUILayout.HorizontalScope()) {
+                EditorGUI.BeginChangeCheck();
                 EditorGUILayout.PropertyField(avatarObjectProperty, new GUIContent("Avatar Root"));
-                if (GUILayout.Button("Load", GUILayout.Width(60))) LoadMenu();
+                if (EditorGUI.EndChangeCheck() && avatarObject != null)
+                {
+                    LoadMenu();
+                }
+
+                if (GUILayout.Button("Load", GUILayout.Width(60)))
+                {
+                    if (avatarObject == null && Selection.activeGameObject != null)
+                    {
+                        avatarObject = Selection.activeGameObject;
+                        serializedObject.Update();
+                    }
+                    LoadMenu();
+                }
             }
 
             if (mergedMenu != null) {
@@ -96,15 +146,24 @@ namespace Bluscream.MenuManager
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
+                    if (control.icon != null)
+                    {
+                        var iconRect = GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16), GUILayout.Height(16));
+                        GUI.DrawTexture(iconRect, control.icon, ScaleMode.ScaleToFit);
+                        GUILayout.Space(4);
+                    }
+
                     if (isSubMenu)
                     {
                         if (!foldouts.ContainsKey(itemPath)) foldouts[itemPath] = false;
-                        foldouts[itemPath] = EditorGUILayout.Foldout(foldouts[itemPath], control.name, true);
+                        var foldoutStyle = new GUIStyle(EditorStyles.foldout) { richText = true };
+                        foldouts[itemPath] = EditorGUILayout.Foldout(foldouts[itemPath], control.name, true, foldoutStyle);
                     }
                     else
                     {
                         GUILayout.Space(15);
-                        EditorGUILayout.LabelField(control.name);
+                        var labelStyle = new GUIStyle(EditorStyles.label) { richText = true };
+                        EditorGUILayout.LabelField(control.name, labelStyle);
                     }
 
                     GUILayout.FlexibleSpace();
@@ -132,16 +191,11 @@ namespace Bluscream.MenuManager
         private void ShowMoveSelector(string originalPath)
         {
             var menu = VRCFuryMenuHelper.GetMergedMenu(avatarObject);
-            var paths = new List<string>();
-            CollectPaths(menu, "", paths);
+            if (menu == null) return;
 
-            var gm = new GenericMenu();
-            gm.AddItem(new GUIContent("(Root)"), false, () => SetMove(originalPath, ""));
-            foreach (var path in paths.OrderBy(p => p))
-            {
-                gm.AddItem(new GUIContent(path), false, () => SetMove(originalPath, path));
-            }
-            gm.ShowAsContext();
+            MenuSelectorWindow.ShowWindow(menu, (targetParent) => {
+                SetMove(originalPath, targetParent);
+            });
         }
 
         private void CollectPaths(VRCExpressionsMenu menu, string currentPath, List<string> paths)
@@ -172,13 +226,33 @@ namespace Bluscream.MenuManager
 
         private void LoadMenu()
         {
-            if (avatarObject == null) return;
+            if (avatarObject == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Please select an Avatar Root GameObject first.", "OK");
+                return;
+            }
+
             mergedMenu = VRCFuryMenuHelper.GetMergedMenu(avatarObject);
-            if (mergedMenu != null) {
+            if (mergedMenu == null)
+            {
+                // Fallback: try reading expressionsMenu directly from VRCAvatarDescriptor
+                var descriptor = avatarObject.GetComponent<VRCAvatarDescriptor>();
+                if (descriptor != null && descriptor.expressionsMenu != null)
+                {
+                    mergedMenu = descriptor.expressionsMenu;
+                }
+            }
+
+            if (mergedMenu != null)
+            {
                 mergedMenu.hideFlags = HideFlags.DontSave | HideFlags.DontUnloadUnusedAsset;
                 pendingMoves.Clear();
                 foldouts.Clear();
-                ShowNotification(new GUIContent("Menu Loaded!"));
+                ShowNotification(new GUIContent($"Loaded '{mergedMenu.name}'!"));
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Menu Manager", "Could not resolve Expression Menu for the selected avatar.\n\nEnsure VRCFury is installed/active or the avatar has a valid VRCAvatarDescriptor with an Expressions Menu assigned.", "OK");
             }
         }
 
