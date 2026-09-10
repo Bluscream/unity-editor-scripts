@@ -314,8 +314,9 @@ namespace Bluscream.MenuManager
                     if (node != null) data.rootNodes.Add(node);
                 }
 
-                var json = JsonUtility.ToJson(data, true);
-                File.WriteAllText(path, json);
+                var sb = new System.Text.StringBuilder(16384);
+                SerializeDataToJson(data, sb);
+                File.WriteAllText(path, sb.ToString());
                 EditorUtility.DisplayDialog("Success", $"Exported menu JSON successfully to:\n{path}", "OK");
             }
             catch (Exception ex)
@@ -323,6 +324,73 @@ namespace Bluscream.MenuManager
                 Debug.LogError($"[MenuManager] Export JSON failed: {ex}");
                 EditorUtility.DisplayDialog("Error", $"Failed to export JSON:\n{ex.Message}", "OK");
             }
+        }
+
+        private static void SerializeDataToJson(MenuExportData data, System.Text.StringBuilder sb)
+        {
+            sb.AppendLine("{");
+            sb.AppendLine("  \"rootNodes\": [");
+            for (int i = 0; i < data.rootNodes.Count; i++)
+            {
+                SerializeNodeToJson(data.rootNodes[i], sb, 4);
+                if (i < data.rootNodes.Count - 1) sb.AppendLine(",");
+                else sb.AppendLine();
+            }
+            sb.AppendLine("  ],");
+            sb.AppendLine("  \"moveOperations\": [");
+            for (int i = 0; i < data.moveOperations.Count; i++)
+            {
+                var move = data.moveOperations[i];
+                sb.Append("    { \"fromPath\": \"").Append(EscapeJson(move.fromPath))
+                  .Append("\", \"toPath\": \"").Append(EscapeJson(move.toPath)).Append("\" }");
+                if (i < data.moveOperations.Count - 1) sb.AppendLine(",");
+                else sb.AppendLine();
+            }
+            sb.AppendLine("  ]");
+            sb.AppendLine("}");
+        }
+
+        private static void SerializeNodeToJson(MenuExportNode node, System.Text.StringBuilder sb, int indent)
+        {
+            var ind = new string(' ', indent);
+            var childInd = new string(' ', indent + 2);
+            sb.AppendLine(ind + "{");
+            sb.AppendLine($"{childInd}\"name\": \"{EscapeJson(node.name)}\",");
+            sb.AppendLine($"{childInd}\"originalPath\": \"{EscapeJson(node.originalPath)}\",");
+            sb.AppendLine($"{childInd}\"type\": {node.type},");
+            sb.AppendLine($"{childInd}\"typeName\": \"{EscapeJson(node.typeName)}\",");
+            sb.AppendLine($"{childInd}\"parameter\": \"{EscapeJson(node.parameter)}\",");
+            sb.AppendLine($"{childInd}\"value\": {node.value.ToString(System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.AppendLine($"{childInd}\"iconGuid\": \"{EscapeJson(node.iconGuid)}\",");
+            sb.AppendLine($"{childInd}\"isSubMenu\": {(node.isSubMenu ? "true" : "false")},");
+            sb.AppendLine($"{childInd}\"subMenuNull\": {(node.subMenuNull ? "true" : "false")},");
+            sb.Append($"{childInd}\"children\": [");
+            if (node.children != null && node.children.Count > 0)
+            {
+                sb.AppendLine();
+                for (int i = 0; i < node.children.Count; i++)
+                {
+                    SerializeNodeToJson(node.children[i], sb, indent + 4);
+                    if (i < node.children.Count - 1) sb.AppendLine(",");
+                    else sb.AppendLine();
+                }
+                sb.AppendLine($"{childInd}]");
+            }
+            else
+            {
+                sb.AppendLine("]");
+            }
+            sb.Append(ind + "}");
+        }
+
+        private static string EscapeJson(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"")
+                    .Replace("\n", "\\n")
+                    .Replace("\r", "\\r")
+                    .Replace("\t", "\\t");
         }
 
         private MenuExportNode ExportControlRecursive(VRCExpressionsMenu.Control control, string parentPath, HashSet<VRCExpressionsMenu> visited)
