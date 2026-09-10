@@ -164,15 +164,27 @@ namespace Bluscream.MenuManager
                 var hasSubMenu = isSubMenuType && control.subMenu != null;
                 var isSubMenuEmpty = isSubMenuType && control.subMenu == null;
 
+                var savedIndent = EditorGUI.indentLevel;
                 using (new EditorGUILayout.HorizontalScope())
                 {
+                    EditorGUI.indentLevel = 0; // Prevent Unity from double-indenting or clipping controls inside HorizontalScope
+
+                    // Manual indent for tree depth
+                    if (savedIndent > 0)
+                    {
+                        GUILayout.Space(savedIndent * 15);
+                    }
+
+                    // Index number (e.g. "1.", "2.")
                     var indexStyle = new GUIStyle(EditorStyles.miniLabel)
                     {
                         alignment = TextAnchor.MiddleRight,
-                        normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 0.8f) }
+                        padding = new RectOffset(0, 2, 0, 0),
+                        normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 0.85f) }
                     };
                     EditorGUILayout.LabelField($"{i + 1}.", indexStyle, GUILayout.Width(22));
 
+                    // Icon or placeholder spacing
                     if (control.icon != null)
                     {
                         var iconRect = GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16), GUILayout.Height(16));
@@ -219,6 +231,8 @@ namespace Bluscream.MenuManager
                     {
                         if (GUILayout.Button("Move", GUILayout.Width(50))) ShowMoveSelector(itemPath);
                     }
+
+                    EditorGUI.indentLevel = savedIndent;
                 }
 
                 if (hasSubMenu && foldouts[itemPath])
