@@ -170,11 +170,12 @@ namespace Bluscream.MenuManager
                     EditorGUI.indentLevel = 0; // Prevent Unity from double-indenting or clipping controls inside HorizontalScope
 
                     // 1. Index number (always pinned at left: e.g. "1.", "2.")
+                    var indexColor = GetDepthColor(savedIndent);
                     var indexStyle = new GUIStyle(EditorStyles.miniLabel)
                     {
                         alignment = TextAnchor.MiddleRight,
                         padding = new RectOffset(0, 2, 0, 0),
-                        normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 0.85f) }
+                        normal = { textColor = indexColor }
                     };
                     EditorGUILayout.LabelField($"{i + 1}.", indexStyle, GUILayout.Width(22));
 
@@ -420,6 +421,21 @@ namespace Bluscream.MenuManager
             }
 
             return cleaned;
+        }
+
+        public static Color GetDepthColor(int depth)
+        {
+            // Curated palette of soft, distinct colors per hierarchy depth
+            switch (depth % 6)
+            {
+                case 0: return new Color(0.85f, 0.85f, 0.85f, 0.95f); // Depth 0: Soft White / Light Grey
+                case 1: return new Color(0.40f, 0.80f, 1.00f, 0.95f); // Depth 1: Soft Cyan / Sky Blue
+                case 2: return new Color(0.45f, 0.90f, 0.55f, 0.95f); // Depth 2: Mint / Pastel Green
+                case 3: return new Color(1.00f, 0.80f, 0.40f, 0.95f); // Depth 3: Soft Amber / Warm Yellow
+                case 4: return new Color(0.90f, 0.55f, 0.95f, 0.95f); // Depth 4: Pastel Lavender / Purple
+                case 5: return new Color(1.00f, 0.55f, 0.65f, 0.95f); // Depth 5: Pastel Rose / Coral
+                default: return new Color(0.75f, 0.75f, 0.75f, 0.90f);
+            }
         }
 
         private void DrawPageSeparator(int pageNum, int itemIndex)
