@@ -20,6 +20,7 @@ namespace Bluscream.MenuManager
         private Vector2 scrollPos;
         private Dictionary<string, string> pendingMoves = new Dictionary<string, string>();
         private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
+        private bool isLocatingItem = false;
 
         [MenuItem("Bluscream/VRChat/Menu Manager")]
         public static void ShowWindow()
@@ -35,12 +36,14 @@ namespace Bluscream.MenuManager
             AutoSelectActiveAvatar();
             if (avatarObject != null)
             {
-                LoadMenu(silent: true);
+                LoadMenu(silent: true, resetState: false);
             }
         }
 
         private void OnSelectionChange()
         {
+            if (isLocatingItem) return;
+
             if (AutoSelectActiveAvatar())
             {
                 Repaint();
@@ -49,9 +52,11 @@ namespace Bluscream.MenuManager
 
         private void OnHierarchyChange()
         {
+            if (isLocatingItem) return;
+
             if (avatarObject != null)
             {
-                LoadMenu(silent: true);
+                LoadMenu(silent: true, resetState: false);
                 Repaint();
             }
         }
@@ -293,136 +298,145 @@ namespace Bluscream.MenuManager
         {
             if (control == null) return;
 
-            // 1. If control has a subMenu asset that exists on disk, ping it
-            if (control.subMenu != null && EditorUtility.IsPersistent(control.subMenu))
+            isLocatingItem = true;
+            try
             {
-                EditorGUIUtility.PingObject(control.subMenu);
-                Selection.activeObject = control.subMenu;
-                return;
-            }
-
-            if (avatarObject != null)
-            {
-                var cleanName = CleanTags(control.name)?.Trim();
-                var paramName = control.parameter?.name?.Trim();
-                var cleanPath = CleanTags(itemPath)?.Trim();
-
-                // 2. Inspect VRCFury components on avatar and child GameObjects
-                if (Bluscream.VRCFury.Utils.TryInitialize())
+                // 1. If control has a subMenu asset that exists on disk, ping it
+                if (control.subMenu != null && EditorUtility.IsPersistent(control.subMenu))
                 {
-                    var vrcfComponents = avatarObject.GetComponentsInChildren(Bluscream.VRCFury.Utils.VRCFuryComponentType, true);
-                    foreach (var comp in vrcfComponents)
+                    EditorGUIUtility.PingObject(control.subMenu);
+                    Selection.activeObject = control.subMenu;
+                    return;
+                }
+
+                if (avatarObject != null)
+                {
+                    var cleanName = CleanTags(control.name)?.Trim();
+                    var paramName = control.parameter?.name?.Trim();
+                    var cleanPath = CleanTags(itemPath)?.Trim();
+
+                    // 2. Inspect VRCFury components on avatar and child GameObjects
+                    if (Bluscream.VRCFury.Utils.TryInitialize())
                     {
-                        if (comp == null) continue;
-
-                        var features = new List<object>();
-
-                        // Modern VRCFury: content field
-                        if (ReflectionHelper.TryGetFieldValue(comp, "content", out object contentObj) && contentObj != null)
+                        var vrcfComponents = avatarObject.GetComponentsInChildren(Bluscream.VRCFury.Utils.VRCFuryComponentType, true);
+                        foreach (var comp in vrcfComponents)
                         {
-                            features.Add(contentObj);
-                        }
+                            if (comp == null) continue;
 
-                        // Legacy VRCFury: config.features list
-                        if (ReflectionHelper.TryGetFieldValue(comp, "config", out object config) && config != null)
-                        {
-                            if (ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) && featuresListObj is System.Collections.IEnumerable featuresEnum)
-                            {
-                                foreach (var f in featuresEnum)
-                                {
-                                    if (f != null) features.Add(f);
-                                }
-                            }
-                        }
+                            var features = new List<object>();
 
-                        foreach (var feature in features)
-                        {
-                            if (feature == null) continue;
-
-                            // Check feature string fields: name, path, fromPath, toPath, etc.
-                            string featName = null;
-                            if (ReflectionHelper.TryGetFieldValue(feature, "name", out string n) ||
-                                ReflectionHelper.TryGetPropertyValue(feature, "name", out n))
+                            // Modern VRCFury: content field
+                            if (ReflectionHelper.TryGetFieldValue(comp, "content", out object contentObj) && contentObj != null)
                             {
-                                featName = n;
-                            }
-                            else if (ReflectionHelper.TryGetFieldValue(feature, "path", out string p) ||
-                                     ReflectionHelper.TryGetPropertyValue(feature, "path", out p))
-                            {
-                                featName = p;
+                                features.Add(contentObj);
                             }
 
-                            if (!string.IsNullOrEmpty(featName))
+                            // Legacy VRCFury: config.features list
+                            if (ReflectionHelper.TryGetFieldValue(comp, "config", out object config) && config != null)
                             {
-                                var cleanFeatName = CleanTags(featName).Trim();
-                                if (!string.IsNullOrEmpty(cleanPath) &&
-                                    (string.Equals(cleanFeatName, cleanPath, StringComparison.OrdinalIgnoreCase) ||
-                                     cleanFeatName.EndsWith("/" + cleanPath, StringComparison.OrdinalIgnoreCase) ||
-                                     cleanPath.EndsWith("/" + cleanFeatName, StringComparison.OrdinalIgnoreCase)))
+                                if (ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) && featuresListObj is System.Collections.IEnumerable featuresEnum)
                                 {
-                                    EditorGUIUtility.PingObject(comp.gameObject);
-                                    Selection.activeGameObject = comp.gameObject;
-                                    return;
-                                }
-
-                                if (!string.IsNullOrEmpty(cleanName) &&
-                                    (string.Equals(cleanFeatName, cleanName, StringComparison.OrdinalIgnoreCase) ||
-                                     cleanFeatName.EndsWith("/" + cleanName, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    EditorGUIUtility.PingObject(comp.gameObject);
-                                    Selection.activeGameObject = comp.gameObject;
-                                    return;
+                                    foreach (var f in featuresEnum)
+                                    {
+                                        if (f != null) features.Add(f);
+                                    }
                                 }
                             }
 
-                            // Check if feature references parameter
-                            if (!string.IsNullOrEmpty(paramName))
+                            foreach (var feature in features)
                             {
-                                if (ReflectionHelper.TryGetFieldValue(feature, "param", out string fParam) ||
-                                    ReflectionHelper.TryGetFieldValue(feature, "parameter", out fParam) ||
-                                    ReflectionHelper.TryGetFieldValue(feature, "driveGlobalParam", out fParam))
+                                if (feature == null) continue;
+
+                                // Check feature string fields: name, path, fromPath, toPath, etc.
+                                string featName = null;
+                                if (ReflectionHelper.TryGetFieldValue(feature, "name", out string n) ||
+                                    ReflectionHelper.TryGetPropertyValue(feature, "name", out n))
                                 {
-                                    if (!string.IsNullOrEmpty(fParam) && (string.Equals(fParam, paramName, StringComparison.OrdinalIgnoreCase) || fParam.EndsWith("/" + paramName, StringComparison.OrdinalIgnoreCase)))
+                                    featName = n;
+                                }
+                                else if (ReflectionHelper.TryGetFieldValue(feature, "path", out string p) ||
+                                         ReflectionHelper.TryGetPropertyValue(feature, "path", out p))
+                                {
+                                    featName = p;
+                                }
+
+                                if (!string.IsNullOrEmpty(featName))
+                                {
+                                    var cleanFeatName = CleanTags(featName).Trim();
+                                    if (!string.IsNullOrEmpty(cleanPath) &&
+                                        (string.Equals(cleanFeatName, cleanPath, StringComparison.OrdinalIgnoreCase) ||
+                                         cleanFeatName.EndsWith("/" + cleanPath, StringComparison.OrdinalIgnoreCase) ||
+                                         cleanPath.EndsWith("/" + cleanFeatName, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        EditorGUIUtility.PingObject(comp.gameObject);
+                                        Selection.activeGameObject = comp.gameObject;
+                                        return;
+                                    }
+
+                                    if (!string.IsNullOrEmpty(cleanName) &&
+                                        (string.Equals(cleanFeatName, cleanName, StringComparison.OrdinalIgnoreCase) ||
+                                         cleanFeatName.EndsWith("/" + cleanName, StringComparison.OrdinalIgnoreCase)))
                                     {
                                         EditorGUIUtility.PingObject(comp.gameObject);
                                         Selection.activeGameObject = comp.gameObject;
                                         return;
                                     }
                                 }
+
+                                // Check if feature references parameter
+                                if (!string.IsNullOrEmpty(paramName))
+                                {
+                                    if (ReflectionHelper.TryGetFieldValue(feature, "param", out string fParam) ||
+                                        ReflectionHelper.TryGetFieldValue(feature, "parameter", out fParam) ||
+                                        ReflectionHelper.TryGetFieldValue(feature, "driveGlobalParam", out fParam))
+                                    {
+                                        if (!string.IsNullOrEmpty(fParam) && (string.Equals(fParam, paramName, StringComparison.OrdinalIgnoreCase) || fParam.EndsWith("/" + paramName, StringComparison.OrdinalIgnoreCase)))
+                                        {
+                                            EditorGUIUtility.PingObject(comp.gameObject);
+                                            Selection.activeGameObject = comp.gameObject;
+                                            return;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                }
 
-                // 3. Search matching GameObject names in hierarchy
-                var transforms = avatarObject.GetComponentsInChildren<Transform>(true);
-                foreach (var t in transforms)
-                {
-                    if (!string.IsNullOrEmpty(cleanName) && t.name.IndexOf(cleanName, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        EditorGUIUtility.PingObject(t.gameObject);
-                        Selection.activeGameObject = t.gameObject;
-                        return;
-                    }
-                }
-
-                // 4. If parameter exists, search GameObject names matching the parameter
-                if (!string.IsNullOrEmpty(paramName))
-                {
+                    // 3. Search matching GameObject names in hierarchy
+                    var transforms = avatarObject.GetComponentsInChildren<Transform>(true);
                     foreach (var t in transforms)
                     {
-                        if (t.name.IndexOf(paramName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        if (!string.IsNullOrEmpty(cleanName) && t.name.IndexOf(cleanName, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             EditorGUIUtility.PingObject(t.gameObject);
                             Selection.activeGameObject = t.gameObject;
                             return;
                         }
                     }
-                }
 
-                // Default fallback: ping the avatar root itself
-                EditorGUIUtility.PingObject(avatarObject);
-                Selection.activeGameObject = avatarObject;
+                    // 4. If parameter exists, search GameObject names matching the parameter
+                    if (!string.IsNullOrEmpty(paramName))
+                    {
+                        foreach (var t in transforms)
+                        {
+                            if (t.name.IndexOf(paramName, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                EditorGUIUtility.PingObject(t.gameObject);
+                                Selection.activeGameObject = t.gameObject;
+                                return;
+                            }
+                        }
+                    }
+
+                    // Default fallback: ping the avatar root itself
+                    EditorGUIUtility.PingObject(avatarObject);
+                    Selection.activeGameObject = avatarObject;
+                }
+            }
+            finally
+            {
+                // Reset on next tick to absorb immediate selection/hierarchy events
+                EditorApplication.delayCall += () => { isLocatingItem = false; };
             }
         }
 
@@ -430,8 +444,16 @@ namespace Bluscream.MenuManager
         {
             if (control?.icon != null && EditorUtility.IsPersistent(control.icon))
             {
-                EditorGUIUtility.PingObject(control.icon);
-                Selection.activeObject = control.icon;
+                isLocatingItem = true;
+                try
+                {
+                    EditorGUIUtility.PingObject(control.icon);
+                    Selection.activeObject = control.icon;
+                }
+                finally
+                {
+                    EditorApplication.delayCall += () => { isLocatingItem = false; };
+                }
             }
         }
 
@@ -611,7 +633,7 @@ namespace Bluscream.MenuManager
             foreach (var key in keys) foldouts[key] = state;
         }
 
-        private void LoadMenu(bool silent = false)
+        private void LoadMenu(bool silent = false, bool resetState = true)
         {
             if (avatarObject == null)
             {
@@ -641,9 +663,15 @@ namespace Bluscream.MenuManager
             if (mergedMenu != null)
             {
                 mergedMenu.hideFlags = HideFlags.DontSave | HideFlags.DontUnloadUnusedAsset;
-                pendingMoves.Clear();
-                foldouts.Clear();
-                ShowNotification(new GUIContent($"Loaded '{mergedMenu.name}'!"));
+                if (resetState)
+                {
+                    pendingMoves.Clear();
+                    foldouts.Clear();
+                }
+                if (!silent)
+                {
+                    ShowNotification(new GUIContent($"Loaded '{mergedMenu.name}'!"));
+                }
             }
             else if (!silent)
             {
