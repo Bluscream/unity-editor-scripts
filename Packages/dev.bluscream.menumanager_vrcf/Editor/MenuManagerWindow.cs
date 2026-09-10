@@ -32,7 +32,10 @@ namespace Bluscream.MenuManager
             serializedObject = new SerializedObject(this);
             avatarObjectProperty = serializedObject.FindProperty("avatarObject");
             AutoSelectActiveAvatar();
-            LoadMenu();
+            if (avatarObject != null)
+            {
+                LoadMenu(silent: true);
+            }
         }
 
         private void OnSelectionChange()
@@ -47,7 +50,7 @@ namespace Bluscream.MenuManager
         {
             if (avatarObject != null)
             {
-                LoadMenu();
+                LoadMenu(silent: true);
                 Repaint();
             }
         }
@@ -61,7 +64,7 @@ namespace Bluscream.MenuManager
                 {
                     avatarObject = descriptor.gameObject;
                     serializedObject.Update();
-                    LoadMenu();
+                    LoadMenu(silent: true);
                     return true;
                 }
             }
@@ -224,11 +227,14 @@ namespace Bluscream.MenuManager
             foreach (var key in keys) foldouts[key] = state;
         }
 
-        private void LoadMenu()
+        private void LoadMenu(bool silent = false)
         {
             if (avatarObject == null)
             {
-                EditorUtility.DisplayDialog("Error", "Please select an Avatar Root GameObject first.", "OK");
+                if (!silent)
+                {
+                    EditorUtility.DisplayDialog("Error", "Please select an Avatar Root GameObject first.", "OK");
+                }
                 return;
             }
 
@@ -250,7 +256,7 @@ namespace Bluscream.MenuManager
                 foldouts.Clear();
                 ShowNotification(new GUIContent($"Loaded '{mergedMenu.name}'!"));
             }
-            else
+            else if (!silent)
             {
                 EditorUtility.DisplayDialog("Menu Manager", "Could not resolve Expression Menu for the selected avatar.\n\nEnsure VRCFury is installed/active or the avatar has a valid VRCAvatarDescriptor with an Expressions Menu assigned.", "OK");
             }
