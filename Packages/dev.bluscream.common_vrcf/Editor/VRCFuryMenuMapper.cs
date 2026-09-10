@@ -157,11 +157,28 @@ namespace Bluscream.VRCFury
             foreach (var comp in vrcfComponents)
             {
                 if (comp == null) continue;
-                if (!ReflectionHelper.TryGetFieldValue(comp, "config", out object config) || config == null) continue;
-                if (!ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) || featuresListObj == null) continue;
-                if (!(featuresListObj is System.Collections.IEnumerable featuresEnumerable)) continue;
 
-                foreach (var feature in featuresEnumerable)
+                var features = new List<object>();
+
+                // Modern VRCFury (single-feature component stores feature directly in 'content' field via SerializeReference)
+                if (ReflectionHelper.TryGetFieldValue(comp, "content", out object contentObj) && contentObj != null)
+                {
+                    features.Add(contentObj);
+                }
+
+                // Legacy VRCFury (stores list in config.features)
+                if (ReflectionHelper.TryGetFieldValue(comp, "config", out object config) && config != null)
+                {
+                    if (ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) && featuresListObj is System.Collections.IEnumerable featuresEnumerable)
+                    {
+                        foreach (var f in featuresEnumerable)
+                        {
+                            if (f != null) features.Add(f);
+                        }
+                    }
+                }
+
+                foreach (var feature in features)
                 {
                     if (feature == null) continue;
                     string typeName = feature.GetType().Name;
@@ -171,6 +188,7 @@ namespace Bluscream.VRCFury
                         ReflectionHelper.TryGetFieldValue(feature, "toPath", out string toPath) &&
                         !string.IsNullOrEmpty(fromPath))
                     {
+                        Log.Info($"ApplyMoveFeaturesFromAvatar: Executing MoveMenuItem '{fromPath}' -> '{toPath}'");
                         ExecuteMove(rootMenu, fromPath, toPath);
                     }
                 }
