@@ -157,11 +157,12 @@ namespace Bluscream.MenuManager
             {
                 var fullPath = string.IsNullOrEmpty(parentPath) ? control.name : parentPath + "/" + control.name;
                 bool isSubMenu = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null;
+                var displayName = MenuManagerWindow.FormatDisplayName(control);
 
                 var item = new MenuTreeItem(
                     currentId++,
                     depth,
-                    control.name,
+                    displayName,
                     fullPath,
                     control.subMenu,
                     control,

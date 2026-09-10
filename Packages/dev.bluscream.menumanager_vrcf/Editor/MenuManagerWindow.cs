@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -176,11 +177,14 @@ namespace Bluscream.MenuManager
                         GUILayout.Space(20); // 16px icon + 4px space placeholder
                     }
 
+                    var displayName = FormatDisplayName(control);
+                    var rawName = control.name ?? "";
+
                     if (hasSubMenu)
                     {
                         if (!foldouts.ContainsKey(itemPath)) foldouts[itemPath] = false;
                         var foldoutStyle = new GUIStyle(EditorStyles.foldout) { richText = true };
-                        foldouts[itemPath] = EditorGUILayout.Foldout(foldouts[itemPath], control.name, true, foldoutStyle);
+                        foldouts[itemPath] = EditorGUILayout.Foldout(foldouts[itemPath], new GUIContent(displayName, rawName != displayName ? rawName : null), true, foldoutStyle);
                     }
                     else
                     {
@@ -189,11 +193,11 @@ namespace Bluscream.MenuManager
                         if (isSubMenuEmpty)
                         {
                             var emptySubStyle = new GUIStyle(EditorStyles.label) { richText = true, normal = { textColor = new Color(0.9f, 0.6f, 0.2f) } };
-                            EditorGUILayout.LabelField(new GUIContent($"{control.name} <color=orange>[SubMenu (Unassigned)]</color>", "SubMenu asset reference is null/empty"), emptySubStyle);
+                            EditorGUILayout.LabelField(new GUIContent($"{displayName} <color=orange>[SubMenu (Unassigned)]</color>", rawName), emptySubStyle);
                         }
                         else
                         {
-                            EditorGUILayout.LabelField(control.name, labelStyle);
+                            EditorGUILayout.LabelField(new GUIContent(displayName, rawName != displayName ? rawName : null), labelStyle);
                         }
                     }
 
@@ -217,6 +221,39 @@ namespace Bluscream.MenuManager
                     EditorGUI.indentLevel--;
                 }
             }
+        }
+
+        public static string CleanTags(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return "";
+            // Strip XML/HTML/TMP tags like <b>, </b>, <size=...>, <color=...>, <line-height=...>, <voffset=...>, etc.
+            string cleaned = Regex.Replace(input, @"<[^>]*>", "").Trim();
+            return cleaned;
+        }
+
+        public static string FormatDisplayName(VRCExpressionsMenu.Control control)
+        {
+            if (control == null) return "<null>";
+            string cleaned = CleanTags(control.name);
+
+            if (string.IsNullOrEmpty(cleaned))
+            {
+                // If stripping tags left nothing (e.g. "<b>", "<size=20>"), provide a clear, helpful fallback
+                if (!string.IsNullOrEmpty(control.parameter?.name))
+                {
+                    cleaned = $"<i>({control.parameter.name})</i>";
+                }
+                else if (control.icon != null && !string.IsNullOrEmpty(control.icon.name))
+                {
+                    cleaned = $"<i>({control.icon.name})</i>";
+                }
+                else
+                {
+                    cleaned = $"<i>({control.type})</i>";
+                }
+            }
+
+            return cleaned;
         }
 
         private void DrawPageSeparator(int pageNum, int itemIndex)
