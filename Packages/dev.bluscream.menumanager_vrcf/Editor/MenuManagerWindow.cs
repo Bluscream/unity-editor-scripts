@@ -271,7 +271,7 @@ namespace Bluscream.MenuManager
             menu.AddSeparator("");
 
             // 1. Locate Item (Submenu asset in Project, or GameObject in Hierarchy)
-            menu.AddItem(new GUIContent("Show Item in Hierarchy or Project"), false, () => LocateItem(control));
+            menu.AddItem(new GUIContent("Show Item in Hierarchy or Project"), false, () => LocateItem(control, itemPath));
 
             // 2. Locate Icon Asset separately in Project browser
             if (control.icon != null && EditorUtility.IsPersistent(control.icon))
@@ -289,7 +289,7 @@ namespace Bluscream.MenuManager
             menu.ShowAsContext();
         }
 
-        private void LocateItem(VRCExpressionsMenu.Control control)
+        private void LocateItem(VRCExpressionsMenu.Control control, string itemPath)
         {
             if (control == null) return;
 
@@ -301,13 +301,100 @@ namespace Bluscream.MenuManager
                 return;
             }
 
-            // 2. Search avatar hierarchy for GameObjects or VRCFury components referencing this control
             if (avatarObject != null)
             {
-                var cleanName = CleanTags(control.name);
-                var paramName = control.parameter?.name;
+                var cleanName = CleanTags(control.name)?.Trim();
+                var paramName = control.parameter?.name?.Trim();
+                var cleanPath = CleanTags(itemPath)?.Trim();
 
-                // Search matching GameObject names in hierarchy
+                // 2. Inspect VRCFury components on avatar and child GameObjects
+                if (Bluscream.VRCFury.Utils.TryInitialize())
+                {
+                    var vrcfComponents = avatarObject.GetComponentsInChildren(Bluscream.VRCFury.Utils.VRCFuryComponentType, true);
+                    foreach (var comp in vrcfComponents)
+                    {
+                        if (comp == null) continue;
+
+                        var features = new List<object>();
+
+                        // Modern VRCFury: content field
+                        if (ReflectionHelper.TryGetFieldValue(comp, "content", out object contentObj) && contentObj != null)
+                        {
+                            features.Add(contentObj);
+                        }
+
+                        // Legacy VRCFury: config.features list
+                        if (ReflectionHelper.TryGetFieldValue(comp, "config", out object config) && config != null)
+                        {
+                            if (ReflectionHelper.TryGetFieldValue(config, "features", out object featuresListObj) && featuresListObj is System.Collections.IEnumerable featuresEnum)
+                            {
+                                foreach (var f in featuresEnum)
+                                {
+                                    if (f != null) features.Add(f);
+                                }
+                            }
+                        }
+
+                        foreach (var feature in features)
+                        {
+                            if (feature == null) continue;
+
+                            // Check feature string fields: name, path, fromPath, toPath, etc.
+                            string featName = null;
+                            if (ReflectionHelper.TryGetFieldValue(feature, "name", out string n) ||
+                                ReflectionHelper.TryGetPropertyValue(feature, "name", out n))
+                            {
+                                featName = n;
+                            }
+                            else if (ReflectionHelper.TryGetFieldValue(feature, "path", out string p) ||
+                                     ReflectionHelper.TryGetPropertyValue(feature, "path", out p))
+                            {
+                                featName = p;
+                            }
+
+                            if (!string.IsNullOrEmpty(featName))
+                            {
+                                var cleanFeatName = CleanTags(featName).Trim();
+                                if (!string.IsNullOrEmpty(cleanPath) &&
+                                    (string.Equals(cleanFeatName, cleanPath, StringComparison.OrdinalIgnoreCase) ||
+                                     cleanFeatName.EndsWith("/" + cleanPath, StringComparison.OrdinalIgnoreCase) ||
+                                     cleanPath.EndsWith("/" + cleanFeatName, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    EditorGUIUtility.PingObject(comp.gameObject);
+                                    Selection.activeGameObject = comp.gameObject;
+                                    return;
+                                }
+
+                                if (!string.IsNullOrEmpty(cleanName) &&
+                                    (string.Equals(cleanFeatName, cleanName, StringComparison.OrdinalIgnoreCase) ||
+                                     cleanFeatName.EndsWith("/" + cleanName, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    EditorGUIUtility.PingObject(comp.gameObject);
+                                    Selection.activeGameObject = comp.gameObject;
+                                    return;
+                                }
+                            }
+
+                            // Check if feature references parameter
+                            if (!string.IsNullOrEmpty(paramName))
+                            {
+                                if (ReflectionHelper.TryGetFieldValue(feature, "param", out string fParam) ||
+                                    ReflectionHelper.TryGetFieldValue(feature, "parameter", out fParam) ||
+                                    ReflectionHelper.TryGetFieldValue(feature, "driveGlobalParam", out fParam))
+                                {
+                                    if (!string.IsNullOrEmpty(fParam) && (string.Equals(fParam, paramName, StringComparison.OrdinalIgnoreCase) || fParam.EndsWith("/" + paramName, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        EditorGUIUtility.PingObject(comp.gameObject);
+                                        Selection.activeGameObject = comp.gameObject;
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Search matching GameObject names in hierarchy
                 var transforms = avatarObject.GetComponentsInChildren<Transform>(true);
                 foreach (var t in transforms)
                 {
@@ -319,7 +406,7 @@ namespace Bluscream.MenuManager
                     }
                 }
 
-                // If parameter exists, search VRCFury components or descriptors binding to this parameter
+                // 4. If parameter exists, search GameObject names matching the parameter
                 if (!string.IsNullOrEmpty(paramName))
                 {
                     foreach (var t in transforms)
