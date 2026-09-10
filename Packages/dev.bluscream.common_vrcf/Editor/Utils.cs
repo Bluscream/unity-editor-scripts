@@ -43,7 +43,11 @@ namespace Bluscream.VRCFury
                 ReflectionHelper.TryFindType("VF.Model.VRCFury", out var vrcfType);
                 VRCFuryComponentType = vrcfType;
 
-                ReflectionHelper.TryFindType("VF.Model.VFGameObject", out var vfGameObjType);
+                ReflectionHelper.TryFindType("VF.Utils.VFGameObject", out var vfGameObjType);
+                if (vfGameObjType == null)
+                {
+                    ReflectionHelper.TryFindType("VF.Model.VFGameObject", out vfGameObjType);
+                }
                 VFGameObjectType = vfGameObjType;
 
                 ReflectionHelper.TryFindType("VF.Utils.MenuEstimator", out var menuEstimatorType);

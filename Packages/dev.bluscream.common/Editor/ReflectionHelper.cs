@@ -27,7 +27,23 @@ namespace Bluscream
             if (assembly == null || string.IsNullOrEmpty(typeName)) return false;
             try
             {
-                type = assembly.GetType(typeName) ?? assembly.GetTypes().FirstOrDefault(t => string.Equals(t.FullName, typeName, StringComparison.Ordinal) || string.Equals(t.Name, typeName, StringComparison.Ordinal));
+                type = assembly.GetType(typeName);
+                if (type != null) return true;
+
+                Type[] types = null;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException rtle)
+                {
+                    types = rtle.Types;
+                }
+
+                if (types != null)
+                {
+                    type = types.FirstOrDefault(t => t != null && (string.Equals(t.FullName, typeName, StringComparison.Ordinal) || string.Equals(t.Name, typeName, StringComparison.Ordinal)));
+                }
             }
             catch { }
             return type != null;
