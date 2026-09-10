@@ -17,9 +17,12 @@ namespace Bluscream.MenuManager
         public string name;
         public string originalPath;
         public int type;
+        public string typeName;
         public string parameter;
         public float value;
         public string iconGuid;
+        public bool isSubMenu;
+        public bool subMenuNull;
         
         public List<MenuExportNode> children = new List<MenuExportNode>();
     }

@@ -145,7 +145,9 @@ namespace Bluscream.MenuManager
             foreach (var control in menu.controls)
             {
                 var itemPath = string.IsNullOrEmpty(currentPath) ? control.name : currentPath + "/" + control.name;
-                var isSubMenu = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null;
+                var isSubMenuType = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu;
+                var hasSubMenu = isSubMenuType && control.subMenu != null;
+                var isSubMenuEmpty = isSubMenuType && control.subMenu == null;
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -156,7 +158,7 @@ namespace Bluscream.MenuManager
                         GUILayout.Space(4);
                     }
 
-                    if (isSubMenu)
+                    if (hasSubMenu)
                     {
                         if (!foldouts.ContainsKey(itemPath)) foldouts[itemPath] = false;
                         var foldoutStyle = new GUIStyle(EditorStyles.foldout) { richText = true };
@@ -166,7 +168,15 @@ namespace Bluscream.MenuManager
                     {
                         GUILayout.Space(15);
                         var labelStyle = new GUIStyle(EditorStyles.label) { richText = true };
-                        EditorGUILayout.LabelField(control.name, labelStyle);
+                        if (isSubMenuEmpty)
+                        {
+                            var emptySubStyle = new GUIStyle(EditorStyles.label) { richText = true, normal = { textColor = new Color(0.9f, 0.6f, 0.2f) } };
+                            EditorGUILayout.LabelField(new GUIContent($"{control.name} <color=orange>[SubMenu (Unassigned)]</color>", "SubMenu asset reference is null/empty"), emptySubStyle);
+                        }
+                        else
+                        {
+                            EditorGUILayout.LabelField(control.name, labelStyle);
+                        }
                     }
 
                     GUILayout.FlexibleSpace();
@@ -182,7 +192,7 @@ namespace Bluscream.MenuManager
                     }
                 }
 
-                if (isSubMenu && foldouts[itemPath])
+                if (hasSubMenu && foldouts[itemPath])
                 {
                     EditorGUI.indentLevel++;
                     DrawMenuRecursive(control.subMenu, itemPath);
@@ -275,8 +285,119 @@ namespace Bluscream.MenuManager
             }
         }
 
-        private void ExportJson() { /* Existing logic simplified or similar */ }
-        private void ImportJson() { /* Existing logic simplified or similar */ }
+        private void ExportJson()
+        {
+            if (mergedMenu == null)
+            {
+                EditorUtility.DisplayDialog("Export JSON", "No menu loaded to export.", "OK");
+                return;
+            }
+
+            var defaultName = avatarObject != null ? $"{avatarObject.name}_menu.json" : "menu_export.json";
+            var path = EditorUtility.SaveFilePanel("Export Menu JSON", "", defaultName, "json");
+            if (string.IsNullOrEmpty(path)) return;
+
+            try
+            {
+                var data = new MenuExportData();
+                data.moveOperations = pendingMoves.Select(kvp => new MenuMoveOperation { fromPath = kvp.Key, toPath = kvp.Value }).ToList();
+
+                var visited = new HashSet<VRCExpressionsMenu>();
+                foreach (var control in mergedMenu.controls)
+                {
+                    var node = ExportControlRecursive(control, "", visited);
+                    if (node != null) data.rootNodes.Add(node);
+                }
+
+                var json = JsonUtility.ToJson(data, true);
+                File.WriteAllText(path, json);
+                EditorUtility.DisplayDialog("Success", $"Exported menu JSON successfully to:\n{path}", "OK");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[MenuManager] Export JSON failed: {ex}");
+                EditorUtility.DisplayDialog("Error", $"Failed to export JSON:\n{ex.Message}", "OK");
+            }
+        }
+
+        private MenuExportNode ExportControlRecursive(VRCExpressionsMenu.Control control, string parentPath, HashSet<VRCExpressionsMenu> visited)
+        {
+            if (control == null) return null;
+
+            var fullPath = string.IsNullOrEmpty(parentPath) ? control.name : parentPath + "/" + control.name;
+            var isSubMenuType = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu;
+            var isSubMenuNull = isSubMenuType && control.subMenu == null;
+
+            var node = new MenuExportNode
+            {
+                name = control.name,
+                originalPath = fullPath,
+                type = (int)control.type,
+                typeName = control.type.ToString(),
+                parameter = control.parameter != null ? control.parameter.name : null,
+                value = control.value,
+                isSubMenu = isSubMenuType,
+                subMenuNull = isSubMenuNull
+            };
+
+            if (control.icon != null)
+            {
+                var assetPath = AssetDatabase.GetAssetPath(control.icon);
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    node.iconGuid = AssetDatabase.AssetPathToGUID(assetPath);
+                }
+            }
+
+            if (isSubMenuType && control.subMenu != null && !visited.Contains(control.subMenu))
+            {
+                visited.Add(control.subMenu);
+                if (control.subMenu.controls != null)
+                {
+                    foreach (var childCtrl in control.subMenu.controls)
+                    {
+                        var childNode = ExportControlRecursive(childCtrl, fullPath, visited);
+                        if (childNode != null) node.children.Add(childNode);
+                    }
+                }
+            }
+
+            return node;
+        }
+
+        private void ImportJson()
+        {
+            var path = EditorUtility.OpenFilePanel("Import Menu JSON", "", "json");
+            if (string.IsNullOrEmpty(path)) return;
+
+            try
+            {
+                var json = File.ReadAllText(path);
+                var data = JsonUtility.FromJson<MenuExportData>(json);
+                if (data != null && data.moveOperations != null && data.moveOperations.Count > 0)
+                {
+                    pendingMoves.Clear();
+                    foreach (var move in data.moveOperations)
+                    {
+                        if (!string.IsNullOrEmpty(move.fromPath) && !string.IsNullOrEmpty(move.toPath))
+                        {
+                            pendingMoves[move.fromPath] = move.toPath;
+                        }
+                    }
+                    ShowNotification(new GUIContent($"Loaded {pendingMoves.Count} moves from JSON!"));
+                    Repaint();
+                }
+                else
+                {
+                    EditorUtility.DisplayDialog("Import JSON", "No pending move operations found in JSON file.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[MenuManager] Import JSON failed: {ex}");
+                EditorUtility.DisplayDialog("Error", $"Failed to import JSON:\n{ex.Message}", "OK");
+            }
+        }
     }
 }
 // Trigger recompile
