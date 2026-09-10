@@ -270,8 +270,18 @@ namespace Bluscream.MenuManager
 
             menu.AddSeparator("");
 
-            // Locate asset in project or GameObject in avatar hierarchy
-            menu.AddItem(new GUIContent("Show in Project or Hierarchy"), false, () => LocateItem(control));
+            // 1. Locate Item (Submenu asset in Project, or GameObject in Hierarchy)
+            menu.AddItem(new GUIContent("Show Item in Hierarchy or Project"), false, () => LocateItem(control));
+
+            // 2. Locate Icon Asset separately in Project browser
+            if (control.icon != null && EditorUtility.IsPersistent(control.icon))
+            {
+                menu.AddItem(new GUIContent("Show Icon in Project"), false, () => LocateIcon(control));
+            }
+            else
+            {
+                menu.AddDisabledItem(new GUIContent("Show Icon in Project"));
+            }
 
             menu.AddSeparator("");
             menu.AddItem(new GUIContent("Delete"), false, () => SetDelete(itemPath));
@@ -291,22 +301,17 @@ namespace Bluscream.MenuManager
                 return;
             }
 
-            // 2. If control has an icon asset on disk, ping it
-            if (control.icon != null && EditorUtility.IsPersistent(control.icon))
-            {
-                EditorGUIUtility.PingObject(control.icon);
-                Selection.activeObject = control.icon;
-                return;
-            }
-
-            // 3. Search avatar hierarchy for VRCFury components or GameObjects referencing this item
+            // 2. Search avatar hierarchy for GameObjects or VRCFury components referencing this control
             if (avatarObject != null)
             {
                 var cleanName = CleanTags(control.name);
+                var paramName = control.parameter?.name;
+
+                // Search matching GameObject names in hierarchy
                 var transforms = avatarObject.GetComponentsInChildren<Transform>(true);
                 foreach (var t in transforms)
                 {
-                    if (t.name.IndexOf(cleanName, StringComparison.OrdinalIgnoreCase) >= 0)
+                    if (!string.IsNullOrEmpty(cleanName) && t.name.IndexOf(cleanName, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         EditorGUIUtility.PingObject(t.gameObject);
                         Selection.activeGameObject = t.gameObject;
@@ -314,9 +319,32 @@ namespace Bluscream.MenuManager
                     }
                 }
 
-                // If nothing specific found, ping the avatar root itself
+                // If parameter exists, search VRCFury components or descriptors binding to this parameter
+                if (!string.IsNullOrEmpty(paramName))
+                {
+                    foreach (var t in transforms)
+                    {
+                        if (t.name.IndexOf(paramName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            EditorGUIUtility.PingObject(t.gameObject);
+                            Selection.activeGameObject = t.gameObject;
+                            return;
+                        }
+                    }
+                }
+
+                // Default fallback: ping the avatar root itself
                 EditorGUIUtility.PingObject(avatarObject);
                 Selection.activeGameObject = avatarObject;
+            }
+        }
+
+        private void LocateIcon(VRCExpressionsMenu.Control control)
+        {
+            if (control?.icon != null && EditorUtility.IsPersistent(control.icon))
+            {
+                EditorGUIUtility.PingObject(control.icon);
+                Selection.activeObject = control.icon;
             }
         }
 
