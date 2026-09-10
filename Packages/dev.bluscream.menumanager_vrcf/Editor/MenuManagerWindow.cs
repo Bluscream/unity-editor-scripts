@@ -169,13 +169,7 @@ namespace Bluscream.MenuManager
                 {
                     EditorGUI.indentLevel = 0; // Prevent Unity from double-indenting or clipping controls inside HorizontalScope
 
-                    // Manual indent for tree depth
-                    if (savedIndent > 0)
-                    {
-                        GUILayout.Space(savedIndent * 15);
-                    }
-
-                    // Index number (e.g. "1.", "2.")
+                    // 1. Index number (always pinned at left: e.g. "1.", "2.")
                     var indexStyle = new GUIStyle(EditorStyles.miniLabel)
                     {
                         alignment = TextAnchor.MiddleRight,
@@ -184,7 +178,7 @@ namespace Bluscream.MenuManager
                     };
                     EditorGUILayout.LabelField($"{i + 1}.", indexStyle, GUILayout.Width(22));
 
-                    // Icon or placeholder spacing
+                    // 2. Icon or placeholder spacing (always pinned right next to index)
                     if (control.icon != null)
                     {
                         var iconRect = GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16), GUILayout.Height(16));
@@ -194,6 +188,12 @@ namespace Bluscream.MenuManager
                     else
                     {
                         GUILayout.Space(20); // 16px icon + 4px space placeholder
+                    }
+
+                    // 3. Tree depth indentation (indents ONLY the foldout and text label)
+                    if (savedIndent > 0)
+                    {
+                        GUILayout.Space(savedIndent * 15);
                     }
 
                     var displayName = FormatDisplayName(control);
