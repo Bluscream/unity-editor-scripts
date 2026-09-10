@@ -230,7 +230,19 @@ namespace Bluscream.MenuManager
                         if (GUILayout.Button("X", GUILayout.Width(20))) pendingMoves.Remove(itemPath);
                     }
 
-                    if (GUILayout.Button("⋮", EditorStyles.miniButton, GUILayout.Width(24)))
+                    var menuIcon = EditorGUIUtility.IconContent("_Menu");
+                    GUIContent btnContent = (menuIcon != null && menuIcon.image != null) 
+                        ? new GUIContent(menuIcon.image, "Actions") 
+                        : new GUIContent("...", "Actions");
+
+                    var menuBtnStyle = new GUIStyle(EditorStyles.iconButton ?? EditorStyles.miniButton)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fixedWidth = 20,
+                        fixedHeight = 18
+                    };
+
+                    if (GUILayout.Button(btnContent, menuBtnStyle, GUILayout.Width(20), GUILayout.Height(18)))
                     {
                         ShowItemMenu(control, itemPath, menu);
                     }
