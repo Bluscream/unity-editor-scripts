@@ -171,6 +171,10 @@ namespace Bluscream.MenuManager
                         GUI.DrawTexture(iconRect, control.icon, ScaleMode.ScaleToFit);
                         GUILayout.Space(4);
                     }
+                    else
+                    {
+                        GUILayout.Space(20); // 16px icon + 4px space placeholder
+                    }
 
                     if (hasSubMenu)
                     {
@@ -220,6 +224,10 @@ namespace Bluscream.MenuManager
             GUILayout.Space(3);
             using (new EditorGUILayout.HorizontalScope())
             {
+                if (EditorGUI.indentLevel > 0)
+                {
+                    GUILayout.Space(EditorGUI.indentLevel * 15);
+                }
                 var originalColor = GUI.color;
                 GUI.color = new Color(0.3f, 0.8f, 1f, 0.8f);
                 var sepStyle = new GUIStyle(EditorStyles.miniLabel)
