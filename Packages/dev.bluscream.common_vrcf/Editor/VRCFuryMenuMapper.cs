@@ -38,24 +38,75 @@ namespace Bluscream.VRCFury
 
         public static VRCExpressionsMenu GetMergedMenu(GameObject avatarObj)
         {
-            if (avatarObj == null || !Utils.TryInitialize()) return null;
+            if (avatarObj == null)
+            {
+                Log.Warn("GetMergedMenu: avatarObj is null.");
+                return null;
+            }
+
+            if (!Utils.TryInitialize())
+            {
+                Log.Warn($"GetMergedMenu: Utils.TryInitialize() returned false. VRCFuryComponentType={Utils.VRCFuryComponentType != null}");
+                return null;
+            }
 
             try
             {
-                if (!ReflectionHelper.TryInvokeMethod(Utils.VFGameObjectType, "op_Implicit", out object vfGameObject, avatarObj) || vfGameObject == null)
-                    return null;
-
-                if (!Utils.EstimateMethod.TryInvoke(null, out object menuManager, vfGameObject) || menuManager == null)
-                    return null;
-
-                if (Utils.GetRawMethod.TryInvoke(menuManager, out VRCExpressionsMenu rawMenu) && rawMenu != null)
+                if (Utils.VFGameObjectType == null)
                 {
-                    var clonedMenu = CloneMenu(rawMenu, new Dictionary<VRCExpressionsMenu, VRCExpressionsMenu>());
-                    ApplyMoveFeaturesFromAvatar(avatarObj, clonedMenu);
-                    return clonedMenu;
+                    Log.Warn("GetMergedMenu: VFGameObjectType is null.");
+                    return null;
                 }
 
-                return null;
+                // Try converting GameObject to VFGameObject via implicit operator or constructor
+                object vfGameObject = null;
+                var opImplicit = Utils.VFGameObjectType.GetMethod("op_Implicit", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(GameObject) }, null);
+                if (opImplicit != null)
+                {
+                    vfGameObject = opImplicit.Invoke(null, new object[] { avatarObj });
+                }
+                else
+                {
+                    var ctor = Utils.VFGameObjectType.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(GameObject) }, null);
+                    if (ctor != null) vfGameObject = ctor.Invoke(new object[] { avatarObj });
+                }
+
+                if (vfGameObject == null)
+                {
+                    Log.Warn($"GetMergedMenu: Failed to convert avatarObj '{avatarObj.name}' to VFGameObject.");
+                    return null;
+                }
+
+                if (Utils.EstimateMethod == null)
+                {
+                    Log.Warn("GetMergedMenu: Utils.EstimateMethod is null.");
+                    return null;
+                }
+
+                object menuManager = Utils.EstimateMethod.Invoke(null, new object[] { vfGameObject });
+                if (menuManager == null)
+                {
+                    Log.Warn("GetMergedMenu: EstimateMethod returned null menuManager.");
+                    return null;
+                }
+
+                if (Utils.GetRawMethod == null)
+                {
+                    Log.Warn("GetMergedMenu: Utils.GetRawMethod is null.");
+                    return null;
+                }
+
+                var rawMenu = Utils.GetRawMethod.Invoke(menuManager, null) as VRCExpressionsMenu;
+                if (rawMenu == null)
+                {
+                    Log.Warn("GetMergedMenu: GetRawMethod returned null rawMenu.");
+                    return null;
+                }
+
+                Log.Info($"GetMergedMenu: Successfully extracted merged menu '{rawMenu.name}' with {rawMenu.controls?.Count ?? 0} root controls.");
+                var clonedMenu = CloneMenu(rawMenu, new Dictionary<VRCExpressionsMenu, VRCExpressionsMenu>());
+                ApplyMoveFeaturesFromAvatar(avatarObj, clonedMenu);
+                return clonedMenu;
             }
             catch (Exception ex)
             {

@@ -34,7 +34,11 @@ namespace Bluscream.VRCFury
             {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 VRCFuryAssembly = assemblies.FirstOrDefault(a => a.GetName().Name == "VRCFury");
-                if (VRCFuryAssembly == null) return false;
+                if (VRCFuryAssembly == null)
+                {
+                    Debug.LogWarning("[VRCFury Utils] VRCFury assembly not found in AppDomain.");
+                    return false;
+                }
 
                 ReflectionHelper.TryFindType("VF.Model.VRCFury", out var vrcfType);
                 VRCFuryComponentType = vrcfType;
@@ -70,10 +74,13 @@ namespace Bluscream.VRCFury
                     GetRawMethod = MenuManagerType.GetMethod("GetRaw", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 }
 
+                Debug.Log($"[VRCFury Utils] Initialized: VRCFuryComponentType={VRCFuryComponentType?.FullName ?? "null"}, VFGameObjectType={VFGameObjectType?.FullName ?? "null"}, MenuEstimator={menuEstimatorType?.FullName ?? "null"}, EstimateMethod={EstimateMethod?.Name ?? "null"}, GetRawMethod={GetRawMethod?.Name ?? "null"}");
+
                 return VRCFuryComponentType != null;
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.LogError($"[VRCFury Utils] TryInitialize failed with exception: {ex}");
                 return false;
             }
         }

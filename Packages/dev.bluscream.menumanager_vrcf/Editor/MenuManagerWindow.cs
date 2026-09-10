@@ -251,12 +251,17 @@ namespace Bluscream.MenuManager
             mergedMenu = VRCFuryMenuHelper.GetMergedMenu(avatarObject);
             if (mergedMenu == null)
             {
+                Debug.LogWarning("[MenuManagerWindow] VRCFuryMenuHelper.GetMergedMenu returned null! Falling back to VRCAvatarDescriptor.expressionsMenu.");
                 // Fallback: try reading expressionsMenu directly from VRCAvatarDescriptor
                 var descriptor = avatarObject.GetComponent<VRCAvatarDescriptor>();
                 if (descriptor != null && descriptor.expressionsMenu != null)
                 {
                     mergedMenu = descriptor.expressionsMenu;
                 }
+            }
+            else
+            {
+                Debug.Log($"[MenuManagerWindow] Successfully loaded merged menu via VRCFury with {mergedMenu.controls?.Count ?? 0} root controls.");
             }
 
             if (mergedMenu != null)
