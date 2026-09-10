@@ -177,7 +177,7 @@ namespace Bluscream.MenuManager
                         padding = new RectOffset(0, 2, 0, 0),
                         normal = { textColor = indexColor }
                     };
-                    EditorGUILayout.LabelField($"{i + 1}.", indexStyle, GUILayout.Width(22));
+                    EditorGUILayout.LabelField($"{i + 1}", indexStyle, GUILayout.Width(20));
 
                     // 2. Icon or placeholder spacing (always pinned right next to index)
                     if (control.icon != null)
