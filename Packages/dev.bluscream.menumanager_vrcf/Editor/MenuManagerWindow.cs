@@ -142,8 +142,22 @@ namespace Bluscream.MenuManager
         {
             if (menu == null || menu.controls == null) return;
 
-            foreach (var control in menu.controls)
+            const int maxPageSlots = 8;
+            bool hasPagination = menu.controls.Count > maxPageSlots;
+
+            for (int i = 0; i < menu.controls.Count; i++)
             {
+                // When pagination is needed, the first page can hold 7 items + "Next",
+                // and subsequent pages also hold 7 items + "Next" (or up to 8 on the final page).
+                if (hasPagination && i > 0 && i % (maxPageSlots - 1) == 0)
+                {
+                    int pageNum = (i / (maxPageSlots - 1)) + 1;
+                    DrawPageSeparator(pageNum, i);
+                }
+
+                var control = menu.controls[i];
+                if (control == null) continue;
+
                 var itemPath = string.IsNullOrEmpty(currentPath) ? control.name : currentPath + "/" + control.name;
                 var isSubMenuType = control.type == VRCExpressionsMenu.Control.ControlType.SubMenu;
                 var hasSubMenu = isSubMenuType && control.subMenu != null;
@@ -199,6 +213,24 @@ namespace Bluscream.MenuManager
                     EditorGUI.indentLevel--;
                 }
             }
+        }
+
+        private void DrawPageSeparator(int pageNum, int itemIndex)
+        {
+            GUILayout.Space(3);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var originalColor = GUI.color;
+                GUI.color = new Color(0.3f, 0.8f, 1f, 0.8f);
+                var sepStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.MiddleLeft,
+                    fontStyle = FontStyle.Bold
+                };
+                EditorGUILayout.LabelField($"─── ↷ Next ── Page {pageNum} (Items {itemIndex + 1}+) ────────────────────────", sepStyle);
+                GUI.color = originalColor;
+            }
+            GUILayout.Space(2);
         }
 
         private void ShowMoveSelector(string originalPath)
