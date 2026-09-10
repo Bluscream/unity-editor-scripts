@@ -36,19 +36,38 @@ namespace Bluscream.VRCFury
                 VRCFuryAssembly = assemblies.FirstOrDefault(a => a.GetName().Name == "VRCFury");
                 if (VRCFuryAssembly == null) return false;
 
-                ReflectionHelper.TryFindType(VRCFuryAssembly, "VF.Model.VRCFury", out var vrcfType);
+                ReflectionHelper.TryFindType("VF.Model.VRCFury", out var vrcfType);
                 VRCFuryComponentType = vrcfType;
 
-                ReflectionHelper.TryFindType(VRCFuryAssembly, "VF.Model.VFGameObject", out var vfGameObjType);
+                ReflectionHelper.TryFindType("VF.Model.VFGameObject", out var vfGameObjType);
                 VFGameObjectType = vfGameObjType;
 
-                ReflectionHelper.TryFindType(VRCFuryAssembly, "VF.Menu.MenuManager", out var menuMgrType);
+                ReflectionHelper.TryFindType("VF.Utils.MenuEstimator", out var menuEstimatorType);
+                if (menuEstimatorType == null)
+                {
+                    ReflectionHelper.TryFindType("VF.Menu.MenuEstimator", out menuEstimatorType);
+                }
+
+                ReflectionHelper.TryFindType("VF.Utils.MenuManager", out var menuMgrType);
+                if (menuMgrType == null)
+                {
+                    ReflectionHelper.TryFindType("VF.Menu.MenuManager", out menuMgrType);
+                }
                 MenuManagerType = menuMgrType;
 
-                if (MenuManagerType != null && VFGameObjectType != null)
+                if (menuEstimatorType != null && VFGameObjectType != null)
                 {
-                    EstimateMethod = MenuManagerType.GetMethod("CalculateMenuParameterCost", BindingFlags.Public | BindingFlags.Static, null, new Type[] { VFGameObjectType }, null);
-                    GetRawMethod = MenuManagerType.GetMethod("GetRaw", BindingFlags.Public | BindingFlags.Instance);
+                    EstimateMethod = menuEstimatorType.GetMethod("Estimate", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, new Type[] { VFGameObjectType }, null);
+                }
+
+                if (EstimateMethod == null && MenuManagerType != null && VFGameObjectType != null)
+                {
+                    EstimateMethod = MenuManagerType.GetMethod("CalculateMenuParameterCost", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, new Type[] { VFGameObjectType }, null);
+                }
+
+                if (MenuManagerType != null)
+                {
+                    GetRawMethod = MenuManagerType.GetMethod("GetRaw", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 }
 
                 return VRCFuryComponentType != null;
