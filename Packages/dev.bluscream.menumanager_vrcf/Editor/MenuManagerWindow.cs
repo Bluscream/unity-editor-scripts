@@ -224,12 +224,15 @@ namespace Bluscream.MenuManager
 
                     if (pendingMoves.ContainsKey(itemPath))
                     {
-                        EditorGUILayout.LabelField($"-> {pendingMoves[itemPath]}", EditorStyles.miniLabel);
+                        var targetDisplay = string.IsNullOrEmpty(pendingMoves[itemPath]) ? "<color=red>[Delete]</color>" : $"-> {pendingMoves[itemPath]}";
+                        var moveLabelStyle = new GUIStyle(EditorStyles.miniLabel) { richText = true };
+                        EditorGUILayout.LabelField(targetDisplay, moveLabelStyle);
                         if (GUILayout.Button("X", GUILayout.Width(20))) pendingMoves.Remove(itemPath);
                     }
-                    else
+
+                    if (GUILayout.Button("⋮", EditorStyles.miniButton, GUILayout.Width(24)))
                     {
-                        if (GUILayout.Button("Move", GUILayout.Width(50))) ShowMoveSelector(itemPath);
+                        ShowItemMenu(control, itemPath, menu);
                     }
 
                     EditorGUI.indentLevel = savedIndent;
@@ -244,12 +247,141 @@ namespace Bluscream.MenuManager
             }
         }
 
+        private void ShowItemMenu(VRCExpressionsMenu.Control control, string itemPath, VRCExpressionsMenu parentMenu)
+        {
+            var menu = new GenericMenu();
+
+            menu.AddItem(new GUIContent("Move"), false, () => ShowMoveSelector(itemPath));
+            menu.AddItem(new GUIContent("Rename"), false, () => PromptRename(itemPath));
+            menu.AddItem(new GUIContent("Set Icon..."), false, () => PromptSetIcon(control));
+
+            menu.AddSeparator("");
+
+            // Locate asset in project or GameObject in avatar hierarchy
+            menu.AddItem(new GUIContent("Show in Project or Hierarchy"), false, () => LocateItem(control));
+
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Delete"), false, () => SetDelete(itemPath));
+
+            menu.ShowAsContext();
+        }
+
+        private void LocateItem(VRCExpressionsMenu.Control control)
+        {
+            if (control == null) return;
+
+            // 1. If control has a subMenu asset that exists on disk, ping it
+            if (control.subMenu != null && EditorUtility.IsPersistent(control.subMenu))
+            {
+                EditorGUIUtility.PingObject(control.subMenu);
+                Selection.activeObject = control.subMenu;
+                return;
+            }
+
+            // 2. If control has an icon asset on disk, ping it
+            if (control.icon != null && EditorUtility.IsPersistent(control.icon))
+            {
+                EditorGUIUtility.PingObject(control.icon);
+                Selection.activeObject = control.icon;
+                return;
+            }
+
+            // 3. Search avatar hierarchy for VRCFury components or GameObjects referencing this item
+            if (avatarObject != null)
+            {
+                var cleanName = CleanTags(control.name);
+                var transforms = avatarObject.GetComponentsInChildren<Transform>(true);
+                foreach (var t in transforms)
+                {
+                    if (t.name.IndexOf(cleanName, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        EditorGUIUtility.PingObject(t.gameObject);
+                        Selection.activeGameObject = t.gameObject;
+                        return;
+                    }
+                }
+
+                // If nothing specific found, ping the avatar root itself
+                EditorGUIUtility.PingObject(avatarObject);
+                Selection.activeGameObject = avatarObject;
+            }
+        }
+
+        private void PromptRename(string originalPath)
+        {
+            var currentName = originalPath.Split('/').Last();
+            var window = RenamePopup.ShowWindow(currentName, (newName) =>
+            {
+                if (!string.IsNullOrEmpty(newName) && newName != currentName)
+                {
+                    var parentPath = originalPath.Contains('/') ? originalPath.Substring(0, originalPath.LastIndexOf('/')) : "";
+                    var targetPath = string.IsNullOrEmpty(parentPath) ? newName : $"{parentPath}/{newName}";
+                    pendingMoves[originalPath] = targetPath;
+                }
+            });
+        }
+
+        private void PromptSetIcon(VRCExpressionsMenu.Control control)
+        {
+            var path = EditorUtility.OpenFilePanelWithFilters("Select Icon Texture", "Assets", new string[] { "Image files", "png,jpg,jpeg,tga,psd" });
+            if (string.IsNullOrEmpty(path)) return;
+
+            if (path.StartsWith(Application.dataPath))
+            {
+                var relativePath = "Assets" + path.Substring(Application.dataPath.Length);
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(relativePath);
+                if (tex != null)
+                {
+                    control.icon = tex;
+                    EditorUtility.SetDirty(control.subMenu ?? (UnityEngine.Object)avatarObject);
+                    ShowNotification(new GUIContent("Icon updated!"));
+                }
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Notice", "Selected icon must be inside the Unity project's Assets folder.", "OK");
+            }
+        }
+
+        private void SetDelete(string originalPath)
+        {
+            // In VRCFury MoveMenuItem, moving an item to an empty toPath ("") removes/deletes the item
+            pendingMoves[originalPath] = "";
+        }
+
         public static string CleanTags(string input)
         {
             if (string.IsNullOrEmpty(input)) return "";
-            // Strip XML/HTML/TMP tags like <b>, </b>, <size=...>, <color=...>, <line-height=...>, <voffset=...>, etc.
-            string cleaned = Regex.Replace(input, @"<[^>]*>", "").Trim();
-            return cleaned;
+
+            // Strip unsupported TextMeshPro layout tags that break Unity standard IMGUI
+            string cleaned = Regex.Replace(input, @"</?(?:size|line-height|voffset|align|pos|space|font|sprite|material|alpha)[^>]*>", "", RegexOptions.IgnoreCase);
+
+            // Ensure any opened <b> or <color=...> tags without closing tags are properly closed so they don't bleed into the whole UI
+            int openB = Regex.Matches(cleaned, @"<b\b[^>]*>", RegexOptions.IgnoreCase).Count;
+            int closeB = Regex.Matches(cleaned, @"</b>", RegexOptions.IgnoreCase).Count;
+            while (openB > closeB)
+            {
+                cleaned += "</b>";
+                closeB++;
+            }
+
+            int openI = Regex.Matches(cleaned, @"<i\b[^>]*>", RegexOptions.IgnoreCase).Count;
+            int closeI = Regex.Matches(cleaned, @"</i>", RegexOptions.IgnoreCase).Count;
+            while (openI > closeI)
+            {
+                cleaned += "</i>";
+                closeI++;
+            }
+
+            int openColor = Regex.Matches(cleaned, @"<color\b[^>]*>", RegexOptions.IgnoreCase).Count;
+            int closeColor = Regex.Matches(cleaned, @"</color>", RegexOptions.IgnoreCase).Count;
+            while (openColor > closeColor)
+            {
+                cleaned += "</color>";
+                closeColor++;
+            }
+
+            return cleaned.Trim();
         }
 
         public static string FormatDisplayName(VRCExpressionsMenu.Control control)
@@ -257,9 +389,10 @@ namespace Bluscream.MenuManager
             if (control == null) return "<null>";
             string cleaned = CleanTags(control.name);
 
-            if (string.IsNullOrEmpty(cleaned))
+            // Check if stripping tags left an empty string (e.g. was only "<b></b>" or "<size=20>")
+            string pureText = Regex.Replace(cleaned, @"<[^>]*>", "").Trim();
+            if (string.IsNullOrEmpty(pureText))
             {
-                // If stripping tags left nothing (e.g. "<b>", "<size=20>"), provide a clear, helpful fallback
                 if (!string.IsNullOrEmpty(control.parameter?.name))
                 {
                     cleaned = $"<i>({control.parameter.name})</i>";
@@ -570,5 +703,51 @@ namespace Bluscream.MenuManager
             }
         }
     }
+
+    public class RenamePopup : EditorWindow
+    {
+        private string newName = "";
+        private Action<string> onConfirm;
+        private bool isFirstFocus = true;
+
+        public static RenamePopup ShowWindow(string currentName, Action<string> onConfirm)
+        {
+            var window = CreateInstance<RenamePopup>();
+            window.titleContent = new GUIContent("Rename Menu Item");
+            window.newName = currentName ?? "";
+            window.onConfirm = onConfirm;
+            window.minSize = new Vector2(300, 90);
+            window.maxSize = new Vector2(450, 90);
+            window.ShowUtility();
+            return window;
+        }
+
+        private void OnGUI()
+        {
+            EditorGUILayout.Space(10);
+            GUI.SetNextControlName("RenameField");
+            newName = EditorGUILayout.TextField("New Name", newName);
+
+            if (isFirstFocus)
+            {
+                EditorGUI.FocusTextInControl("RenameField");
+                isFirstFocus = false;
+            }
+
+            EditorGUILayout.Space(10);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Cancel", GUILayout.Width(70)))
+                {
+                    Close();
+                }
+                if (GUILayout.Button("Rename", GUILayout.Width(70)) || (Event.current.isKey && Event.current.keyCode == KeyCode.Return))
+                {
+                    onConfirm?.Invoke(newName);
+                    Close();
+                }
+            }
+        }
+    }
 }
-// Trigger recompile
