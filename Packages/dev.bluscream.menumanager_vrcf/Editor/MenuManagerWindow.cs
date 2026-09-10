@@ -166,6 +166,13 @@ namespace Bluscream.MenuManager
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
+                    var indexStyle = new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        alignment = TextAnchor.MiddleRight,
+                        normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 0.8f) }
+                    };
+                    EditorGUILayout.LabelField($"{i + 1}.", indexStyle, GUILayout.Width(22));
+
                     if (control.icon != null)
                     {
                         var iconRect = GUILayoutUtility.GetRect(16, 16, GUILayout.Width(16), GUILayout.Height(16));
